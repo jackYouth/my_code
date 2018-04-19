@@ -1,0 +1,30 @@
+@import "./app.scss";
+
+.orderTips-container{
+  .fast-tips{
+    padding: 30px;background-color: #fff;margin-top: 20px;
+    p{margin-bottom: 30px;font-size: 28px;}
+    span{
+      display: inline-block;text-align: center;border: 1px solid #ff9a00;padding: 8px 10px;font-size: 24px;color: #666;
+      margin-right: 15px;border-radius: 4px;margin-bottom: 15px;max-width: 221px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;
+    }
+    .chooseFastTip{background-color: #ff9a00;color: #fff;}
+  }
+  .tips-main-box{
+    background-color: #fff;padding: 30px;
+    .tips-main-title{font-size: 28px;color: #333;}
+    .tips-box{
+      background-color: #f8f8f8;margin-top: 30px;border: 2px solid #e5e5e5;
+    }
+  }
+  .btn-container{
+    text-align: center;
+  }
+}
+
+.am-list-body .am-list-item:last-child{
+  // background-color: #f8f8f8;
+}
+.am-textarea-control textarea{
+  font-size: 24px;
+}

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Table Operations</title>
+</head>
+<style>
+  .selected{
+    background: yellow;
+  }
+</style>
+<body>
+
+
+    <div id="ctrl-panel" style="margin: 20px 0px">
+
+        <form method="post">
+            会员号:<input name="userId" />
+            姓名:<input name="name" />
+            性别:<input name="gender" />
+            生日:<input name="birthday" />
+            星座:<input name="zodiac" />
+
+            <button class="add" type="button">新增行</button>
+            <button class="edit" type="button">修改</button>
+            <button class="del" type="button">删除行</button>
+            <button class="up" type="button">上移</button>
+            <button class="down" type="button">下移</button>
+
+        </form>
+
+    </div>
+
+    <table border="1" width="100%" class="table">
+        <tr class="th">
+            <td>No.</td>
+            <td>会员号</td>
+            <td>姓名</td>
+            <td>性别</td>
+            <td>生日</td>
+            <td>星座</td>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>001</td>
+            <td>老王</td>
+            <td>男</td>
+            <td>1990-10-02</td>
+            <td>天秤座</td>
+        </tr>
+    </table>
+    <script src="./jquery-1.11.3.min.js"></script>
+    <script>
+
+
+
+      // var table = new myTable();
+      //
+      // table.addRow();
+      //
+      // table.deleteRow();
+      //
+      // table.updateRow();
+      //
+      //
+      // function myTable(){
+      //
+      //   var addRow = function(){
+      //
+      //   }
+      //
+      //   var deleteRow = function(){
+      //
+      //   }
+      // }
+
+
+
+
+      $(function(){
+        var num = $('tr:not(.th) td').eq(0).text();//FIXME num删除或移动时应该重新计算
+        //add
+        $(document).on("click",".add",function(){
+          var userId = $('input[name = "userId"]').val();
+          var name = $('input[name = "name"]').val();
+          var gender = $('input[name = "gender"]').val();
+          var birth = $('input[name = "birthday"]').val();
+          var zodiac = $('input[name = "zodiac"]').val();
+          num++;
+          var newTr = '<tr>'+   //大段的字符串连接可以使用数组push的方式
+                      '<td>'+num+'</td>'+
+                      '<td>'+userId+'</td>'+
+                      '<td>'+name+'</td>'+
+                      '<td>'+gender+'</td>'+
+                      '<td>'+birth+'</td>'+
+                      '<td>'+zodiac+'</td>'+
+                      '</tr>'
+          $(".table").append(newTr);
+        })
+        //show text
+        $(document).on("click","tr:not(.th)",function(){
+          //$(this).addClass("color").siblings().removeClass("color");//效率不是最高的
+
+          $(".table .selected").removeClass("selected");
+          $(this).addClass("selected");
+
+          //class name 修改为 .selected_row 之类会更好
+
+          var userinfo = $(this).children().eq(1).html(); //XXX 可以只调用一次children()
+          var nameinfo = $(this).children().eq(2).html();
+          var genderinfo = $(this).children().eq(3).html();
+          var birthinfo = $(this).children().eq(4).html();
+          var zodiacinfo = $(this).children().eq(5).html();
+
+          $('input[name = "userId"]').val(userinfo);
+          $('input[name = "name"]').val(nameinfo);
+          $('input[name = "gender"]').val(genderinfo);
+          $('input[name = "birthday"]').val(birthinfo);
+          $('input[name = "zodiac"]').val(zodiacinfo);
+        })
+        //edit XXX 这个可以和showText放一起，属于同一个操作->"选中" 但这么写会存在bug 没有关注这个选中的行 index会变 所以这个其实没有必要去获取index，用class=selected_row即可
+          $(document).on('click','tr:not(.th)',function(){
+              inx = $(this).index()
+          })
+            $(document).on('click','.edit',function(){
+
+              var row = $(".table").find(".selected");
+              var columns = row.children();
+
+              //XXX 不够健壮 UI一调整 代码就错了 使用siblings时注意 相互对象之间是无差别 而且必定一直会是兄弟，比如table中的row、ul中的li等等。
+              var userChange = $(this).siblings().eq(0).val();
+              var nameChange = $(this).siblings().eq(1).val();
+              var genderChange = $(this).siblings().eq(2).val();
+              var birthdayChange = $(this).siblings().eq(3).val();
+              var zodiacChange = $(this).siblings().eq(4).val();
+
+              columns.eq(1).text(userChange);
+              columns.eq(2).text(nameChange);
+    					columns.eq(3).text(genderChange);
+    					columns.eq(4).text(birthdayChange);
+    					columns.eq(5).text(zodiacChange);
+
+              // $('tr').eq(inx).children().eq(1).text(userChange);
+              // $('tr').eq(inx).children().eq(2).text(nameChange);
+    					// $('tr').eq(inx).children().eq(3).text(genderChange);
+    					// $('tr').eq(inx).children().eq(4).text(birthdayChange);
+    					// $('tr').eq(inx).children().eq(5).text(zodiacChange);
+            })
+        //del
+          $('.del').click(function(){
+            // $(this).parent().parent().siblings().children().find('.color').remove();//同样 只要remove selected_row的行即可
+            $(".table .selected").remove();
+          })
+        //up
+          $(document).on('click','.up',function(){//同样不要用index 这里有bug 不能一直移动
+            if(inx >= 2){
+              //$('tr').eq(inx).fadeOut().fadeIn();
+              //$('tr').eq(inx-1).before($('tr').eq(inx));
+
+              var prevRow = $(".table .selected").prev();
+
+              if(prevRow){
+                $(".table .selected").after(prevRow);
+              }
+
+            }
+          })
+        //down
+        $(document).on('click','.down',function(){
+          if (inx >= 1) {
+            $('tr').eq(inx).fadeOut().fadeIn();
+            $('tr').eq(inx+1).after($('tr').eq(inx));
+          }
+        })
+      })
+
+
+
+
+
+
+
+
+    </script>
+</body>
+</html>

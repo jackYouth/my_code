@@ -1,0 +1,59 @@
+// @import "~common-sass/mixins";
+// @import "~common-sass/varible";
+
+.mainContainer{
+  background-color: #f5f5f6;width: 100%;height:calc(100% - 84px);overflow-y: scroll;
+  .oilCardBox{
+    background-color: #fff;
+    padding: 32px;
+    overflow: hidden;
+    .ocbInfo{
+      width: 80%;
+      float: left;
+      p{
+        font-size: 0.44rem;
+        margin: 0px 0 11px 0;
+      }
+      span{
+        font-size: 0.28rem;
+        color: rgb(153,153,153);
+      }
+    }
+    .ocbImg{
+      // height: 54px;
+      // width: 20%;
+      float: right;
+      margin-top: 1%;
+      // background-image: url('../img/加油卡_copy@2x.png');
+      background-position: center right;
+      background-repeat: no-repeat;
+      background-size: 75px 54px;
+      .am-icon-md{
+        width: .8rem;height: .8rem
+      }
+    }
+  }
+  .oilCardInfo{
+    width: calc(100% - 0px);
+    margin-top: 24px;
+    max-height: calc(100% - 290px);
+    overflow-y: scroll;
+    overflow-x: hidden;
+    .oilCardPrice{
+      background-color: #fff;padding-top: 36px;
+    }
+    .oilCardText{
+      padding: 20px 32px 0 32px;background-color: #fff;padding-bottom: 36px;
+      h3 , p{
+        font-size: 0.24rem;
+        color: rgb(153,153,153);
+        margin-top: 20px;
+        font-weight: normal;
+
+      }
+    }
+  }
+}
+.mask-container{
+  // height: calc(100% - 110px) !important;
+}

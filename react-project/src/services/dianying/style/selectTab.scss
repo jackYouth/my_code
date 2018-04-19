@@ -1,0 +1,35 @@
+.select_tabs{
+  position: relative;
+  background: #ffffff;
+  color:#666666;
+  .select_cro{
+    height: 0.9rem;
+    width: 100%;
+    overflow: hidden;
+    p{
+      margin: 0;
+      font-size: 0.28rem;
+      position: relative;
+      display: inline-block;
+      height: 0.9rem;
+      line-height: 0.3rem;
+      white-space: nowrap;
+      .select_li{
+        display: inline-block;
+        box-sizing: border-box;
+        height: 100%;
+        text-align: center;
+        padding: 0 0.3rem;
+        line-height: 0.9rem;
+        position: relative;
+      }
+      .select_foucs{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        display: inline-block;
+        transition: .3s ease;
+      }
+    }
+  }
+}

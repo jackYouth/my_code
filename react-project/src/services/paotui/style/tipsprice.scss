@@ -1,0 +1,138 @@
+@import "common.scss";
+
+.tipsPrice{
+  .iconWrapper {
+    position: relative;
+    padding:0 40px 0 10px;
+    margin-right:10%;
+    .am-slider-wrapper{
+      padding:0 20px;
+      }
+      .am-slider{
+        margin:4px 20px 4px 0;
+        .am-slider-handle{
+          width: 46px;
+          height:46px;
+          margin-top:-0.18rem;
+          border:8px solid #fbc447;
+          background:#ffab00;
+        }
+        .am-slider-rail{
+          height:8px;
+          background:#f3f3f4;
+          // width: 85%;
+        }
+        .am-slider-track{
+          background-color:#ffab00;
+          height:8px;
+        }
+      }
+    }
+  //   .iconWrapper .am-icon {
+  //     position: absolute;
+  //     top: -0.19rem;
+  //     width: 0.44rem;
+  //     height: 0.44rem;
+  //     line-height: 1;
+  //     font-size: 0.44rem;
+  //     color: #000;
+  //     right:0;
+  //   }
+    .moreSpan{
+      position: absolute;
+      right:32px;
+      top:22;
+      display:inline-block;
+      padding:5px 22px;
+      background:#ffab00;
+      color:#fff;
+      font-size:24px;
+      border-radius: 6px;
+    }
+    .tipsPriceSpan{
+      margin-left:15%;
+      color:#ff4848;
+    }
+    .am-list-item .am-list-line .am-list-content{
+      -webkit-box-flex: 0.5;
+      flex:0.5;
+    }
+    .am-list-item .am-list-line .am-list-extra{
+      -webkit-box-flex: 1.5;
+      flex:1.5;
+      height:70px;
+      padding:26px 0;
+    }
+    .am-list-body div:not(:last-child) .am-list-line:after{
+      border: 0;
+    }
+    .am-list{
+      .tipsTextPrice{
+        .am-list-line .am-list-content{
+          -webkit-box-flex: 1;
+          flex: 1;
+          color:#999 !important;
+          font-size:26px !important;
+        }
+      }
+    }
+  }
+.tipspriceMain{
+  width:100%;
+  height:700px;
+  .header{
+    padding:0 32px;
+    border-bottom:1px solid #e5e5f5;
+    width: 100%;
+    height:88px;
+    line-height: 88px;
+    .close{
+      color: #999;
+      font-size: 28px;
+    }
+    .tips{
+      color:#333;
+      font-size:36px;
+      margin-left:36%;
+    }
+  }
+  .content{
+    padding:32px;
+    border-radius: 12px;
+    height:auto;
+    .am-list-body{
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+    }
+    .am-list-body:after{
+      border:0;
+    }
+    .am-input-item{
+      background:#f8f8f8 !important;
+      border-radius: 12px;
+      input{
+        font-size:28px;
+      }
+    }
+    .btn{
+      margin-top:32px;
+      background:#ffab00;
+      color:#fff;
+      font-size: 38px;
+    }
+  }
+  .tipspriceNotice{
+    .am-notice-bar-icon{
+      display: none;
+    }
+    .am-notice-bar-operation{
+      display: none;
+    }
+    .am-notice-bar-marquee{
+      padding-left:32px;
+    }
+  }
+}
+  .rc-slider-tooltip-inner{
+    height:50px;
+  }

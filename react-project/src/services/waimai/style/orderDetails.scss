@@ -1,0 +1,37 @@
+@import "./app.scss";
+
+.food-container{
+  .am-list-content{
+    font-weight: bold !important;
+  }
+}
+.orderDetail-container{
+  overflow-y: scroll;
+  height: 100%;
+}
+
+// .orderDetail-container .main-container{
+  // margin-bottom: .4rem !important;
+// }
+
+.orderDetail-container .btn-container{
+  position: fixed;
+}
+
+.am-list-item .am-list-line .am-list-extra{
+  color:#ffab00;
+}
+.am-list-item .am-list-line .am-list-extra{
+  flex-basis: 75%;
+}
+
+.group-item-box{
+  font-size: 28px;color: #333;min-height: 80px;line-height: 80px;padding: 0 30px;
+  p{
+    line-height: 50px;
+  }
+}
+
+.group-item-attrs-box{
+  display: inline-block;margin-right: 15px;
+}

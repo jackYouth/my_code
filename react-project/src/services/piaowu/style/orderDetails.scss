@@ -1,0 +1,205 @@
+*{margin: 0;padding: 0}
+@mixin all_center($row: center) {
+  display: flex;
+  display: -webkit-flex;
+  align-items: center;
+  -webkit-align-items: center;
+  justify-content: $row;
+  -webkit-justify-content: $row;
+}
+
+.orderDetails{
+  width: 100%;
+  height: 100%;
+  .jianhui{
+    display: inline-block;
+    vertical-align: middle;
+    background: #ff4848;
+    border-radius: .06rem;
+    width: .32rem;
+    height: .32rem;
+    font-size: .2rem;
+    color: #fff;
+    line-height: .32rem;
+    text-align: center;
+    margin-right: .1rem;
+    float: left;
+  }
+  .odlcenter{
+    width: 100%;
+    padding-bottom: 2rem;
+  }
+  .tgTip{
+    background: #ffffff;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    font-size: 0.28rem;
+    color: #ffab00;
+    padding:  0 0.3rem;
+    box-sizing: border-box;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .numpri{
+    font-size: 0.28rem;
+    color: #ff4848;
+  }
+  .realsubpri{
+    position: relative;
+    .am-icon-md{
+      width: 0.38rem;
+      height: 0.38rem;
+      position: absolute;
+      top: -0.02rem;
+      right: 0;
+    }
+  }
+  .am-list-item .am-list-line .am-list-content{
+    font-size:0.28rem;
+    color:#333333;
+    i{
+      font-style:normal;
+      font-size:0.26rem;
+      color:#999999;
+    }
+  }
+  .am-list-item .am-list-line .am-list-extra{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .am-list-item .am-input-control input, .am-list-item .am-input-label{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .s-promotion {
+    margin-bottom: 1.5rem;
+  }
+}
+
+.am-modal-button-group-h .am-modal-button{
+  color: #ffab00;
+}
+
+// 票务详情
+.Oderdetail {
+  background: #ffffff;
+  padding: 0.3rem 0.24rem 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  img{
+    width: 1.7rem;
+    height: 2.4rem;
+    float: left;
+  }
+  .orderInfo{
+    display: inline-block;
+    width: calc( 100% - 2.1rem);
+    padding-left: 0.24rem;
+    p{
+      padding: 0 0.1rem;
+      span{
+        margin-right: 0.3rem;
+      }
+      i{
+        font-style: normal;
+      }
+      &:nth-child(1){
+        font-size: 0.28rem;
+        color: #333333;
+        padding-top: 0;
+        padding-bottom: 0.2rem;
+        border-bottom: 1px dashed #ccc;
+        margin-bottom: 0.2rem;
+      }
+      &:nth-child(2), &:nth-child(3){
+        font-size: 0.24rem;
+        color: #666666;
+        padding-bottom: 0.15rem;
+      }
+      &:nth-child(4){
+        padding-top: 0.15rem;
+        font-size: 0.24rem;
+        color:#333333;
+      }
+    }
+  }
+}
+// 快递配送
+.discontact{
+  >h3{
+    border-top: 1px solid #e5e5e5;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.28rem;
+    color: #333333;
+    background: #ffffff;
+    font-weight: 300;
+  }
+  .nocant{
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    background: #ffffff;
+    padding: 0.2rem 0.3rem;
+    h3{
+      float: left;
+      line-height: 1.5;
+      font-size: 0.28rem;
+      color: #333333;
+      font-weight: 300;
+    }
+    >div{
+      display: table;
+    }
+    p{
+      font-size: 0.28rem;
+      color: #666666;
+      line-height: 1.5;
+      .am-icon-md{
+        margin-right: 0.2rem;
+      }
+      i{
+        font-style: normal;
+        margin: 0 0.5rem 0 0.3rem;
+      }
+      span{
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.2rem;
+        color:#ffab00;
+        padding: 0.05rem 0.1rem;
+        background:#fff3db;
+        border-radius: 0.04rem;
+        border: 1px solid #ffab00;
+      }
+    }
+    .addr{
+      font-size: 0.24rem;
+      color: #999999;
+      margin: 0.1rem 0;
+    }
+  }
+}
+// 上门自取
+.smzq{
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  background: #ffffff;
+  padding: 0.2rem 0.3rem;
+  p{
+    margin: 0.2rem 0;
+    font-size: 0.28rem;
+    color: #333333;
+  }
+  i{
+    font-style: normal;
+    float: left;
+  }
+  span{
+    display: table;
+  }
+}
+// 提示
+.infotip{
+  font-size: 0.24rem;
+  color: #999999;
+  padding: 0 0.3rem;
+}

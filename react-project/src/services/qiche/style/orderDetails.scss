@@ -1,0 +1,427 @@
+*{margin: 0;padding: 0}
+@mixin all_center($row: center) {
+  display: flex;
+  display: -webkit-flex;
+  align-items: center;
+  -webkit-align-items: center;
+  justify-content: $row;
+  -webkit-justify-content: $row;
+}
+
+.orderDetails{
+  width: 100%;
+  height: 100%;
+  .seat_tui{
+    font-size: 0.28rem;
+    color: #333333;
+    padding: 0.2rem 0.3rem;
+    background: #fff;
+    @include all_center(space-between);
+    span{
+      &:last-child{
+        font-size: 0.24rem;
+        color: #999999;
+        display: inline-block;
+        padding: 0.05rem 0.1rem;
+        border: 1px solid #999999;
+        border-radius: 4px;
+      }
+    }
+  }
+  .jianhui{
+    display: inline-block;
+    vertical-align: middle;
+    background: #ff4848;
+    border-radius: .06rem;
+    width: .32rem;
+    height: .32rem;
+    font-size: .2rem;
+    color: #fff;
+    line-height: .32rem;
+    text-align: center;
+    margin-right: .1rem;
+    float: left;
+  }
+  .odlcenter{
+    width: 100%;
+    padding-bottom: 2rem;
+  }
+  .tgTip{
+    background: #ffffff;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    font-size: 0.28rem;
+    color: #ffab00;
+    padding:  0 0.3rem;
+    box-sizing: border-box;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .numpri{
+    font-size: 0.28rem;
+    color: #ff4848;
+  }
+  .realsubpri{
+    position: relative;
+    .am-icon-md{
+      width: 0.38rem;
+      height: 0.38rem;
+      position: absolute;
+      top: -0.02rem;
+      right: 0;
+    }
+  }
+  .am-list-item .am-list-line .am-list-content{
+    font-size:0.28rem;
+    color:#333333;
+    i{
+      font-style:normal;
+      font-size:0.26rem;
+      color:#999999;
+    }
+  }
+  .am-list-item .am-list-line .am-list-extra{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .am-list-item .am-input-control input, .am-list-item .am-input-label{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .s-promotion {
+    margin-bottom: 1.5rem;
+  }
+}
+
+.am-modal-button-group-h .am-modal-button{
+  color: #ffab00;
+}
+// 乘客信息
+.passenger{
+  background: #fff;
+  padding: 0 0 0 0.3rem;
+  font-size: 0.28rem;
+  color: #333333;
+  border-bottom: 1px solid #e5e5e5;
+  h3{
+    font-size: 0.28rem;
+    color: #333333;
+    padding: 0.3rem 0.3rem 0.3rem 0;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .ps_list{
+    @include all_center(space-between);
+    border-bottom: 1px solid #e5e5e5;
+    padding: 0.3rem 0.3rem 0.3rem 0;
+    >div{
+      p{
+        &:nth-child(1){
+          margin-bottom: 0.15rem;
+          color: #999999;
+          span{
+            color: #333333;
+          }
+        }
+        // &:nth-child(2){
+        //   font-size: 0.24rem;
+        //   color: #999999;
+        // }
+        span{
+          margin-right: 0.3rem;
+        }
+      }
+    }
+    >p{
+      display: inline-block;
+      color: #fff;
+      background: #ffab00;
+      border-radius: 4px;
+      padding: 0.05rem 0.1rem;
+    }
+    &:last-child{
+      border: none;
+    }
+  }
+}
+.passengerbt{
+  padding: 0.3rem;
+  background: #fff;
+  font-size: 0.28rem;
+  color: #333333;
+  span{
+    margin-right: 0.3rem;
+  }
+}
+// 保险
+.baoxian{
+  width: 100%;
+  height: 100%;
+  .baoxian_main{
+    background: #ffffff;
+    .baoxian_list{
+      @include all_center(space-between);
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0.3rem;
+      >div{
+        p{
+          &:nth-child(1){
+            font-size: 0.28rem;
+            color: #333333;
+            margin-bottom: 0.1rem;
+          }
+          &:nth-child(2){
+            font-size: 0.24rem;
+            color: #999999;
+          }
+        }
+      }
+    }
+    .ps_list{
+      @include all_center(space-between);
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0.3rem;
+      >div{
+        font-size: 0.26rem;
+        p{
+          &:nth-child(1){
+            color: #333333;
+            margin-bottom: 0.1rem;
+          }
+          span{
+            &:nth-child(1){
+              color: #999999;
+              margin-right: 0.2rem;
+            }
+          }
+        }
+      }
+      >p{
+        display: inline-block;
+        border-radius: 4px;
+        // border: 1px solid;
+        padding: 0.05rem 0.1rem;
+        font-size: 0.2rem;
+      }
+    }
+  }
+}
+// 切换
+.switch{
+  background: #fff;
+  >p{
+    padding: 0.15rem 0.3rem;
+    font-size: 0.28rem;
+    color: #333333;
+    span{
+      box-sizing: border-box;
+      display: inline-block;
+      width: 50%;
+      padding: 0.15rem;
+      text-align: center;
+      &:first-child{
+        border-right: 1px solid #f0f0f0;
+      }
+    }
+  }
+  .switch_c{
+    font-size: 0.24rem;
+    padding: 0.3rem;
+    color: #666666;
+    div{
+      p{
+        span{
+          margin-right: 0.2rem;
+        }
+        &:first-child{
+          margin-bottom: 0.2rem;
+        }
+      }
+    }
+  }
+}
+// 车次详情
+.detailCart{
+  .qctit{
+    padding: 0.2rem 0.3rem;
+    background: #ffffff;
+    @include all_center(space-between);
+    span{
+      font-size: 0.26rem;
+      &:nth-child(1){
+        color: #333333;
+      }
+      &:nth-child(2){
+        color: #ffab00;
+        @include all_center(none);
+        .am-icon-md{
+          width: 0.33rem;
+          height: 0.33rem;
+          margin-right: 0.1rem;
+        }
+      }
+    }
+  }
+  .cart_main{
+    padding: 0.3rem;
+    background: #fbf4e8;
+    @include all_center(space-around);
+    >div{
+      display: inline-block;
+      width: calc(50% - 0.9rem);
+      color:#333333;
+      text-align: center;
+      h3{
+        font-size: 0.4rem;
+        margin: 0.1rem 0;
+      }
+      p{
+        font-size: 0.2rem;
+      }
+      &:first-child{
+        text-align: left;
+      }
+      &:last-child{
+        text-align: right;
+      }
+    }
+    .cart_mainmid{
+      width: 1.8rem;
+      p{
+        font-size: 0.2rem;
+        color: #333333;
+        &:nth-child(2){
+          width: 1.4rem;
+          color:#939393;
+          margin: 0.2rem;
+          width: calc(100% - 0.8rem);
+          margin: 0.2rem 0.4rem;
+          border: 1px dashed;
+          position: relative;
+          &:before{
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: -0.07rem;
+            left: -0.3rem;
+            width: 0.15rem;
+            height: 0.15rem;
+            border-radius: 50%;
+            background: #6d6d6d;
+          }
+          &:after{
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: -0.07rem;
+            right: -0.3rem;
+            width: 0.15rem;
+            height: 0.15rem;
+            border-radius: 50%;
+            background: #6d6d6d;
+          }
+        }
+      }
+    }
+  }
+  >p{
+    font-size: 0.2rem;
+    color: #999999;
+    padding: 0.3rem 0.3rem 0;
+  }
+}
+// 快递配送
+.discontact{
+  >h3{
+    border-top: 1px solid #e5e5e5;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.28rem;
+    color: #333333;
+    background: #ffffff;
+    font-weight: 300;
+  }
+  .nocant{
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    background: #ffffff;
+    padding: 0.2rem 0.3rem;
+    h3{
+      float: left;
+      line-height: 1.5;
+      font-size: 0.28rem;
+      color: #333333;
+      font-weight: 300;
+    }
+    >div{
+      display: table;
+    }
+    p{
+      font-size: 0.28rem;
+      color: #666666;
+      line-height: 1.5;
+      .am-icon-md{
+        margin-right: 0.2rem;
+      }
+      i{
+        font-style: normal;
+        margin: 0 0.5rem 0 0.3rem;
+      }
+      span{
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.2rem;
+        color:#ffab00;
+        padding: 0.05rem 0.1rem;
+        background:#fff3db;
+        border-radius: 0.04rem;
+        border: 1px solid #ffab00;
+      }
+    }
+    .addr{
+      font-size: 0.24rem;
+      color: #999999;
+      margin: 0.1rem 0;
+    }
+  }
+}
+// 上门自取
+.smzq{
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  background: #ffffff;
+  padding: 0.2rem 0.3rem;
+  p{
+    margin: 0.2rem 0;
+    font-size: 0.28rem;
+    color: #333333;
+  }
+  i{
+    font-style: normal;
+    float: left;
+  }
+  span{
+    display: table;
+  }
+}
+// 提示
+.infotip{
+  font-size: 0.24rem;
+  color: #999999;
+  padding: 0 0.3rem;
+}
+// 购票提示
+.gou_detail{
+  background: #fff;
+  padding: 0.3rem;
+  overflow: auto;
+  height: 100%;
+  h2{
+    font-size: 0.28rem;
+    color: #333333;
+    margin: 0.2rem 0;
+  }
+  p{
+    font-size: 0.26rem;
+    color: #666666;
+    line-height: 1.5;
+  }
+}

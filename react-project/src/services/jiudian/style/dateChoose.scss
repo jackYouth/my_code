@@ -1,0 +1,13 @@
+@import "./app.scss";
+
+.dateChoose-container{
+  width: 100%;display: inline-block;height: 140px;padding: 0 30px;box-sizing: border-box;background-color: #fff;
+  .arriveDate-container{text-align: left;float: left;}
+  .sumNight-container{display: inline-block;width: 14%;font-size: 23px;color: #888;height: 100%;line-height: 140px;}
+  .departureDate-container{text-align: right;float: right;}
+  .date-box{
+    display: inline-block;width: 43%;height: 100%;border-bottom: 1px solid #e1e1e2;
+    span{font-size: 28px;color: #aaa;margin-top: 28px;display: inline-block;}
+    p{font-size: 36px;margin-top: 13px;}
+  }
+}

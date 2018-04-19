@@ -1,0 +1,177 @@
+body,
+dd,
+dl,
+dt,
+fieldset,
+form,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+html,
+img,
+legend,
+li,
+ol,
+p,
+ul {
+    margin: 0;
+    padding: 0;
+ }
+
+fieldset,
+img {
+    border: none;
+ }
+
+address,
+caption,
+cite,
+code,
+dfn,
+th,
+var {
+    font-style: normal;
+    font-weight: normal;
+ }
+
+ol,
+ul {
+    list-style: none;
+ }
+
+input {
+    outline: none;
+    border: none;
+ }
+
+body,
+html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: #f5f5f6;
+ }
+
+html {
+    overflow-x: hidden;
+ }
+
+
+
+
+
+
+// 定义公共的变量
+// 定义页面中用到的颜色都使用变量进行定义了，命名是颜色+rgb的三个数字的倒数第二个数字
+$black555:rgb(51,51,51);
+$black666:rgb(64,64,64);
+$black111:rgb(17,17,17);
+$grey777:rgb(170,170,170);
+$grey333:rgb(136,136,136);
+$grey000:rgb(204,204,204);
+$grey222:rgb(227,227,228);
+$grey223:rgb(229,229,230);
+$grey555:rgb(225,225,226);
+$red500:rgb(255,102,102);
+$yellow570:rgb(255,170,0);
+$yellow550:rgb(255,154,0);
+$white555:rgb(255,255,255);
+
+
+// 定义公共的代码块
+// center：父元素内左右居中，middle：父元素内上下居中
+@mixin s_center{
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    -ms-transform:translateX(-50%);     /* IE 9 */
+    -moz-transform:translateX(-50%);    /* Firefox */
+    -webkit-transform:translateX(-50%); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%);
+ }
+@mixin s_middle{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    -ms-transform:translateY(-50%);     /* IE 9 */
+    -moz-transform:translateY(-50%);    /* Firefox */
+    -webkit-transform:translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateY(-50%);
+ }
+@mixin s_allCenter{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    -ms-transform:translateX(-50%) translateY(-50%);     /* IE 9 */
+    -moz-transform:translateX(-50%) translateY(-50%);    /* Firefox */
+    -webkit-transform:translateX(-50%) translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%) translateY(-50%);
+ }
+// 字体家族，用于设置固定颜色和大小的字体模版，使用时需要传入两个参数：$l对应杭高，$clr对应颜色，$size对应大小，其中页面中用到的颜色都使用变量进行定义了，命名是颜色+rgb的三个数字的倒数第二个数字
+@mixin s_fontDemo ($clr,$size,$l) {
+    color: $clr;
+    font-size: $size;
+    line-height: $l;
+ }
+// 块元素模版，参数对应：$w对应宽，$h对应高，
+@mixin s_blockDemo ($w,$h) {
+    width: $w;
+    height: $h;
+ }
+
+
+//  改变antd默认样式
+
+//  改变picker组件默认样式
+.am-picker-popup-item{
+  font-size:28px;
+  color:#999999;
+  &.am-picker-popup-header-left{
+    color:#999999;
+  }
+  &.am-picker-popup-title{
+    font-size:36px;
+    color:#333333;
+  }
+  &.am-picker-popup-header-right{
+    color:#ffab00;
+  }
+ }
+
+//  List.Item, InputItem
+.am-list-item .am-input-label,
+.am-list-item .am-list-line .am-list-extra,
+.am-list-item .am-list-line .am-list-content,
+.am-list-item .am-input-control input{
+  font-size:28px !important;
+  color:#333333 !important;
+ }
+input::-webkit-input-placeholder {/* WebKit browsers */
+  font-size:28px !important;
+  color:#adadad !important;
+ }
+input:-moz-placeholder {/* Mozilla Firefox 4 to 18 */
+  font-size:28px !important;
+  color:#adadad !important;
+ }
+input::-moz-placeholder {/* Mozilla Firefox 19+ */
+  font-size:28px !important;
+  color:#adadad !important;
+ }
+input:-ms-input-placeholder {/* Internet Explorer 10+ */
+  font-size:28px !important;
+  color:#adadad !important;
+ }
+
+
+//  modal组件
+.am-modal-button-group-h .am-modal-button{
+  color: #ffab00;
+ }
+.am-modal-button-group-h .am-modal-button:first-child{
+  color:#999999;
+ }

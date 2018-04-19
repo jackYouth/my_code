@@ -1,0 +1,45 @@
+@import "./app.scss";
+
+.guarantee-container{
+  .guarantee-price-container{
+    padding: 20px 30px;box-sizing: border-box;
+    span{display: inline-block;font-size: 36px;color: #3f3f3f;}
+    span:nth-child(1){}
+    span:nth-child(2){color: #ff4848;}
+  }
+  .guarantee-main-container{
+    overflow: hidden;
+    .input-box{
+      background-color: #fff;border-bottom: 1px solid #e5e5e5;height: 88px;line-height: 88px;box-sizing: border-box;
+      padding: 0 30px;
+      span{
+        display: inline-block;font-size: 32px;color: #222;width: 20%;
+      }
+      input{
+        display: inline-block;width: 80%;font-size: 28px;outline: 0;
+      }
+    }
+  }
+  .btn-container{
+    display: inline-block;width: 100%;text-align: center;
+    button{
+      background-color: #ffab00;color: #fff;border-radius: 8px;width: 92%;height: 98px;line-height: 98px;font-size: 36px;
+      text-align: center;margin: 40 auto;
+    }
+  }
+}
+
+.help{
+  width: 5% !important;background-image: url('../image/help.png');background-repeat: no-repeat;background-position: center;
+  background-size: 30px;height: 100%;vertical-align: middle;display: inline-block;
+}
+
+.img-box{
+  background-color: #fff;width: 100%;height: 520px;position: relative;z-index: 90;top: 50%;margin-top: -260px;
+}
+.cvv-img{
+  background-image: url('../image/cvv@3x.png');background-size: 100%;background-repeat: no-repeat;
+}
+.use-img{
+  background-image: url('../image/usedate.png');background-size: 100%;background-repeat: no-repeat;
+}

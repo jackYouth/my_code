@@ -1,0 +1,219 @@
+*{margin: 0;padding: 0}
+@mixin all_center($row: center) {
+  display: flex;
+  display: -webkit-flex;
+  align-items: center;
+  -webkit-align-items: center;
+  justify-content: $row;
+  -webkit-justify-content: $row;
+}
+.orderDetail-container{
+  overflow: auto;
+}
+.orderDetails{
+  width: 100%;
+  // height: 100%;
+  .failtext{
+    margin: 0 0.3rem;
+    padding-top: 0.2rem;
+    font-size:24px;
+    color:#ff4848;
+  }
+  .jianhui{
+    display: inline-block;
+    vertical-align: middle;
+    background: #ff4848;
+    border-radius: .06rem;
+    width: .32rem;
+    height: .32rem;
+    font-size: .2rem;
+    color: #fff;
+    line-height: .32rem;
+    text-align: center;
+    margin-right: .1rem;
+    float: left;
+  }
+  .odlcenter{
+    width: 100%;
+    padding-bottom: 2rem;
+  }
+  .tgTip{
+    background: #ffffff;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    font-size: 0.28rem;
+    color: #ffab00;
+    padding:  0 0.3rem;
+    box-sizing: border-box;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .numpri{
+    font-size: 0.28rem;
+    color: #ff4848;
+  }
+  .realsubpri{
+    position: relative;
+    .am-icon-md{
+      width: 0.38rem;
+      height: 0.38rem;
+      position: absolute;
+      top: -0.02rem;
+      right: 0;
+    }
+  }
+  .am-list-item .am-list-line .am-list-content{
+    font-size:0.28rem;
+    color:#333333;
+    i{
+      font-style:normal;
+      font-size:0.26rem;
+      color:#999999;
+    }
+  }
+  .am-list-item .am-list-line .am-list-extra{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .am-list-item .am-input-control input, .am-list-item .am-input-label{
+    font-size:0.28rem;
+    color:#333333;
+  }
+  .s-promotion {
+    margin-bottom: 1.5rem;
+  }
+}
+
+.am-modal-button-group-h .am-modal-button{
+  color: #ffab00;
+}
+
+// userinfo
+.userinfo{
+  background: #ffffff;
+  h3{
+    padding: 0.15rem 0.3rem;
+    display: flex;
+    display: -webkit-flex;
+    align-items: center;
+    -webkit-align-items: center;
+    .am-icon-md{
+      margin-right: 0.15rem;
+    }
+  }
+  p{
+    font-size: 0.28rem;
+    color: #666666;
+    padding: 0.12rem 0.3rem;
+    @include all_center(space-between);
+  }
+
+}
+// userinfo
+.odlinfo{
+  background: #ffffff;
+  padding-left: 0.3rem;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  p{
+    font-size: 0.3rem;
+    color: #111111;
+    padding: 0.25rem 0.3rem 0.25rem 0;
+    border-bottom: 1px solid #e5e5e5;
+    @include all_center(space-between);
+    &:last-child{
+      border: none;
+    }
+  }
+  .flate{
+    display: inline-block;
+    padding: 0 0.2rem;
+    height:0.7rem;
+    line-height: 0.7rem;
+    font-size: 0.32rem;
+    text-align: center;
+    color: #fff;
+    background: url(../img/flateDiv.png) no-repeat;
+    background-size: 100% 100%;
+  }
+}
+// more
+.more{
+  text-align: center;
+  background: #fff;
+  font-size: 0.2rem;
+  color: #999999;
+  p{
+    &:first-child{
+      border-top: 1PX solid #ddd;
+      padding-top: 0.2rem;
+    }
+    &:last-child{
+      border-bottom: 1PX solid #ddd;
+      padding-bottom: 0.2rem;
+    }
+  }
+  .am-icon-md{
+    width: 0.4rem;
+    height: 0.3rem;
+  }
+}
+
+/*
+  卡片
+*/
+.am-card-header{
+  font-size: 0.24rem;
+  .am-card-header-content{
+    p{
+      color:#888;
+      width: 100%;
+      span{
+        right: 0.6rem;
+        color: #ff4848;
+        // z-index: 3;
+        float: right;
+      }
+    }
+  }
+}
+.am-card-body{
+  min-height: auto;
+  font-size: 0.28rem;
+  p{
+    padding: 0;
+    margin: 0.1rem 0;
+    font-size: 0.24rem;
+    color:#888;
+  }
+}
+.am-card-footer{
+    padding: 0.12rem 0 0;
+    border-top: 1PX solid #ddd;
+    .cardFootli{
+      padding: 0.18rem 0;
+      text-align: center;
+      font-size: 0.24rem;
+    }
+    .cardFootli:nth-child(2){
+      border-left: 1PX solid #ddd;
+      border-right: 1PX solid #ddd;
+    }
+}
+.am-list-body:after{
+  border: none;
+}
+.am-list .am-list-item.am-checkbox-item .am-list-thumb .am-checkbox{
+  height: 100%;
+}
+.am-list .am-list-item.am-checkbox-item .am-list-thumb .am-checkbox-inner{
+  top: 45%
+}
+.orderDetails .am-list-item .am-list-line .am-list-extra{
+  flex-basis: auto;
+}
+.cardFootli{
+  span{
+    margin-left:0.1rem;
+  }
+}

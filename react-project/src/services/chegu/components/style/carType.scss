@@ -1,0 +1,86 @@
+$grey777: rgb(170,170,170);
+$grey333: rgb(136,136,136);
+$black666: rgb(69,69,69);
+$yellow570: rgb(255,170,0);
+$yellow550: rgb(255,154,0);
+$black: rgb(0,0,0);
+
+@mixin s_middle {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    /* IE 9 */
+    -moz-transform: translateY(-50%);
+    /* Firefox */
+    -webkit-transform: translateY(-50%);
+    /* Safari 和 Chrome */
+    -o-transform: translateY(-50%);
+}
+@mixin s_fontDemo ($clr,$size,$l) {
+    color: $clr;
+    font-size: $size;
+    line-height: $l;
+}
+
+*{margin: 0;padding: 0;}
+body{background-color: #fff !important;}
+.brandTitle{
+  width: 100%;height: 100px;line-height: 100px;text-align: left;background-color: #fff;
+  div{
+    width: 90%;height: 54px;border: 1px solid #e4e4e5;border-radius: 8px;font-size: 22px;text-align: center;background-color: #f5f5f6;display: inline-block;line-height: 54px;margin-left: 32px;
+    background-image: url('../img/magnifier.png');background-size: 27px;background-position: 3% center;background-repeat: no-repeat;margin-top: 23px;
+    color: #999;text-align: center;
+    input{width: 80%;height: 100%;font-size: 0.22rem;background-color: #f5f5f6;border: 0;outline: none;color: #999;}
+  }
+}
+
+.mainContainer{
+  height: calc(100% - 100px);overflow-y: scroll;
+  .hotBrand{
+    h3{font-weight: normal;font-size: 0.24rem;color: #999;background-color: #f5f5f6;height: 55px;line-height: 55px;text-indent: 32px;}
+    .hotBrandContainer{
+      border-top: 1px solid #e5e5e5;
+      .hotBrandBox{
+        width: 25%;display: inline-block;padding: 16px 0;text-align: center;border: 1px solid #e5e5e5;border-left: 0;border-top: 0;box-sizing: border-box;
+        img{}
+        span{font-size: 24px;color: #666;display: block;text-align: center;margin-top: 12px;}
+      }
+    }
+  }
+  .normalBrands{
+    .brandContainer{
+      .brandsKey{font-weight: normal;font-size: 0.24rem;color: #999;background-color: #f5f5f6;height: 55px;line-height: 55px;text-indent: 32px;}
+      ul{
+        li{
+          height: 80px;line-height: 80px;border-bottom: 1px solid #f5f5f6;font-size: 24px;
+          img{width: 64px;height: 64px;margin: 0 32px;vertical-align: middle;}
+          span{}
+        }
+        .brandBox{}
+      }
+    }
+  }
+  .letterIndex {
+    @include s_middle;
+    width: 0.49rem;
+    right: 0.08rem;
+    z-index: 20;
+    list-style: none;
+    li {
+      span {
+        display: block;
+        text-align: center;
+        @include s_fontDemo( $black, .2rem, .35rem );
+        text-decoration: none;
+      }
+    }
+  }
+}
+
+.itemBox{
+  padding: 0 32px;background-color: #fff;height: 94px;line-height: 94px;border-bottom: 1px solid #e5e5e5;
+  overflow: hidden;text-overflow: ellipsis;white-space: nowrap;
+}
+
+.cancel{color: #ffab00;text-align: center;display: inline-block;width: 100%;}

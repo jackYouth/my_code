@@ -1,0 +1,16 @@
+{
+  "name": "jackyouth",
+  "version": "1.0.0",
+  "description": "it's first pachong for jackyouth ",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "axios": "^0.17.1",
+    "cheerio": "^1.0.0-rc.2",
+    "iconv-lite": "^0.4.19"
+  }
+}

@@ -1,0 +1,83 @@
+@import "./common.scss";
+
+.daijia {
+  position: relative;
+  .daijia-map {
+    height: 70%;
+    width: 100%;
+  }
+  .car-num {
+    position: fixed;
+    top: calc(40% - 200px);
+    height: 120px;
+    width: 100%;
+    text-align: center;
+    background: url(../img/tips-wrap.png) no-repeat center center;
+    background-size: auto 100%;
+    @include s_fontDemo(26px, 85px, $font-11);
+  }
+  .daijia-info {
+    position: fixed;
+    bottom: 40px;
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 70;
+    .daijia-info-container {
+      width: 100%;
+      background: $bg-ff;
+      box-shadow:0 2px 13px 0 rgba(0,0,0,0.08);
+      border-radius:8px;
+      padding: 0 30px;
+      box-sizing: border-box;
+      li {
+        display: flex;
+        align-items: center;
+        height: 105px;
+        @include s_border_b;
+        .icon {
+          @include s_blockDemo(15px, 15px);
+          border-radius:100%;
+          margin-right: 20px;
+          &.green-icon {
+            border: 4px solid #14d7a6;
+          }
+          &.orange-icon {
+            border: 4px solid $theme;
+          }
+        }
+        p {
+          flex: 1;
+          min-height: 32px;
+          min-width: 32px;
+          @include s_fontDemo(32px, 32px, $font-11);
+        }
+        .am-list-item.am-input-item {
+          padding-left: 0;
+          input {
+            @include s_fontDemo(32px, 32px, $font-11);
+          }
+        }
+        &:last-of-type {
+          justify-content: center;
+          p {
+            flex: none;
+            @include s_fontDemo(32px, 32px, $font-66);
+          }
+        }
+      }
+      &.to-order {
+        background: $theme;
+        height: 90px;
+        text-align: center;
+        margin-top: 30px;
+        @include s_fontDemo(36px, 90px, $font-ff);
+      }
+    }
+  }
+
+  // 高德地图样式修改
+  .amap-geolocation-con {
+    bottom: calc(500px - 40%) !important;
+  }
+}

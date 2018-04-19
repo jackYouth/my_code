@@ -1,0 +1,78 @@
+@import "../../../styles/s_common.scss";
+
+.specification {
+  padding: 0 23px;
+  position: relative;
+  .close-icon {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    color: #666;
+  }
+  .header {
+    padding: 23px 0;
+    overflow: hidden;
+    @include s_border_b;
+    .specification-left {
+      float: left;
+      overflow: hidden;
+      margin-right: 23px;
+      img {
+        height: 140px;
+        margin: 0 auto;
+      }
+    }
+    .specification-right {
+      overflow: hidden;
+      float: left;
+      .price {
+        margin-bottom: 8px;
+        @include s_fontDemo(24px, 33px, $font-f48);
+        del {
+          color: $font-99;
+        }
+      }
+      .selected-info {
+        @include s_fontDemo(24px, 33px, $font-66);
+      }
+    }
+  }
+  .specification-list {
+    padding-top: 24px;
+    padding-bottom: 112px;
+    max-height: 780px;
+    overflow: auto;
+    h1 {
+      @include s_fontDemo(28px, 40px, $font-33);
+      margin-bottom: 24px;
+      font-weight: normal;
+    }
+    li {
+      @include s_fontDemo(24px, 60px, $font-66);
+      @include s_blockDemo(48%, 60px);
+      text-align: center;
+      border: 1px solid $font-99;
+      margin-bottom: 20px;
+      float: left;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      &.active {
+        border-color: $theme;
+        color: $theme;
+      }
+    }
+  }
+  .button {
+    @include s_fontDemo(36px, 112px, $font-ff);
+    @include s_blockDemo(100%, 112px);
+    text-align: center;
+    background: $disable;
+    position: absolute;
+    bottom: 0;
+    margin-left: -23px;
+    &.active {
+      background: $theme;
+    }
+  }
+}

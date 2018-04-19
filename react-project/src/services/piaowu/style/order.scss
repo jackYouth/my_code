@@ -1,0 +1,192 @@
+*{margin: 0;padding: 0}
+
+@mixin all_center($row: center) {
+  display: flex;
+  display: -webkit-flex;
+  align-items: center;
+  -webkit-align-items: center;
+  justify-content: $row;
+  -webkit-justify-content: $row;
+}
+.order{
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  .orderwrap{
+    height: calc(100% - 1rem);
+  }
+  .sebt_bt{
+    display: flex;
+    display: -webkit-flex;
+    height: 1rem;
+    box-sizing: border-box;
+    border-top: 1px solid #e5e5e5;
+    background: #ffffff;
+    .real_pri{
+      @include all_center(space-between);
+      width: calc(100% - 2rem);
+      height: 100%;
+      line-height: 1rem;
+      box-sizing: border-box;
+      padding-left: 0.3rem;
+      padding-right: 0.1rem;
+      font-size: 0.28rem;
+      color: #ff4848;
+      i{
+        font-style: normal;
+        font-size: 0.32rem;
+      }
+      .sebt_cl{
+        font-size: 0.24rem;
+        color: #999999;
+      }
+    }
+    .real_go{
+      display: inline-block;
+      width: 2rem;
+      height: 100%;
+      line-height: 1rem;
+      text-align: center;
+      font-size: 0.36rem;
+      color: #ffffff;
+      background: #ffab00;
+    }
+  }
+  .infotip{
+    font-size: 0.24rem;
+    color: #999999;
+    padding: 0 0.3rem;
+    margin: 0.1rem 0;
+  }
+  .recev_sel{
+    height: 1rem;
+    background: #ffffff;
+    span{
+      display: inline-block;
+      background:rgba(255,255,255,0.20);
+      border: 1px solid #e5e5e5;
+      text-align: center;
+      border-radius: 0.05rem;
+      width: 1.5rem;
+      height: 0.6rem;
+      line-height: 0.6rem;
+      margin: 0.2rem;
+      font-size: 0.28rem;
+      color: #666666;
+    }
+    .seling{
+      background: rgba(255,161,0,0.05);
+      border: 1px solid #ffa100;
+      color: #ffa100;
+    }
+  }
+  .borderimg{
+    height: 0.3rem;
+    background-size: 102%;
+    background-position: center;
+  }
+  .smzq{
+    // border-top: 1px solid #e5e5e5;
+    // border-bottom: 1px solid #e5e5e5;
+    // background: #ffffff;
+    // padding: 0.2rem 0.3rem;
+    p{
+      font-size: 0.24rem;
+      color: #999999;
+      padding: 0 0.3rem;
+      margin: 0.1rem 0;
+      &:last-child{
+        color:#ffab00;
+      }
+    }
+  }
+  .nocant{
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    background: #ffffff;
+    padding: 0.45rem 0.3rem;
+    @include all_center(space-between);
+    p{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      @include all_center(none);
+      font-size: 0.28rem;
+      color: #333333;
+      .am-icon-md{
+        margin-right: 0.2rem;
+      }
+      i{
+        font-style: normal;
+        margin: 0 0.5rem 0 0.3rem;
+      }
+      span{
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.2rem;
+        color:#ffab00;
+        padding: 0.05rem 0.1rem;
+        background:#fff3db;
+        border-radius: 0.04rem;
+        border: 1px solid #ffab00;
+      }
+    }
+    .addr{
+      font-size: 0.24rem;
+      color: #999999;
+      margin: 0.1rem 0;
+    }
+  }
+}
+
+// 票务详情
+.Oderdetail {
+  background: #ffffff;
+  padding: 0.3rem 0.24rem 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  img{
+    width: 1.7rem;
+    height: 2.4rem;
+    float: left;
+  }
+  .orderInfo{
+    display: inline-block;
+    width: calc( 100% - 2.1rem);
+    padding-left: 0.24rem;
+    p{
+      padding: 0 0.1rem;
+      span{
+        margin-right: 0.3rem;
+      }
+      i{
+        font-style: normal;
+      }
+      &:nth-child(1){
+        font-size: 0.28rem;
+        color: #333333;
+        padding-top: 0;
+        padding-bottom: 0.2rem;
+        border-bottom: 1px dashed #ccc;
+        margin-bottom: 0.2rem;
+      }
+      &:nth-child(2), &:nth-child(3){
+        font-size: 0.24rem;
+        color: #666666;
+        padding-bottom: 0.15rem;
+      }
+      &:nth-child(4){
+        padding-top: 0.15rem;
+        font-size: 0.24rem;
+        color:#333333;
+      }
+    }
+  }
+}
+.am-list-item .am-input-label.am-input-label-5{
+  font-size: 0.28rem;
+  color:#333333;
+}
+.am-list-item .am-input-control input{
+  font-size: 0.28rem;
+}

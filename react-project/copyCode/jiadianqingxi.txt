@@ -1,0 +1,1491 @@
+
+
+
+
+ jiadianqingxi/actions/app.js
+
+import { Loading } from '@boluome/oto_saas_web_app_component'
+// import { get } from '@boluome/common-lib'
+import { get } from 'business'
+
+// Project interface
+export const getListDataFn = datas => dispatch => {
+  console.log('aaaa')
+  const handleClose = Loading({ mask: false, maskClosable: false })
+  const listUrl = '/jiadianqingxi/v1/categories'
+  get(listUrl, { city: datas, source: 2 }).then(reply => {
+    const { code, data } = reply
+    if (code === 0) {
+      dispatch({
+        type:     'KJIN_LISTSHOW',
+        listData: data,
+      })
+    } else {
+      console.log('数据加载失败')
+    }
+    handleClose()
+  }).catch(err => console.log('message', err))
+}
+
+
+
+
+ jiadianqingxi/actions/chooseCity.js
+
+export const chooseCity = result => {
+  return {
+    type: 'GET_CITIES',
+    city: result,
+  }
+}
+
+
+
+
+ jiadianqingxi/actions/details.js
+
+// import { wrap, Loading } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+import { browserHistory } from 'react-router'
+import { get } from 'business'
+
+
+export const getDetailsData = (datas1, Id, cityId) => dispatch => {
+  // console.log('data-----------', datas1)
+  const detailsUrl = `/jiadianqingxi/v1/category/${ datas1.Id }`
+  const datas = {
+    channel: 'zmn',
+    cityId:  datas1.cityId,
+    source:  '2',
+  }
+  get(detailsUrl, datas).then(reply => {
+    const { code, data } = reply
+    data.cityId = datas1.cityId
+    if (code === 0) {
+      dispatch({
+        type:        'KJIN_DETAILSHOW',
+        detailsData: data,
+      })
+      setStore('detailsData1', data, 'session')
+      browserHistory.push(`/jiadianqingxi/details?categoryId=${ Id }&cityId=${ cityId }`)
+    } else {
+      console.log('数据加载失败')
+    }
+    // handleClose()
+  }).catch(err => console.log('message', err))
+}
+
+
+
+
+ jiadianqingxi/actions/index.js
+
+
+
+
+
+ jiadianqingxi/actions/order.js
+
+import { getStore, parseQuery, setStore } from '@boluome/common-lib'
+import { afterOrdering, get, send } from 'business'
+
+const search = location.search
+const objurl = parseQuery(search)
+const orderTimeUrl = `/jiadianqingxi/v1/category/${ objurl.categoryId }/service-time`
+const orderUrl = '/jiadianqingxi/v1/order'
+// 服务时间的请求
+export const getOrderTime = (datastr, sum) => dispatch => {
+  const datas = {
+    channel:   'zmn',
+    cityId:    datastr.cityId,
+    count:     sum,
+    longitude: datastr.longitude,
+    latitude:  datastr.latitude,
+    mapType:   'gaode',
+  }
+  send(orderTimeUrl, datas).then(reply => {
+    const { code, data } = reply
+    data.cityId = datas.cityId
+    // console.log('tttt---', reply)
+    if (code === 0) {
+      dispatch({
+        type:     'KJIN_ORDERTIME',
+        timeData: data,
+      })
+      if (data.length === 0) {
+        dispatch({ type: 'CHOOSE_SERVICETIME', serviceDate: undefined })
+        dispatch({ type: 'MARK_ORDERBTN', disabled: false })
+      } else {
+        const times = [data[0].date, data[0].time[0]]
+        dispatch({ type: 'CHOOSE_SERVICETIME', serviceDate: times })
+      }
+    } else {
+      console.log('数据加载失败')
+    }
+  }).catch(err => console.log('message', err))
+}
+// 选择地址的时候
+export const handleChangeContact = (contact, sum) => dispatch => {
+  dispatch({ type: 'CHANGE_CONTACT', contact })
+  console.log('contact-handleChangeContact---', contact)
+  if (contact.city) {
+    const cityName = contact.city.replace(/[市省区]|特别行政区/g, '')
+    const cityUrl = '/basis/v1/jiadianqingxi/zmn/cities'
+    get(cityUrl, { channel: 'zmn' }).then(reply => {
+      const { code, data } = reply
+      if (code === 0) {
+        const cityFilter = data.filter(item => {
+          return item.name === cityName
+        })
+        // console.log('cityFilter-----', cityFilter[0])
+        if (cityFilter[0]) { // 收货地址与服务商城市列表作对比
+          const point = {
+            latitude:  contact.latitude,
+            longitude: contact.longitude,
+            cityId:    cityFilter[0].channelCityId,
+            city:      cityFilter[0].name,
+          }
+          dispatch({ type: 'CHANGE_POINT', point })
+          dispatch(getOrderTime(point, sum))
+          dispatch({ type: 'MARK_ORDERBTN', disabled: true })
+        } else { // 无该服务的城市不进行下单
+          let ishas = '1'
+          dispatch({ type: 'NOHAS_CITYNAME', ishas })
+          setTimeout(() => {
+            ishas = '0'
+            dispatch({ type: 'NOHAS_CITYNAME', ishas })
+          }, 1000)
+          dispatch({ type: 'MARK_ORDERBTN', disabled: false })
+          dispatch({ type: 'CHOOSE_SERVICETIME', serviceDate: undefined })
+        }
+      } else {
+        console.log('数据加载失败')
+      }
+    }).catch(err => console.log('message', err))
+  }
+}
+// 默认地址的选择----
+export const getAddrContact = () => dispatch => {
+  const choosecontact = getStore('Choosecontact', 'session')
+  if (choosecontact) {
+    dispatch(handleChangeContact(choosecontact, 1))
+  } else {
+    const contactUrl = '/user/v1/contact'
+    const sendData = {
+      userId:    getStore('customerUserId', 'session'),
+      contactId: '',
+      longitude: 0,
+      latitude:  0,
+      mapType:   'gaode',
+    }
+    get(contactUrl, sendData).then(reply => {
+      const { code, data } = reply
+      if (code === 0) {
+        // dispatch({ type: 'CHANGE_CONTACT', contact : data});
+        setStore('Choosecontact', data, 'session')
+        // const points = getStore('geopoint', 'session')
+        // points.cityId = getStore('markId', 'session').cityId
+        // dispatch(getOrderTime(points, 1))
+        dispatch(handleChangeContact(data, 1))
+        // handleChangeContact(data, '1')
+      } else {
+        console.log('数据加载失败--getAddrContact---', code)
+        dispatch({ type: 'CHANGE_CONTACT', contact: '' })
+      }
+    }).catch(err => console.log('message', err))
+  }
+}
+// 用户下单
+export const getOrder = (detailsData, sum, contact, time, curDiscountData, point) => dispatch => {
+  const customerUserId = getStore('customerUserId', 'session')
+  const userPhone = getStore('userPhone', 'session')
+  console.log(time.join(' '))
+  const { cityId } = point
+  const datas = {
+    channel:     'zmn',
+    customerUserId,
+    userPhone,
+    categoryId:  detailsData.categoryId,
+    cityId,
+    count:       sum,
+    serviceTime: time.join(' '),
+    contact,
+    couponId:    curDiscountData.coupon ? curDiscountData.coupon.id : '',
+    activityId:  curDiscountData.activities ? curDiscountData.activities.id : '',
+    mapType:     'gaode',
+  }
+  send(orderUrl, datas).then(reply => {
+    const { code, data } = reply
+    if (code === 0) {
+      dispatch({
+        type:      'KJIN_ORDERDETAILS',
+        orderData: data,
+      })
+      // window.location.href = `/cashier/${ data.id }`
+      afterOrdering(data)
+      // console.log(afterOrdering)
+    } else {
+      console.log('下单失败')
+    }
+  }).catch(err => console.log('message', err))
+}
+
+
+
+
+ jiadianqingxi/components/app.js
+
+import React from 'react'
+// import { setStore } from '@boluome/common-lib'
+import { Mask, SlidePage, CitySearch, UserCenter } from '@boluome/oto_saas_web_app_component'
+import '../style/index.scss'
+
+const App = props => {
+  const { listData, getListDataHandle, selectedCIty, goDetails } = props
+  if (listData) {
+    // console.log('listData', listData, selectedCIty)
+    return (
+      <div className='listMain'>
+        <UserCenter categoryCode='jiadianqingxi' />
+        <div className='headerWrap'>
+          <div className='header_l' />
+          <div className='header_c' onClick={ () =>
+            Mask(
+              <SlidePage target='left' showClose={ false }>
+                <CitySearch localCity='上海' api='/basis/v1/jiadianqingxi/zmn/cities' handleCityData={ result => getListDataHandle(result) } />
+              </SlidePage>
+              , { mask: false, style: { position: 'absolute' } }
+            ) }
+          >
+            <span>{ selectedCIty }</span>
+            <span><img alt='' className='jiaoPic' src={ require('../img/jiao.png') } /></span>
+          </div>
+          <div className='header_r' />
+        </div>
+        <div className='contentWrap'>
+          {
+          listData && listData.map(item => (
+            <div key={ item.categoryId } className='listItem' onClick={ () =>
+                goDetails(item.cityId, item.categoryId)
+              }
+            >
+              <div className='itemPic'><img alt='' src={ item.categoryIcon } /></div>
+              <div className='item'>
+                <span className='title'>{ item.categoryName }</span>
+                <span className='theme'>{ item.description }</span>
+                <span className='price'>￥{ item.price } / { item.unit }</span>
+                <span className='channel'>啄木鸟</span>
+              </div>
+            </div>
+          ))
+          }
+        </div>
+        {
+          (listData && listData.length === 0) && (
+            <div className='kongWrap'>
+              <img alt='' src={ require('../img/noUse.png') } />
+              <div className='tips'>该城市尚未提供家电清洗服务敬请期待</div>
+            </div>
+          )
+        }
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+export default App
+
+
+
+
+ jiadianqingxi/components/contactlist.js
+
+import React from 'react'
+// import { browserHistory } from 'react-router'
+// import { Toast } from 'antd-mobile'
+import { setStore } from '@boluome/common-lib'
+import { Contact, SlidePage } from '@boluome/oto_saas_web_app_component'
+
+// const alert = Modal.alert
+class ContactList extends React.Component {
+  constructor(props) {
+    super(props)
+    // this.state = {
+    //   pricearr: [],
+    // }
+    this.handleChangeContactFn = this.handleChangeContactFn.bind(this)
+  }
+  handleChangeContactFn(contact) {
+    setStore('Choosecontact', contact, 'session')
+    // dispatch(handleChangeContact(contact, sum))
+    window.history.back()
+  }
+  componentWillUnmount() {
+    SlidePage.closeAll()
+  }
+  render() {
+    return (
+      <div className='addtouristWrap'>
+        <Contact handleChange={ contacts => this.handleChangeContactFn(contacts) } />
+      </div>
+    )
+  }
+}
+
+export default ContactList
+
+
+
+
+ jiadianqingxi/components/details.js
+
+import React from 'react'
+// import { getStore } from '@boluome/common-lib'
+// import { Mask, SlidePage } from '@boluome/oto_saas_web_app_component'
+// 样式引入
+import '../style/details.scss'
+
+const Details = props => {
+  const { goBackPage, detailsData = { introduction: '', note: '' } } = props
+  let introductions = detailsData.introduction
+  let notes = detailsData.note
+  if (!introductions) {
+    introductions = []
+  }
+  if (!notes) {
+    notes = []
+  }
+  return (
+    <div className='detailsWrap'>
+      <div className='detailsMain'>
+        <div className='detailsPic'>
+          <div className='details_img'><img alt='' src={ detailsData.banner } /></div>
+          <div className='details_price'>
+            <div className='title'>{ detailsData.categoryName }</div>
+            <div className='price'>￥<span>{ detailsData.price } / { detailsData.unit }</span></div>
+          </div>
+        </div>
+        <div className='detailsSer otm '>
+          <div className='iconTitle'>
+            <img alt='' className='icon' src={ require('../img/jieshao.png') } />
+            <span>服务介绍</span>
+          </div>
+          <div className='detailsPrice'>
+            {
+              introductions.map((item, index) => (
+                <p key={ `${ index + 1 }` }>{ item }</p>
+              ))
+            }
+          </div>
+        </div>
+        <div className='detailsSer otm '>
+          <div className='iconTitle'>
+            <img alt='' className='icon' src={ require('../img/jiage.png') } />
+            <span>价格说明</span>
+          </div>
+          <div className='detailsPrice'>
+            <img alt='' src={ detailsData.serviceDescription } />
+          </div>
+        </div>
+        <div className='detailsSer otm '>
+          <div className='iconTitle'>
+            <img alt='' className='icon'src={ require('../img/liucheng.png') } />
+            <span>服务流程</span>
+          </div>
+          <div className='detailsPrice'>
+            <img alt='' src={ detailsData.flow } />
+          </div>
+        </div>
+        <div className='detailsSer otm '>
+          <div className='iconTitle'>
+            <img alt='' className='icon'src={ require('../img/sever.png') } />
+            <span>服务承诺</span>
+          </div>
+          <div className='detailsPrice'>
+            <img alt='' src={ detailsData.guarantee } />
+          </div>
+        </div>
+        <div className='detailsSer otm '>
+          <div className='iconTitle'>
+            <img alt='' className='icon'src={ require('../img/xuzhi.png') } />
+            <span>预约须知</span>
+          </div>
+          <div className='detailsPrice'>
+            {
+            notes.map((item, index) => (
+              <p key={ `${ index + 1 }` }>{ item }</p>
+            ))
+            }
+          </div>
+        </div>
+      </div>
+      <div className='orderBtnWrap'>
+        <div className='orderBtn'onClick={ () => {
+          goBackPage(detailsData.cityId, detailsData.categoryId)
+        } }
+        >立即预约</div>
+      </div>
+    </div>
+  )
+}
+
+export default Details
+
+
+
+
+ jiadianqingxi/components/order.js
+
+import React from 'react'
+import { Picker, List, WhiteSpace, ActivityIndicator, Button } from 'antd-mobile'
+import { getStore } from '@boluome/common-lib'
+import { NewPromotion, ContactShow, Contact, Mask, SlidePage } from '@boluome/oto_saas_web_app_component'
+
+import '../style/order.scss'
+
+const ListItem = List.Item
+
+const order = props => {
+  const { contact = '',
+    changeSum, handleChangeServiceDate,
+    orderSubmit, serviceDate, ishas, disabled, handlePromotionChange,
+    showToastNoMask, handleChangeContactFnList, point,
+  } = props
+  let { detailsData = {}, sum = 1 } = props
+  const { timeData = [],
+    supplier = 'zmn', curDiscountData = { coupon: {}, activity: {}, discount: '0' },
+  } = props
+  detailsData = getStore('detailsData1', 'session')
+  let introductions = detailsData.introduction
+  let notes = detailsData.note
+  const sumPrice = detailsData.price * sum
+  if (!introductions) {
+    introductions = []
+  }
+  if (!notes) {
+    notes = []
+  }
+  const handleSuccess = () => {
+    Mask(
+      <SlidePage target='right' type='root' >
+        <Contact handleChange={ contacts => handleChangeContactFnList(contacts, sum) } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  const seasons = timeData.map(({ time, date }) => ({ label: date, value: date, children: time.map(key => ({ label: key, value: key })) }))
+  return (
+    <div className='orderWrap'>
+      <div className='orderMain'>
+        {
+          ishas === '1' ? (<ActivityIndicator toast text='该城市尚未服务' size='large' />) : ('')
+        }
+        <List>
+          <div className='addrWrap'>
+            <ContactShow { ...{ contact, handleSuccess } } />
+          </div>
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          <div className='showData'>
+            <div className='showMain'>
+              <div className='showPic'><img alt='' src={ detailsData.banner } /></div>
+              <div className='showPrice'>
+                <div className='show_title'>
+                  { detailsData.categoryName }
+                </div>
+                <div className='show_sum'>x { sum }</div>
+                <div className='show_price'>￥{ detailsData.price }</div>
+              </div>
+              <div className='clear' />
+            </div>
+          </div>
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          <ListItem extra={
+            <div>
+              <span onClick={ () => { changeSum(--sum, contact) } }><img alt='' src={ require('../img/delete.png') } /></span>
+              <span className='Sum'>{sum}</span>
+              <span onClick={ () => { changeSum(++sum, contact) } }><img alt='' src={ require('../img/ic_add.png') } /></span>
+            </div>
+          }
+          >购买数量</ListItem>
+        </List>
+        <List className='ItemTime'>
+          <PickerWrap { ...{ seasons, serviceDate, handleChangeServiceDate, showToastNoMask } } />
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          <NewPromotion orderType='jiadianqingxi' channel={ supplier } amount={ sumPrice } count={ sum } handleChange={ reply => handlePromotionChange(reply) } />
+        </List>
+        <div className='supplier'>此次服务由菠萝觅合作伙伴[啄木鸟]提供服务</div>
+      </div>
+      <div className='orderBtnWrap'>
+        <div className='orderSumPrice'>￥ { (sumPrice - curDiscountData.discount).toFixed(2) }</div>
+        {
+          disabled ? (<button className='orderBtn orderBg' onClick={ () => {
+            orderSubmit(detailsData, sum, contact, serviceDate, curDiscountData, point)
+          }
+         }>立即下单</button>) : (<button disabled='disabled' className='orderBtn'>立即下单</button>)
+        }
+      </div>
+    </div>
+  )
+}
+const PickerWrap = ({ seasons, serviceDate, handleChangeServiceDate, showToastNoMask }) => {
+  // console.log('serviceDate--', serviceDate)
+  if (serviceDate) {
+    console.log('111---', serviceDate)
+    return (
+      <Picker data={ seasons }
+        title='选择日期'
+        extra={ serviceDate ? (`${ serviceDate[0] } ${ serviceDate[1] }`) : '请选择上门服务时间' }
+        cols={ 2 }
+        onChange={ v => handleChangeServiceDate(v) }
+      >
+        <ListItem arrow='horizontal' >预约时间</ListItem>
+      </Picker>
+    )
+  }
+  return (
+    <ListItem extra={
+      <div>
+        <span><Button style={{ color: '#888', border: '0', fontSize: '0.28rem' }} onClick={ showToastNoMask }>请选择服务时间</Button></span>
+      </div>
+    } arrow='horizontal'
+    >
+      预约时间
+    </ListItem>
+  )
+}
+export default order
+
+
+ jiadianqingxi/components/root.js
+
+import React from 'react'
+import customize from 'customize'
+
+const Root = ({ children }) => (<div>{ children }</div>)
+
+export default customize(Root)
+
+
+
+
+ jiadianqingxi/containers/app.js
+
+// common
+import { connect } from 'react-redux'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+import { setStore, getStore } from '@boluome/common-lib'
+import { login, getLocationGaode } from 'business'
+// import { browserHistory } from 'react-router'
+// self
+import { getListDataFn } from '../actions/app.js'
+import { getDetailsData } from '../actions/details.js'
+
+import App from '../components/app'
+
+const mapStateToProps = state => { // 给组建、件添加属性
+  // console.log('state==========', state)
+  const { markId, getListData } = state
+  const { listData, selectedCIty } = getListData
+  return {
+    markId,
+    listData,
+    selectedCIty,
+  }
+}
+const mapDispatchToProps = dispatch => { // 添加方法
+  return {
+    dispatch,
+    getListDataHandle: res => {
+      console.log('res', res)
+      dispatch({ type: 'CHANGE_SELECTED_CITY', selectedCIty: res.name })
+      dispatch(getListDataFn(res.name))
+    },
+    goDetails: (cityId, Id) => {
+      const markId = {
+        cityId,
+        Id,
+      }
+      dispatch({ type: 'CHANGE_SELECTED_GOODS', markId })
+      setStore('markId', markId, 'session')
+      console.log('markId--------', markId)
+      dispatch(getDetailsData(markId, Id, cityId))
+      // browserHistory.push(`/jiadianqingxi/details?categoryId=${ Id }&cityId=${ cityId }`)
+    },
+  }
+}
+const mapFunToComponent = dispatch => { // 整个生命周期只执行一次
+  return {
+    componentWillMount: () => {
+      login(err => {
+        if (err) {
+          console.log(err)
+        } else {
+          console.log('我是用户绑定')
+        }
+      })
+      getLocationGaode(err => {
+        let localCity = '上海'
+        if (err) {
+          console.log('定位失败')
+        } else {
+          localCity = getStore('currentPosition', 'session').city.replace(/['省', '市', '县', '区']/, '')
+        }
+        dispatch({ type: 'CHANGE_SELECTED_CITY', selectedCIty: localCity })
+        console.log(getStore)
+        dispatch(getListDataFn(localCity))
+      })
+    },
+  }
+}
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+
+
+
+
+ jiadianqingxi/containers/details.js
+
+// common
+import { connect } from 'react-redux'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+import { getStore } from '@boluome/common-lib'
+import { browserHistory } from 'react-router'
+
+import Details from '../components/details'
+
+const mapStateToProps = () => {
+  // console.log('state==========', state)
+  // const { getDetailsData } = state
+  const detailsData = getStore('detailsData1', 'session')
+  return {
+    detailsData,
+  }
+}
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goBackPage: (cityId, Id) => {
+      browserHistory.push(`/jiadianqingxi/order?cityId=${ cityId }&categoryId=${ Id }`)
+    },
+  }
+}
+const mapFunToComponent  = () => ({
+  // componentDidMount: () => console.log('root mounted')
+  // componentWillMount: data => dispatch( getDetailsData(data))
+  // componentWillReceiveProps: nextProps => {
+  //   const { detailsData } = nextProps
+  //   dispatch({ type:        'KJIN_DETAILSHOW',  detailsData: data,})
+  // },
+})
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Details)
+)
+
+
+
+
+ jiadianqingxi/containers/order.js
+
+// common
+import { connect } from 'react-redux'
+import { wrap, SlidePage, Mask } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+// import { browserHistory } from 'react-router'
+import { setStore, getStore } from '@boluome/common-lib'
+import { getOrderTime, getOrder, getAddrContact, handleChangeContact } from '../actions/order.js'
+import Order from '../components/Order'
+
+const mapStateToProps = state => {
+  const { getDetailsData, order } = state
+  const { contact, timeData, serviceDate, sum, curDiscountData, disabled, point } = order
+  // console.log('state----', state)
+  return {
+    getDetailsData,
+    order,
+    timeData,
+    serviceDate,
+    contact,
+    sum,
+    curDiscountData,
+    disabled,
+    point,
+  }
+}
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    // 返回的选择收货地址
+    handleChangeContactFnList: (contact, sum) => {
+      setStore('Choosecontact', contact, 'session')
+      dispatch(handleChangeContact(contact, sum))
+    },
+    // 这里是家电清洗的购买数量的加减
+    changeSum: (sum, contact) => {
+      if (sum < 1) sum = 1
+      dispatch({ type: 'CHANGE_NUMBER', sum })
+      if (contact) { // 根据经纬度判断服务时间
+        const latOrlong = {
+          latitude:  contact.latitude,
+          longitude: contact.longitude,
+          cityId:    contact.cityId,
+        }
+        dispatch(getOrderTime(latOrlong, sum))
+      } else {
+        dispatch({ type: 'MARK_ORDERBTN', disabled: false })
+      }
+    },
+    // 通过收货地址经纬度判断该城市是否存在服务在请求服务时间
+    handleChangeServiceDate: serviceDate => {
+      console.log('handleChangeServiceDate---', serviceDate)
+      if (!serviceDate || serviceDate === '') {
+        dispatch({ type: 'MARK_ORDERBTN', disabled: false })
+      } else {
+        dispatch({ type: 'CHOOSE_SERVICETIME', serviceDate })
+        dispatch({ type: 'MARK_ORDERBTN', disabled: true })
+      }
+    },
+    // 对红包优惠活动的处理
+    handlePromotionChange: curDiscountData => {
+      dispatch({ type: 'KJIN_PROMOTION', curDiscountData })
+    },
+    // 确认下单，需求修改在此处登录成功后再下单
+    orderSubmit: (detailsData, sum, contact, time, curDiscountData, point) => {
+      if (time) {
+        dispatch(getOrder(detailsData, sum, contact, time, curDiscountData, point))
+      } else {
+        Toast.info('请选择服务时间', 2)
+      }
+    },
+    showToastNoMask: () => {
+      const contact = getStore('Choosecontact', 'session')
+      if (contact) {
+        Toast.info('该地区无服务', 2, null, false)
+      } else {
+        Toast.info('请填写服务地址', 2, null, false)
+      }
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+// componentDidMount: () => console.log('root mounted')
+  componentWillMount: () => {
+    dispatch(getAddrContact())
+  },
+  componentWillUnmount: () => {
+    SlidePage.closeAll()
+    Mask.closeAll()
+  },
+})
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Order)
+)
+
+
+
+
+ jiadianqingxi/index.js
+
+import React      from 'react'
+import { render } from 'react-dom'
+import { setServerUrl } from '@boluome/common-lib'
+import Root       from './root'
+
+import '../../styles/index.scss'
+
+setServerUrl(/192.168.|localhost/.test(location.hostname)
+                ? 'https://dev-api.otosaas.com'
+                : `${ location.origin }/api`)
+
+render(<Root />, document.querySelector('#root'))
+
+
+
+
+ jiadianqingxi/reducers/app.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:        'jiadianqingxi',
+  selectedCIty: '上海',
+}
+
+const app = (state = initialState, action) => {
+    switch (action.type) {
+      case 'CHANGE_SELECTED_GOODS' :
+      case 'CHANGE_SELECTED_CITY' :
+        console.log('appsmarge------',return state);
+        default: return state;
+    }
+}
+
+export default app;
+
+
+
+
+ jiadianqingxi/reducers/details.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title: 'jiadianqingxi',
+}
+const getDetailsData = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_DETAILSHOW' :
+    case 'CHANGE_SELECTED_GOODS' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default getDetailsData
+
+
+
+
+ jiadianqingxi/reducers/getListData.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title: 'jiadianqingxi',
+}
+const getListData = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_LISTSHOW':
+    case 'CHANGE_SELECTED_CITY':
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default getListData
+
+
+
+
+ jiadianqingxi/reducers/index.js
+
+import { combineReducers } from 'redux'
+// 引入reducers
+import getListData  from './getListData'
+import getDetailsData  from './details'
+import order from './order'
+// 组合reducers
+export default combineReducers({
+  getListData,
+  getDetailsData,
+  order,
+})
+
+
+
+
+ jiadianqingxi/reducers/order.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:           'jiadianqingxi',
+  sum:             1,
+  curDiscountData: { coupon: {}, activity: {}, discount: 0 },
+  disabled:        false,
+}
+const getDetailsData = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_DETAILSHOW':
+    case 'KJIN_ORDERTIME' :
+    case 'CHANGE_CONTACT' :
+    case 'CHANGE_NUMBER' :
+    case 'CHANGE_POINT' :
+    case 'CHOOSE_SERVICETIME' :
+    case 'NOHAS_CITYNAME' :
+    case 'MARK_ORDERBTN' :
+    case 'KJIN_PROMOTION' :
+    case 'CATEGORYID' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default getDetailsData
+
+
+
+
+ jiadianqingxi/root.js
+
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+import { createStore, applyMiddleware } from 'redux'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+
+// 由Reducers创建状态树
+const store = createStore(reducers, applyMiddleware(thunk))
+// 定义根组件
+const Root = () => (<Provider store={ store }><Routes /></Provider>)
+
+export default Root
+
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/jiadianqingxi' component={ require('react-router?name=app!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+      <Route path='details' component={ require('react-router?name=details!./containers/details') } />
+      <Route path='order' component={ require('react-router?name=order!./containers/order') } />
+      <Route path='contactlist' component={ require('react-router?name=contactlist!./components/contactlist') } />
+    </Route>
+  </Router>
+)
+
+
+
+
+ jiadianqingxi/style/details.scss
+
+@import 'self_common';
+
+
+.detailsWrap{
+   width: $w;
+   height: $h;
+   .detailsMain{
+      width: $w;
+      @extend .pos-absolute;
+      top:0;
+      bottom:112px;
+      overflow: auto;
+      .detailsPic{
+         width: $w;
+         height:auto;
+         background:#fff;
+         .details_img{
+            width: $w;
+            height:552px;
+            img{
+               width: $w;
+               height:$h;
+            }
+         }
+         .details_price{
+            width: $w;
+            height:auto;
+            margin-bottom:32px;
+            .title{
+               width: $w;
+               text-align: center;
+               padding:26px 0;
+               font-size:32px;
+               color:rgb(38,38,38);
+            }
+            .price{
+               width: $w;
+               text-align: center;
+               padding-bottom:26px;
+               color:#ffab00;
+               span{
+                 font-size:44px;
+               }
+            }
+
+         }
+      }
+      .otm{
+          padding:32px 32px;
+          background:#fff;
+          margin-bottom:32px;
+          .iconTitle{
+             width: $w;
+             height:44px;
+             line-height: 44px;
+             margin-bottom:20px;
+          }
+          .icon{
+            width: 32px;
+            height:auto;
+            max-height:32px;
+            margin-right:20px;
+            margin-top:6px;
+            @extend .inline-block;
+            float:left;
+          }
+          span{
+              @extend .inline-block;
+              float:left;
+              color:rgb(38,38,38);
+              font-size:30px;
+          }
+          .detailsPrice{
+             color:rgb(170,170,170);
+             font-size:24px;
+             p{
+                line-height:44px;
+             }
+             img{
+                width: $w;
+                height:auto;
+             }
+          }
+      }
+   }
+   .orderBtnWrap{
+      @extend .pos-fixed;
+      bottom:0;
+      left:0;
+      background:#fff;
+      width: $w;
+      height:112px;
+      .orderBtn{
+         width: 60%;
+         height:90px;
+         background:#ffab00;
+         border-radius: 8px;
+         margin-left:20%;
+         margin-top:11px;
+         color:#fff;
+         font-size:36px;
+         text-align: center;
+         line-height:90px;
+      }
+   }
+}
+
+
+
+
+ jiadianqingxi/style/index.scss
+
+@import 'self_common';
+
+#root{
+   width:$w;
+   height:$h;
+   .listMain{
+      width: $w;
+      height: $h;
+      .headerWrap{
+        width: $w;
+        height:88px;
+        background:#fff;
+        border-bottom:2px solid rgb(227,227,228);
+        @extend .pos-fixed;
+        .header_l{
+           width: 15%;
+           height:$h;
+           float:left;
+           @extend .none;
+        }
+        .header_c{
+           width: 70%;
+           height:$h;
+           float:left;
+           font-size:30px;
+           color:#666;
+           text-indent: 32px;
+           line-height: 88px;
+           .jiaoPic{
+             width: 20px;
+             height:auto;
+             margin-left:16px;
+           }
+        }
+        .header_r{
+           width: 15%;
+           height:$h;
+           float:right;
+           padding:21px 32px 0 0;
+           .myPic{
+             width: 44px;
+             height:auto;
+             float:right;
+           }
+        }
+      }
+      .contentWrap{
+          @extend .pos-absolute;
+          top:90px;
+          bottom:0;
+          background:#fff;
+          padding:0 32px;
+          overflow: auto;
+          z-index: 2;
+          .listItem{
+             width: 100%;
+            //  height:280px;
+             height:auto;
+             float:left;
+             padding:32px 0;
+             border-bottom:1px solid rgb(231,231,231);
+          }
+          .itemPic{
+             width: 35%;
+             height:auto;
+             float:left;
+             margin-right: 5%;
+             img{
+                width: $w;
+                height:auto;
+             }
+          }
+          .item{
+             width: 60%;
+             float:left;
+             .title{
+                width: $w;
+                height:auto;
+                @extend .inline-block;
+                margin-bottom:14px;
+                margin-top:16px;
+                font-size:28px;
+                color:rgb(17,17,17);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+             }
+             .theme{
+               width: $w;
+               height:auto;
+               @extend .inline-block;
+               font-size:24px;
+               color:rgb(153,153,153);
+               line-height:0.35rem;
+             }
+             .price{
+                 width: 50%;
+                 height:auto;
+                 @extend .inline-block;
+                 color:#ff4848;
+                 margin: 13px 0px 0 0;
+                 font-size:32px;
+             }
+             .channel{
+               width: 40%;
+               height:auto;
+               @extend .inline-block;
+               color:rgb(153,153,153);
+               margin: 16px 10px 0 0;
+               font-size:22px;
+             }
+          }
+      }
+      .kongWrap{
+        width: $w;
+        height:$h;
+        background:#f5f5f6;
+        @extend .pos-fixed;
+        top:90px;
+        bottom:0;
+        z-index: 50;
+        img{
+           width: 360px;
+           height:360px;
+           @include s_allCenter(80%);
+        }
+        .tips{
+          width: 360px;
+          height:auto;
+          @include s_allCenter(-95%);
+          text-align: center;
+          color:rgb(136,136,136);
+        }
+      }
+   }
+}
+
+
+
+
+ jiadianqingxi/style/order.scss
+
+@import 'self_common';
+
+.orderWrap{
+    width: $w;
+    height:100%;
+    .orderMain{
+      width: 100%;
+      height:calc(100% - 112px);
+      overflow: scroll;
+    }
+    .addrWrap{
+       width: $w;
+       height:auto;
+       background:#fff;
+       @extend .pos-relative;
+       top:0;
+       .addr_no{
+           width: $w;
+           height: 164px;
+           padding:32px;
+          //  float:left;
+          //  display:none;
+           img{
+               @extend .inline-block;
+               float:left;
+               width: 50px;
+               height:auto;
+               margin-top:24px;
+           }
+           span{
+               @extend .inline-block;
+               float: left;
+               margin-top:32px;
+               margin-left:20px;
+               color:rgb(255,170,0);
+               font-size:33px;
+           }
+           .goChoose{
+              float: right;
+              width: 20px;
+              margin-top:32px;
+           }
+       }
+       .addr_one{
+          padding:32px;
+          .addr_main{
+              width: $w;
+              height:auto;
+              .clear{
+                  clear:both;
+              }
+              .addr_l{
+                 width: 10%;
+                 height:auto;
+                 float:left;
+                 img{
+                    width: 30px;
+                    margin-top:35%;
+                 }
+              }
+              .addr_c{
+                 width: 80%;
+                 height:auto;
+                 float:left;
+                 font-size:26px;
+                 .addr_name{
+                //    display:flex;
+                //    align-items: center;
+                //    justify-content: space-between;
+                 }
+              }
+              .addr_r{
+                width: 10%;
+                height:auto;
+                float:left;
+                 img{
+                    width: 20px;
+                    float: right;
+                    margin-top:45%;
+                 }
+              }
+              .kong{
+                  margin-bottom:12px;
+                  span{
+                     margin-right:14px;
+                  }
+                  .tag{
+                     @extend .inline-block;
+                    //  width: 56px;
+                     height:32px;
+                     border-radius: 6px;
+                     background:rgb(255,160,0);
+                     color:#fff;
+                     text-align: center;
+                  }
+              }
+          }
+       }
+       .addr_line{
+          width: $w;
+          height:10px;
+          background: url(../img/bgs.png) repeat-x;
+          bottom: -10px;
+          background-size: contain;
+       }
+
+    }
+    .showData{
+       padding:32px;
+       margin-top:10px;
+       background:#fff;
+       .showMain{
+          width: $w;
+          height:auto;
+          .clear{
+            clear: both;
+          }
+          .showPic{
+             width: 35%;
+             height:150px;
+             float:left;
+             margin-right:5%;
+             img{
+                width: $w;height:$h;
+             }
+          }
+          .showPrice{
+              width: 60%;
+              float:left;
+              .show_title{
+                 width: $w;
+                 margin-bottom:16px;
+                 white-space: nowrap;
+                 overflow: hidden;
+                 text-overflow: ellipsis;
+                 font-size:30px;
+              }
+              .show_sum{
+                  color:#ffab00;
+                  text-align: right;
+                  margin-bottom:16px;
+                  font-size:0.35rem;
+              }
+              .show_price{
+                  width: $w;
+                  font-size:0.35rem;
+                  color: #ffab00;
+              }
+          }
+       }
+    }
+    .Sum{
+        margin:0 28px;
+    }
+    .supplier{
+      background: #f5f5f6;
+      width: $w;
+      height:82px;
+      line-height: 82px;
+      padding: 0 32px;
+      font-size:0.24rem;
+      color:rgb(170,170,170);
+    }
+    .promotion_title{
+        padding:0 32px;
+        width: $w;
+        height:82px;
+        line-height: 82px;
+        font-size:28px;
+    }
+  .orderBtnWrap{
+     @extend .pos-fixed;
+     bottom:0;
+     left:0;
+     width: $w;
+     height:112px;
+     border-top:1px solid #f5f5f6;
+     background:#fff;
+     .orderSumPrice{
+        width: 60%;
+        height:$h;
+        color: #ffab00;
+        font-size:34px;
+        font-weight: 700;
+        float:left;
+        text-indent: 32px;
+        line-height:112px;
+     }
+     .orderBtn{
+         width: 40%;
+         height:$h;
+         text-align: center;
+         line-height:112px;
+         font-size:36px;
+         color:#fff;
+         float:left;
+     }
+     .orderBg{
+         background: #ffab00;
+     }
+  }
+  .ItemTime .am-list-item{
+    .am-list-line{
+      height:88px;
+    }
+  }
+}
+
+
+
+
+ jiadianqingxi/style/self_common.scss
+
+*{margin: 0;padding: 0;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);box-sizing: border-box;}
+a{color: #000}
+html{font-size: 16px;height: 100%;overflow: hidden;}
+body{height: 100%;background: #f5f5f6;font-family: -apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif;-webkit-font-smoothing:antialiased;overflow-y: scroll;}
+ul{list-style: none;}
+h2{font-weight: normal;}
+input{border: none;outline: none;}
+input[type="search"]{-webkit-appearance:none;}
+input::-webkit-search-cancel-button {display: none;}
+button{outline: none;border: 0;}
+
+body{
+  background-color: #f5f5f6;
+}
+//Parameter declarations,$W wide $h high,
+$w : 100%;
+$h : 100%;
+$posa : absolute;
+$posr : relative;
+
+
+
+
+
+//Block of code that defines public
+// Relative to the above and below Center
+// @mixin s_allCenter{
+//     position: absolute;
+//     left: 50%;
+//     top: 50%;
+//     transform: translateX(-50%) translateY(-50%);
+//     -ms-transform:translateX(-50%) translateY(-50%);     /* IE 9 */
+//     -moz-transform:translateX(-50%) translateY(-50%);    /* Firefox */
+//     -webkit-transform:translateX(-50%) translateY(-50%); /* Safari 和 Chrome */
+//     -o-transform:translateX(-50%) translateY(-50%);
+// }
+@mixin s_allCenter($value: 50%){
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-$value);
+    -ms-transform:translateX(-50%) translateY(-$value);     /* IE 9 */
+    -moz-transform:translateX(-50%) translateY(-$value);    /* Firefox */
+    -webkit-transform:translateX(-50%) translateY(-$value); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%) translateY(-$value);
+}
+$displayArray: block inline inline-block none;
+
+@each $d in $displayArray {
+  .#{ $d } {
+    display: $d
+  }
+}
+
+$positionArray: absolute relative fixed;
+
+@each $p in $positionArray {
+  .pos-#{ $p } {
+     position: $p
+  }
+}

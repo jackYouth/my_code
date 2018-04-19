@@ -1,0 +1,41 @@
+@import "../../../styles/s_common.scss";
+
+.airport-search {
+  .leftCom {
+    width: 20% !important;
+    padding-right: 10px;
+    margin-top: 23px;
+    float: left;
+  }
+  .searchMain {
+    width: 65% !important;
+    background-image: none;
+    background: none;
+    border: none;
+    input {
+      margin-left: 50px;
+      background: none;
+    }
+  }
+}
+
+.airport-container {
+  padding-left: 30px;
+  min-height: calc(100% - 100px);
+  background: $bg-ff;
+  .airport-item {
+    padding-top: 30px;
+    padding-bottom: 30px;
+    @include s_border_b;
+    h1 {
+      @include s_fontDemo(28px, 28px, $font-33);
+      font-weight: normal;
+      margin-bottom: 18px;
+    }
+    p {
+      @include s_fontDemo(24px, 24px, $font-ad);
+      font-weight: normal;
+      margin-bottom: 18px;
+    }
+  }
+}

@@ -1,0 +1,9 @@
+@import '../../../styles/index.scss';
+
+.local-fetch {
+  font-size: .3rem;
+  text-align: center;
+  @include color($gray-3);
+  display: flex;
+  justify-content: center;
+}

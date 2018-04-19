@@ -1,0 +1,105 @@
+@mixin w($w: 0) {
+  width: $w
+}
+
+@mixin h($h: 0) {
+  height: $h
+}
+
+@mixin lh($h: 0) {
+  line-height: $h
+}
+
+@mixin wh($w: 100%, $h: 100%) {
+  @include w($w);
+  @include h($h);
+}
+
+@mixin z($z: 0) {
+  z-index: $z
+}
+
+@mixin o($o: 1) {
+  opacity: $o
+}
+
+@mixin font($size: 1, $weight: normal) {
+  font-size: $size !important;
+  font-weight: $weight;
+}
+
+@mixin rem($size) {
+  @include font(#{ $size }rem);
+}
+
+@mixin color($color: #fff) {
+  color: $color
+}
+
+@mixin padding($val: 0, $direction: top right bottom left) {
+  @if(length($val) > 1) {
+    padding: $val
+  }
+  @else {
+    @each $d in $direction {
+      padding-#{ $d }: $val
+    }
+  }
+}
+
+@mixin margin($val: 0, $direction: top right bottom left) {
+  @if(length($val) > 1) {
+    margin: $val
+  }
+  @else {
+    @each $d in $direction {
+      margin-#{ $d }: $val
+    }
+  }
+}
+
+@mixin box($val: (top: 0, left: 0)) {
+  @each $k, $v in $val {
+      #{ $k }: $v;
+  }
+}
+
+@mixin radius($radius: 5px) {
+  border-radius: $radius
+}
+
+//颜色
+@mixin bgc($color: #fff) {
+  background-color: $color
+}
+
+@mixin transform($val) {
+  transform: $val;
+  -webkit-transform: $val;
+}
+
+@mixin transition($prop: all, $dur: .3s, $func: ease, $de: 0s) {
+    $transition: $prop $dur $func $de;
+    transition: $transition;
+    -webkit-transition: $transition;
+}
+
+@mixin rotate($deg: 45deg) {
+  @include transform(rotate($deg))
+}
+
+@mixin translateX($x: 0) {
+  @include transform(translateX($x));
+}
+
+@mixin translateY($y: 0) {
+  @include transform(translateY($y));
+}
+
+@mixin shadow($val) {
+  box-shadow: $val
+}
+
+@mixin talign($align) {
+  text-align: $align
+}

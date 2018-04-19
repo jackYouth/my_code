@@ -1,0 +1,185 @@
+@import 's_common.scss';
+
+.no-error{
+  height: 400px;
+  padding-top: 120px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+  img{
+    height: 180px;
+    display: block;
+    margin: 0 auto 14px;
+  }
+  p{
+    font-size:28px;
+    color:#333333;
+    line-height:36px;
+    text-align:center;
+    margin-bottom: 10px;
+  }
+  span{
+    display: block;
+    font-size:20px;
+    color:#999999;
+    line-height:30px;
+    text-align:center;
+  }
+ }
+
+a{
+  box-sizing: border-box;
+ }
+
+.bill-info{
+  .img-container{
+    background: #fff;
+    overflow: hidden;
+    height: 390px;
+    h1{
+      font-size:28px;
+      color:#333333;
+      font-weight: normal;
+      line-height: 80px;
+      padding-left: 28px;
+    }
+    img{
+      display: block;
+      margin: 0 auto 14px;
+      @include s_blockDemo(1.8rem, auto);
+    }
+    p{
+      font-size:28px;
+      color:#333333;
+      line-height: 36px;
+      text-align: center;
+    }
+    span{
+      display: block;
+      margin: 0 auto;
+      width: 320px;
+      font-size:20px;
+      color:#999999;
+      line-height:30px;
+      text-align:center;
+    }
+  }
+  .list{
+    padding: 5px 32px;
+    border-top: 1px solid #e4e4e5;
+    background: #fff;
+    li{
+      width: 100%;
+      line-height: 60px;
+      overflow: hidden;
+      p{
+        font-size: 28px;
+        color: #999999;
+      }
+      .left{
+        float: left;
+      }
+      .right{
+        float: right;
+      }
+    }
+    }
+
+    .orderInfo-top-container{
+      border-bottom: 1px solid #e5e5e5;
+      .orderInfo-top{
+        background: #fff;
+        padding: 20px 0 30px 60px;
+        border-bottom: 1px solid #e5e5e5;
+        .top{
+          font-size:28px;
+          color:#333333;
+          line-height: 40px;
+        }
+        .middle{
+          font-size:80px;
+          color:#333333;
+          line-height: 240px;
+          text-align: center;
+        }
+      }
+    }
+ }
+
+
+
+
+
+
+/* 默认样式改变*/
+.my-list .am-list-item{height: 1.07rem; }
+.my-list .am-list-item .am-list-line .am-list-extra{font-size: .3rem; -ms-flex-preferred-size: none;flex-basis: none; -webkit-box-flex: 1; -ms-flex: 1; flex: 1; color: $black111; }
+.my-list .am-list-item .am-list-line .am-list-content{font-size: .3rem; -webkit-box-flex: 0;-ms-flex: none;flex: none; color: $black111; }
+
+
+.am-modal.am-modal-android .am-modal-content .am-modal-footer .am-modal-button-group-h{-webkit-box-pack: justify; -ms-flex-pack: justify; justify-content: space-between; }
+.am-modal-content .am-modal-header .am-modal-title img{display: block; margin: 0 auto; }
+
+/* .bill-info-middle{*/
+/*   background: #fff;*/
+/*   padding-left: 30px;*/
+/*   li{*/
+/*     overflow: hidden;*/
+/*     border-bottom: 1px solid #e1e1e2;*/
+/*     &:last-child{*/
+/*       border-bottom: none;*/
+/*     }*/
+/*     p{*/
+/*       font-size: 30px;*/
+/*       line-height: 106px;*/
+/*       color:#111111;*/
+/*       &.li-left{*/
+/*         float: left;*/
+/*       }*/
+/*       &.li-right{*/
+/*         float: right;*/
+/*         padding-right: 27px;*/
+/*       }*/
+/*     }*/
+/*   }*/
+/* }*/
+/**/
+/* .bill-list{*/
+/*   list-style: none;*/
+/*   overflow: hidden;*/
+/*   padding-left: 0.32rem;*/
+/*   background: #fff;*/
+/*   li{*/
+/*     border-bottom: 1px solid $grey555;*/
+/*     height: 1.06rem;*/
+/*     line-height: 1.06rem;*/
+/*     padding-right: 0.32rem;*/
+/*     &:last-child{*/
+/*       border-bottom: none;*/
+/*     }*/
+/*     h1{*/
+/*       font-weight: normal;*/
+/*       font-size: 0.30rem;*/
+/*       color: $black111;*/
+/*       float: left;*/
+/*     }*/
+/*     p{*/
+/*       float:right;*/
+/*       font-size: 0.28rem;*/
+/*       position: relative;*/
+/*       .price{*/
+/*         color: #f66;*/
+/*         margin-right: 0.40rem;*/
+/*       }*/
+/*       .status{*/
+/*         color:$grey000;*/
+/*       }*/
+/*       img{*/
+/*         display: inline-block;*/
+/*         height: .26rem;*/
+/*         right: 0;*/
+/*         @include s_middle;*/
+/*       }*/
+/*     }*/
+/**/
+/*   }*/
+/* }*/

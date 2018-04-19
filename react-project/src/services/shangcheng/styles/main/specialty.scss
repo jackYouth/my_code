@@ -1,0 +1,64 @@
+@import "../common.scss";
+
+.specialty {
+  .spacialty-category {
+    margin-bottom: 20px;
+    .specialty-list-title {
+      height: 92px;
+      @include s_fontDemo(32px, 92px, $font-33);
+      padding-left: 30px;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      background: $bg-ff;
+      &>span {
+        width: 250px;
+      }
+      p {
+        -webkit-box-flex: 1;
+            -ms-flex: 1;
+                flex: 1;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-pack: end;
+            -ms-flex-pack: end;
+                justify-content: flex-end;
+        -webkit-box-align: center;
+            -ms-flex-align: center;
+                align-items: center;
+        padding-right: 20px;
+        @include s_border_b;
+        span {
+          @include s_fontDemo(24px, 92px, $font-99);
+        }
+        .am-icon {
+          color: $font-99;
+        }
+      }
+    }
+    .specialty-list {
+      box-sizing: border-box;
+      padding-top: 5px;
+      overflow-y: auto;
+      background: $bg-ff;
+    }
+  }
+  .sc-ad {
+    padding: 0;
+    padding-top: 100px;
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    img {
+      width: 100%;
+    }
+    p {
+      left: 0;
+      bottom: 0;
+    }
+  }
+}

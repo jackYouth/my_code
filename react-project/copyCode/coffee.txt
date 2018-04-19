@@ -1,0 +1,4805 @@
+         
+ 
+ 
+ 
+ coffee/actions/index.js 
+ 
+import { get, getStore, setStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+
+// 通过经纬度定位商家，在展示一系列数据请求
+export const indexDatalist = point => dispatch => {
+  const handleClose = Loading()
+  const goodsListUrl = '/coffee/v2/nearByMerchantAndGoods'
+  const { latitude, longitude } = point
+  const sendData = {
+    coordtype: '4',
+    lat:       latitude,
+    lng:       longitude,
+    mapType:   'gaode',
+  }
+  get(goodsListUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      console.log('coffee---data', data)
+      let mark = getStore('tagsmark', 'session')
+      if (mark) {
+        console.log(mark)
+      } else {
+        mark = data.tags[0]
+      }
+      dispatch({
+        type:      'KJIN_GOODSLIST',
+        goodslist: data,
+        tagsmark:  mark,
+      })
+      setStore('coffee_availableTime', data.availableTime, 'session')
+      setStore('coffee_merchant', data.merchant, 'session')
+      // handleClose()
+    } else {
+      console.log('数据请求失败', message)
+      dispatch({
+        type:      'KJIN_GOODSLIST',
+        goodslist: '',
+      })
+      dispatch({ type: 'KJIN_OUTRANGE', outRange: true })
+    }
+    handleClose()
+  })
+}
+
+// 获取改用户的所有收货地址列表
+export const getContactList = () => dispatch => {
+  const contactListUrl = '/user/v1/contacts'
+  const sendData = {
+    userId: getStore('customerUserId', 'session'),
+  }
+  get(contactListUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      // console.log('getContactList-----', data)
+      dispatch({
+        type:        'KJIN_CONTACTLIST',
+        contactData: data,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+  })
+}
+const changeContact = (contact, point, title, dispatch) => {
+  dispatch({
+    type:           'KJIN_OPTIMALCONTACT',
+    OptimalContact: contact,
+    userPoint:      point,
+  })
+  setStore('coffee_contact', contact, 'session')
+  dispatch(indexDatalist(point))
+  dispatch({ type: 'TITLE_ADDRESS', titleAddress: title })
+}
+// 获取根据当前定位在用户收货地址中选择最优的收货地址
+export const getOptimalContact = point => dispatch => {
+  const OptimalContactUrl = '/user/v1/contact'
+  const currentPosition = getStore('currentPosition', 'session').street + getStore('currentPosition', 'session').streetNumber
+  const { latitude, longitude } = point
+  const userId = getStore('customerUserId', 'session')
+  const sendData = {
+    userId,
+    longitude,
+    latitude,
+    mapType: 'gaode',
+  }
+  get(OptimalContactUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      console.log('getOptimalContact----', data)
+      if (data) { // 有最优地址的时候
+        const choosePoint = { latitude: data.latitude, longitude: data.longitude }
+        const title = data.detail
+        if (data.distance > 3) { // 判断范围
+          changeContact('', point, currentPosition, dispatch)
+        } else {
+          changeContact(data, choosePoint, title, dispatch)
+        }
+      } else { // 没有返回地址的时候
+        changeContact('', point, currentPosition, dispatch)
+      }
+    } else { // 当请求最优地址失败，进行自动定位
+      console.log('数据请求失败', message)
+      console.log('currentPosition----', currentPosition)
+      changeContact('', point, currentPosition, dispatch)
+    }
+  })
+}
+         
+ 
+ 
+ 
+ coffee/actions/order.js 
+ 
+import { Toast } from 'antd-mobile'
+import { get, getStore, setStore, send, removeStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { afterOrdering } from 'business'
+
+// 配送费的请求
+export const deliverFee = (serviceDate, contact) => dispatch => {
+  const handleClose = Loading()
+  const deliverFeeUrl = '/coffee/v1/deliverFee'
+  const merchant = getStore('coffee_merchant', 'session')
+  // console.log('deliverFee--serviceDate', contact, serviceDate)
+  const { id, lat, lng } = merchant
+  const { address, latitude, longitude } = contact
+  const sendData = {
+    coordtype: '4',
+    time:      serviceDate,
+    merchId:   id,
+    merchAddr: merchant.address,
+    merchLat:  lat,
+    merchLng:  lng,
+    rcvrAddr:  address,
+    rcvrLat:   latitude,
+    rcvrLng:   longitude,
+    mapType:   'gaode',
+  }
+  get(deliverFeeUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      // console.log('deliverFees', data)
+      dispatch({
+        type:        'DELIVERFEE',
+        deliverFees: data.deliverFee,
+      })
+    } else {
+      console.log('数据请求失败', message)
+      Toast.info(message, 2, null, false)
+      dispatch({
+        type:        'DELIVERFEE',
+        deliverFees: 0,
+      })
+    }
+    handleClose()
+  })
+}
+
+// 通过经纬度定位商家，在展示一系列数据请求
+export const orderDeliverTime = contact => dispatch => {
+  const handleClose = Loading()
+  const goodsListUrl = '/coffee/v1/validDeliverTime'
+  get(goodsListUrl).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      // console.log('orderDeliverTime', data)
+      dispatch({
+        type:          'KJIN_DELIVERTIME',
+        orderTimeDate: data,
+        serviceDate:   [data[0].deliverDate, data[0].deliverTime[0]],
+      })
+      console.log('test----', [data[0].deliverDate, data[0].deliverTime[0]])
+      setStore('coffee_serviceDate', [data[0].deliverDate, data[0].deliverTime[0]], 'session')
+      dispatch(deliverFee((`${ data[0].deliverDate } ${ data[0].deliverTime[0] }`), contact))
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+// 创建订单
+export const handleGoOrder = (tipsPrice, contact, merchant, serviceDate, goodsCartarr, Promotion, deliverFees, noteText) => {
+  const handleClose = Loading()
+  const orderUrl = '/coffee/v1/order'
+  const customerUserId = getStore('customerUserId', 'session')
+  const userPhone = getStore('userPhone', 'session')
+  const { contactId } = contact
+  const { coupon, activities } = Promotion
+  const orderItem = []
+  const time = serviceDate[1] === '尽快送' ? (serviceDate).join(' ') : (serviceDate).join('')
+  console.log('下单时----', Promotion, serviceDate.join(''))
+  for (let k = 0; k < goodsCartarr.length; k++) {
+    const { productId, productName, price, unit } = goodsCartarr[k].data
+    const selectedAttr = goodsCartarr[k].standard
+    const count = goodsCartarr[k].quantity
+    const obj = {
+      productId,
+      productName,
+      price,
+      unit,
+      count,
+      selectedAttr,
+    }
+    orderItem.push(obj)
+  }
+  const sendData = {
+    customerUserId,
+    userPhone,
+    type:       3,
+    coordtype:  4,
+    deliverFee: deliverFees,
+    contactId,
+    merchant:   {
+      ...merchant,
+    },
+    deliverTime: time,
+    comment:     noteText,
+    tipFee:      tipsPrice,
+    couponId:    coupon ? coupon.id : '',
+    activityId:  activities ? activities.id : '',
+    orderItem,
+  }
+  send(orderUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      handleClose()
+      // console.log(data)
+      afterOrdering(data)
+      setStore('goodsCartarr', [], 'session')
+      removeStore('tagsmark', 'session')
+    } else {
+      // Toast.info('下单失败 !', 2, null, false)
+      Toast.info(message, 2, null, false)
+      // console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+         
+ 
+ 
+ 
+ coffee/components/addGoodsCartFns.js 
+ 
+import { setStore, getStore } from '@boluome/common-lib'
+
+const addGoodsCartFns = (datas, num, standard, sPrice, callback) => {
+  const goods = {}
+  goods.data = datas
+  goods.quantity = num
+  goods.standard = standard
+  goods.markId = standard.length === 0 ? (datas.productId) : (datas.productId + standard.map(i => { return i.name + i.value + i.price }).join(''))
+  goods.oprice = sPrice === 0 ? datas.price : (datas.price + sPrice) * 1
+  const goodsCartarr = getStore('goodsCartarr', 'session')
+  // console.log('goods---', goods, standard.map(i => { return i.name + i.value + i.price }).join(''))
+  if (goodsCartarr.length > 0) {
+    const cartArr = goodsCartarr.filter(item => {
+      return (item.markId) === (goods.markId)
+    })
+    if (cartArr.length > 0) {
+      // const cartStan = cartArr[0].standard
+      cartArr[0].quantity += goods.quantity
+      // console.log(cartStan)
+    } else {
+      goodsCartarr.push(goods)
+    }
+  } else {
+    goodsCartarr.push(goods)
+  }
+  setStore('goodsCartarr', goodsCartarr, 'session')
+  callback(goodsCartarr)
+  // dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+}
+
+export default (
+  // string -> string -> string | object
+  addGoodsCartFns
+)
+
+// export const f = () => {}
+//
+// import { f } from 'xxx'
+//
+//
+//
+// const f = () => {}
+//
+// const f2 = () => {}
+//
+// export default ({
+//   f, f2
+// })
+//
+// import f123 from 'xxx'
+//
+// const { f, f2 } = f123
+         
+ 
+ 
+ 
+ coffee/components/app.js 
+ 
+
+import React from 'react'
+import { Icon } from 'antd-mobile'
+import { UserCenter, Nolocation, Mask, SlidePage, Contact } from '@boluome/oto_saas_web_app_component'
+// import { vconsole } from 'vconsole' // <vconsole />
+// import { setStore, getStore } from '@boluome/common-lib'
+import '../style/index.scss'
+import CartListCom from './cart.js'
+import GoodslistMain from './goodslist.js'
+import icondown from '../img/down.svg'
+import noshop from '../img/noshopp.png'
+
+// const Item = List.Item
+const App = props => {
+  // console.log('app props-=--=-==-=--=', props)
+  const { goodslist, goodsCartarr,
+    goDetailsShow, goOrderMmessage, // goContactList,
+    addCartFn, ReduceCartNum, ReduceCartListNum,
+    handleReduceNum, handleAddNum, handleOnClose,
+    handleChangeContact, handleBtnEvevtR, nolocation, handleChooseContact,
+    contactData, titleAddress = '定位中...', OptimalContact, // goOrderDetails,
+    outRange,
+  } = props
+  console.log('outRange--', outRange)
+  const handleGoContact = () => {
+    Mask.closeAll()
+    Mask(
+      <SlidePage target='left' type='root' showClose={ false }>
+        <Contact handleChange={ contact => handleChooseContact(contact) }
+          hideDefaultBtn='true'
+          source='coffee'
+          chooseContact={ OptimalContact }
+        />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  if (nolocation && goodslist) {
+    console.log('sssss')
+    const { merchant } = goodslist
+    const { name } = merchant
+    return (
+      <div className='indexWrap'>
+        <div className='indexLocation'>
+          <div className='location_c' onClick={ () => handleGoContact() }>{ titleAddress }</div><Icon type={ icondown } />
+        </div>
+        <GoodslistMain
+          goDetailsShow={ goDetailsShow }
+          goodsCartarr={ goodsCartarr }
+          addCartFn={ addCartFn }
+          ReduceCartNum={ ReduceCartNum }
+          ReduceCartListNum={ ReduceCartListNum }
+          contactData={ contactData }
+          handleChangeContact={ handleChangeContact }
+          OptimalContact={ OptimalContact }
+          handleGoContact={ handleGoContact }
+          goodslist={ goodslist }
+          name={ name }
+          goContactList={ handleGoContact }
+        />
+        <div className='footerCart'>
+          <CartListCom onChange={ goOrderMmessage }
+            goodsCartarr={ goodsCartarr }
+            handleReduceNum={ handleReduceNum }
+            handleAddNum={ handleAddNum }
+            handleOnClose={ handleOnClose }
+          />
+        </div>
+        <UserCenter categoryCode='coffee' />
+      </div>
+    )
+  } else if (outRange) {
+    return (
+      <div className='outRangeWrap'>
+        <div className='indexLocation'>
+          <div className='location_c' onClick={ () => handleGoContact() }>{ titleAddress }</div><Icon type={ icondown } />
+        </div>
+        <div className='outRange'>
+          <img src={ noshop } alt='' />
+          <p>当前位置暂无可用商家～</p>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div>
+      {
+        nolocation && nolocation === true ? (<div className='loading_self' />) : (<Nolocation handleBtnEvevtL={ handleGoContact } handleBtnEvevtR={ handleBtnEvevtR } />)
+      }
+    </div>
+  )
+}
+
+export default App
+         
+ 
+ 
+ 
+ coffee/components/attribute.js 
+ 
+import React from 'react'
+// import { browserHistory } from 'react-router'
+import { Icon } from 'antd-mobile'
+// import { getStore, setStore } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import '../style/attribute.scss'
+
+import iconadd from '../img/jia.svg'
+import iconjian from '../img/jian.svg'
+import iconcha from '../img/cha.svg'
+
+// const Item = List.Item
+class AttributeCom extends React.Component {
+  constructor(props) {
+    super(props)
+    const { data, addCartFn, handleContainerClose } = props
+    const { attribute } = data
+    const markAttribute = attribute.map(({ name, items }) => ({ name, value: items[0].name, price: items[0].value }))
+    // console.log('markAttribute-----', markAttribute)
+    this.state = {
+      data,
+      markAttribute,
+      addCartFn,
+      sum: 1,
+      val: 0,
+      handleContainerClose,
+    }
+    this.handleAttribute = this.handleAttribute.bind(this)
+    this.handleraddCartFn = this.handleraddCartFn.bind(this)
+    this.handleAddSumBtn = this.handleAddSumBtn.bind(this)
+  }
+  // componentDidMount() {
+  // i.name === item.name && i.value === items.name && i.price === items.value
+  // }
+  componentWillUnmount() {
+    Mask.closeAll()
+  }
+  handleCloseEvent(handleContainerClose) {
+    // Mask.closeAll()
+    handleContainerClose()
+  }
+  handleAttribute(n, s) {
+    const { markAttribute } = this.state
+    let { val } = this.state
+    for (let i = 0; i < markAttribute.length; i++) {
+      val = 0
+      if (markAttribute[i].name === n && markAttribute[i].value !== s.name) {
+        markAttribute[i].value = s.name
+        markAttribute[i].price = s.value
+        val += s.value
+      }
+    }
+    this.setState({
+      markAttribute,
+      val,
+    })
+  }
+  handleraddCartFn(data, markAttribute, sum) {
+    const { addCartFn } = this.state
+    addCartFn('yes', data, markAttribute, sum)
+    Mask.closeAll()
+  }
+  handleAddSumBtn(i) {
+    const { sum } = this.state
+    if (sum === 1 && i === -1) {
+      console.log('最少一个')
+    } else {
+      this.setState({
+        sum: (sum + i),
+      })
+    }
+  }
+  render() {
+    const { data, markAttribute, sum, val, handleContainerClose } = this.state
+    // console.log('markAttribute-----', markAttribute, val)
+    const { productName, price, attribute } = data
+    const sumPrice = (price + val) * sum
+    if (attribute) {
+      return (
+        <div className='attributeWrap'>
+          <div className='title'>
+            <span>{ productName }</span>
+            <Icon className='close' type={ iconcha } onClick={ () => this.handleCloseEvent(handleContainerClose) } />
+          </div>
+          <div className='attribute'>
+            {
+              attribute.map(item => {
+                return (
+                  <div className='item' key={ `${ item.name + 1 }` }>
+                    <p>{ item.name }</p>
+                    {
+                      (item.items).map(items => (
+                        <span className={ `${ markAttribute.filter(o => { return o.name === item.name })[0].value === items.name ? 'markSpan' : '' }` }
+                          key={ `${ items.name + 1 }` }
+                          onClick={ () => this.handleAttribute(item.name, items) }
+                        >
+                          { items.name }
+                        </span>
+                      ))
+                    }
+                  </div>
+                )
+              })
+            }
+          </div>
+          <div className='sumChange'>
+            <div className='sumText'>购买数量</div>
+            <div className='num'>
+              <span onClick={ () => this.handleAddSumBtn(-1) }><Icon type={ iconjian } /></span>
+              <span className='Sum'>{ sum }</span>
+              <span onClick={ () => this.handleAddSumBtn(1) }><Icon type={ iconadd } /></span>
+            </div>
+          </div>
+          <div className='addcart'>
+            ¥ <span className='addcart_price'>{ sumPrice }</span>
+            <span className='addcart_btn' onClick={ () => this.handleraddCartFn(data, markAttribute, sum) }>选好了</span>
+          </div>
+        </div>
+      )
+    }
+    return (<div />)
+  }
+}
+
+export default AttributeCom
+         
+ 
+ 
+ 
+ coffee/components/cart.js 
+ 
+import React from 'react'
+import { Icon, Popup } from 'antd-mobile'
+import CartPopup from './cartpopup.js'
+
+import '../style/cart.scss'
+import iconcartf from '../img/cart_fff.svg'
+// import iconadd from '../img/jia.svg'
+// import iconjian from '../img/jian.svg'
+
+// const Item = List.Item
+class CartListCom extends React.Component {
+  constructor(props) {
+    super(props)
+    // const newState = merge(state)(props)
+    this.state = {
+      close: false,
+      ...props,
+    }
+    this.handleCartPopup = this.handleCartPopup.bind(this)
+    this.onMaskClose = this.onMaskClose.bind(this)
+    this.onClose = this.onClose.bind(this)
+  }
+  componentWillUnmount() {
+    Popup.hide()
+  }
+  componentWillReceiveProps(nextProps) {
+    // console.log('nextProps---', nextProps)
+    this.setState({
+      goodsCartarr: nextProps.goodsCartarr,
+    })
+  }
+  onMaskClose() {
+    this.setState({
+      close: false,
+    })
+  }
+  onClose() {
+    const { handleOnClose } = this.state
+    handleOnClose()
+    this.setState({
+      goodsCartarr: [],
+      close:        false,
+    })
+    Popup.hide()
+  }
+  handleCartPopup(goodsCartarr) {
+    const { close, handleReduceNum, Notice } = this.state
+    if (close) {
+      Popup.hide()
+      this.setState({
+        close: false,
+      })
+    } else {
+      this.setState({
+        close: true,
+      })
+      Popup.show(<CartPopup goodsCartarr={ goodsCartarr } onClose={ this.onClose } handleReduceNum={ handleReduceNum } Notice={ Notice } />, {
+        animationType: 'slide-up',
+        maskProps:     { className: 'am-popup-mask myselfam-popup-mask' },
+        onMaskClose:   this.onMaskClose,
+      })
+    }
+  }
+  render() {
+    const { onChange } = this.props
+    const { goodsCartarr } = this.state
+    // console.log('cart,js----', goodsCartarr)
+    let Sum = 0
+    let SumPrice = 0.00
+    for (let s = 0; s < goodsCartarr.length; s++) {
+      Sum += goodsCartarr[s].quantity
+      SumPrice += (goodsCartarr[s].quantity * goodsCartarr[s].oprice)
+    }
+    return (
+      <div className='cartListWrap'>
+        <div className='cart' onClick={ () => { this.handleCartPopup(goodsCartarr) } }>
+          <div className={ `cart_l ${ Sum === 0 ? '' : 'cart_has' }` }>
+            <span><Icon type={ iconcartf } /></span>
+            {
+              Sum === 0 ? ('') : (<span className='marknum'>{ Sum }</span>)
+            }
+          </div>
+          <div className='cart_r'>
+            <span className='cart_price'>¥ { Sum === 0 ? '0.00' : SumPrice.toFixed(2) }</span>
+            <span>不含配送费</span>
+          </div>
+        </div>
+        {
+          Sum > 0 ? (<div className='Settlement' onClick={ onChange }>结算</div>) : (<div className='Settlement Settlement_no'>结算</div>)
+        }
+      </div>
+    )
+  }
+}
+
+export default CartListCom
+// class CartPopupComponent extends React.Component {
+//   constructor(props) {
+//     super(props)
+//     this.state = {
+//       initialGoodsCartarr: this.props.goodsCartarr,
+//       copyNoticeBar:       this.props.Notice,
+//     }
+//     this.handleReduceNum = this.onReduceNum.bind(this)
+//   }
+//   onReduceNum(id, num) {
+//     const { handleReduceNum } = this.props
+//     this.setState({
+//       initialGoodsCartarr: handleReduceNum(id, num),
+//     })
+//   }
+//   render() {
+//     const { onClose } = this.props
+//     const { initialGoodsCartarr, copyNoticeBar } = this.state
+//     return (
+//       <div className='cartWrap'>
+//         <List >
+//           { copyNoticeBar ? (<NoticeBar />) : ('') }
+//           <Item className='cartTitle'>
+//             <div className='cartDeteleWrap' style={{ position: 'relative' }}>
+//               已选商品
+//               <div className='deteleBtn' />
+//               <span
+//                 style={{ position: 'absolute', right: 3, top: -5 }}
+//                 onClick={ () => onClose() }
+//               >
+//                 <Icon type={ icondelete } />清空
+//               </span>
+//             </div>
+//           </Item>
+//         </List>
+//         <div className='cartList'>
+//           <CartlistItem goodsCartarr={ initialGoodsCartarr } handleReduceNum={ this.handleReduceNum } />
+//         </div>
+//       </div>
+//     )
+//   }
+// }
+
+// const CartlistItem = ({ goodsCartarr, handleReduceNum }) => {
+//   if (goodsCartarr) {
+//     return (
+//       <div>
+//         {
+//           goodsCartarr.map((o, i) => (
+//             <Item key={ `${ i + 1 }` }>
+//               <div className='cartItem'>
+//                 <div className='pic'>
+//                   <img alt='' src={ o.data.photoUrl } />
+//                 </div>
+//                 <div className='name'>
+//                   <p>{ o.data.productName }</p>
+//                   {
+//                     o.standard.map(s => (
+//                       <span key={ `${ s.value }` }>{ `${ s.value } ` }</span>
+//                     ))
+//                   }
+//                 </div>
+//                 <div className='price'>¥ <span>{ o.oprice }</span></div>
+//                 <div className='num'>
+//                   <span onClick={ () => handleReduceNum(o.markId, -1) }><Icon type={ iconjian } /></span>
+//                   <span className='Sum'>{ o.quantity }</span>
+//                   <span onClick={ () => handleReduceNum(o.markId, 1) }><Icon type={ iconadd } /></span>
+//                 </div>
+//               </div>
+//             </Item>
+//           ))
+//         }
+//       </div>
+//     )
+//   }
+//   return (<div />)
+// }
+         
+ 
+ 
+ 
+ coffee/components/cart0.js 
+ 
+import React from 'react'
+import { List, Icon, Popup, NoticeBar } from 'antd-mobile'
+
+import '../style/cart.scss'
+import iconcartf from '../img/cart_fff.svg'
+import icondelete from '../img/delete.svg'
+import iconadd from '../img/jia.svg'
+import iconjian from '../img/jian.svg'
+
+const Item = List.Item
+class CartListCom extends React.Component {
+  constructor(props) {
+    super(props)
+    // const newState = merge(state)(props)
+    this.state = {
+      close: false,
+      ...props,
+    }
+    console.log('CartListCom', props)
+    this.handleCartPopup = this.handleCartPopup.bind(this)
+    this.onMaskClose = this.onMaskClose.bind(this)
+    this.onClose = this.onClose.bind(this)
+  }
+  componentWillUnmount() {
+    Popup.hide()
+  }
+  componentWillReceiveProps(nextProps) {
+    // console.log('nextProps---', nextProps)
+    this.setState({
+      goodsCartarr: nextProps.goodsCartarr,
+    })
+  }
+  onMaskClose() {
+    this.setState({
+      close: false,
+    })
+  }
+  onClose() {
+    const { handleOnClose } = this.state
+    handleOnClose()
+    this.setState({
+      goodsCartarr: [],
+      close:        false,
+    })
+    Popup.hide()
+  }
+  handleCartPopup(goodsCartarr) {
+    const { close, handleReduceNum } = this.state
+    if (close) {
+      Popup.hide()
+      this.setState({
+        close: false,
+      })
+    } else {
+      this.setState({
+        close: true,
+      })
+      Popup.show(<CartPopupComponent goodsCartarr={ goodsCartarr } onClose={ this.onClose } handleReduceNum={ handleReduceNum } />, {
+        animationType: 'slide-up',
+        maskProps:     { className: 'am-popup-mask myselfam-popup-mask' },
+        onMaskClose:   this.onMaskClose,
+      })
+    }
+  }
+  render() {
+    const { onChange } = this.props
+    const { goodsCartarr } = this.state
+    // console.log('cart,js----', goodsCartarr)
+    let Sum = 0
+    let SumPrice = 0.00
+    for (let s = 0; s < goodsCartarr.length; s++) {
+      Sum += goodsCartarr[s].quantity
+      SumPrice += (goodsCartarr[s].quantity * goodsCartarr[s].oprice)
+    }
+    return (
+      <div className='cartListWrap'>
+        <div className='cart' onClick={ () => { this.handleCartPopup(goodsCartarr) } }>
+          <div className={ `cart_l ${ Sum === 0 ? '' : 'cart_has' }` }>
+            <span><Icon type={ iconcartf } /></span>
+            {
+              Sum === 0 ? ('') : (<span className='marknum'>{ Sum }</span>)
+            }
+          </div>
+          <div className='cart_r'>
+            <span className='cart_price'>¥ { Sum === 0 ? '0.00' : SumPrice }</span>
+            <span>不含配送费</span>
+          </div>
+        </div>
+        <div className='Settlement' onClick={ onChange }>结算</div>
+      </div>
+    )
+  }
+}
+
+// const CartPopupComponent = ({ goodsCartarr, onClose, handleReduceNum }) => {
+//   console.log('CartPopupComponent---', goodsCartarr)
+//   return (
+//     <div className='cartWrap'>
+//       <List >
+//         <NoticeBar />
+//         <Item className='cartTitle'>
+//           <div className='cartDeteleWrap' style={{ position: 'relative' }}>
+//             已选商品
+//             <div className='deteleBtn'>删除失效商品</div>
+//             <span
+//               style={{ position: 'absolute', right: 3, top: -5 }}
+//               onClick={ () => onClose() }
+//             >
+//               <Icon type={ icondelete } />清空
+//             </span>
+//           </div>
+//         </Item>
+//       </List>
+//       <div className='cartList'>
+//         <CartlistItem goodsCartarr={ goodsCartarr } handleReduceNum={ handleReduceNum } />
+//       </div>
+//     </div>
+//   )
+// }
+
+class CartPopupComponent extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      initialGoodsCartarr: this.props.goodsCartarr,
+    }
+    this.handleReduceNum = this.onReduceNum.bind(this)
+  }
+  onReduceNum(id, num) {
+    const { handleReduceNum } = this.props
+    this.setState({
+      initialGoodsCartarr: handleReduceNum(id, num),
+    })
+  }
+  render() {
+    const { onClose } = this.props
+    const { initialGoodsCartarr } = this.state
+    return (
+      <div className='cartWrap'>
+        <List >
+          <NoticeBar />
+          <Item className='cartTitle'>
+            <div className='cartDeteleWrap' style={{ position: 'relative' }}>
+              已选商品
+              <div className='deteleBtn'>删除失效商品</div>
+              <span
+                style={{ position: 'absolute', right: 3, top: -5 }}
+                onClick={ () => onClose() }
+              >
+                <Icon type={ icondelete } />清空
+              </span>
+            </div>
+          </Item>
+        </List>
+        <div className='cartList'>
+          <CartlistItem goodsCartarr={ initialGoodsCartarr } handleReduceNum={ this.handleReduceNum } />
+        </div>
+      </div>
+    )
+  }
+}
+
+export default CartListCom
+
+const CartlistItem = ({ goodsCartarr, handleReduceNum }) => {
+  if (goodsCartarr) {
+    return (
+      <div>
+        {
+          goodsCartarr.map((o, i) => (
+            <Item key={ `${ i + 1 }` }>
+              <div className='cartItem'>
+                <div className='pic'>
+                  <img alt='' src={ o.data.photoUrl } />
+                </div>
+                <div className='name'>
+                  <p>{ o.data.productName }</p>
+                  {
+                    o.standard.map(s => (
+                      <span key={ `${ s.value }` }>{ `${ s.value } ` }</span>
+                    ))
+                  }
+                </div>
+                <div className='price'>¥ <span>{ o.oprice }</span></div>
+                <div className='num'>
+                  <span onClick={ () => handleReduceNum(o.markId, -1) }><Icon type={ iconjian } /></span>
+                  <span className='Sum'>{ o.quantity }</span>
+                  <span onClick={ () => handleReduceNum(o.markId, 1) }><Icon type={ iconadd } /></span>
+                </div>
+              </div>
+            </Item>
+          ))
+        }
+      </div>
+    )
+  }
+  return (<div />)
+}
+         
+ 
+ 
+ 
+ coffee/components/cartpopup.js 
+ 
+import React from 'react'
+import { List, Icon, NoticeBar } from 'antd-mobile'
+
+import icondelete from '../img/delete.svg'
+import iconadd from '../img/jia.svg'
+import iconjian from '../img/jian.svg'
+
+const Item = List.Item
+
+class CartPopup extends React.Component {
+  constructor(props) {
+    super(props)
+    // console.log('goodsCartarr---', this.props)
+    this.state = {
+      initialGoodsCartarr: this.props.goodsCartarr,
+      copyNoticeBar:       this.props.Notice,
+    }
+    this.handleReduceNum = this.onReduceNum.bind(this)
+  }
+  onReduceNum(id, num) {
+    const { handleReduceNum } = this.props
+    this.setState({
+      initialGoodsCartarr: handleReduceNum(id, num),
+    })
+  }
+  render() {
+    const { onClose } = this.props
+    const { initialGoodsCartarr, copyNoticeBar } = this.state
+    return (
+      <div className='cartWrap'>
+        <List >
+          { copyNoticeBar ? (<NoticeBar />) : ('') }
+          <Item className='cartTitle'>
+            <div className='cartDeteleWrap' style={{ position: 'relative' }}>
+              已选商品
+              <div className='deteleBtn' />
+              <span
+                style={{ position: 'absolute', right: 3, top: -5 }}
+                onClick={ () => onClose() }
+              >
+                <Icon type={ icondelete } />清空
+              </span>
+            </div>
+          </Item>
+        </List>
+        <CartlistItem goodsCartarr={ initialGoodsCartarr } handleReduceNum={ this.handleReduceNum } />
+      </div>
+    )
+  }
+}
+export default CartPopup
+
+const CartlistItem = ({ goodsCartarr, handleReduceNum }) => {
+  if (goodsCartarr) {
+    return (
+      <div className='list'>
+        {
+          goodsCartarr.map((o, i) => (
+            <Item key={ `${ i + 1 }` }>
+              <div className='cartItem'>
+                <div className='pic'>
+                  <img alt='' src={ o.data.photoUrl } />
+                </div>
+                <div className='name'>
+                  <p>{ o.data.productName }</p>
+                  {
+                    o.standard.map(s => (
+                      <span key={ `${ s.value }` }>{ `${ s.value } ` }</span>
+                    ))
+                  }
+                </div>
+                <div className='price'>¥ <span>{ o.oprice }</span></div>
+                <div className='num'>
+                  <span onClick={ () => handleReduceNum(o.markId, -1) }><Icon type={ iconjian } /></span>
+                  <span className='Sum'>{ o.quantity }</span>
+                  <span onClick={ () => handleReduceNum(o.markId, 1) }><Icon type={ iconadd } /></span>
+                </div>
+              </div>
+            </Item>
+          ))
+        }
+      </div>
+    )
+  }
+  return (<div />)
+}
+         
+ 
+ 
+ 
+ coffee/components/contactlist.js 
+ 
+import React from 'react'
+// import { browserHistory } from 'react-router'
+// import { Icon } from 'antd-mobile'
+import { setStore, getStore } from '@boluome/common-lib'
+import { Mask, Contact } from '@boluome/oto_saas_web_app_component'
+
+class ContactList extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+      chooseContact: getStore('coffee_contact', 'session') ? getStore('coffee_contact', 'session') : '',
+    }
+    // console.log('ContactList-----', props)
+    this.handleChooseContact = this.handleChooseContact.bind(this)
+  }
+  componentWillUnmount() {
+    Mask.closeAll()
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  // 当选择了收货地址之后的事件
+  handleChooseContact(contact) {
+    console.log('handleChooseContact----', contact)
+    setStore('coffee_contact', contact, 'session')
+    setStore('goodsCartarr', [], 'session')
+    if (contact) {
+      // window.history.back()
+      Mask.closeAll()
+    }
+  }
+  render() {
+    const { chooseContact = '' } = this.state
+    return (
+      <div>
+        <Contact handleChange={ contact => this.handleChooseContact(contact) }
+          hideDefaultBtn='true'
+          source='coffee'
+          fromWhich='true'
+          chooseContact={ chooseContact }
+        />
+      </div>
+    )
+  }
+}
+export default ContactList
+         
+ 
+ 
+ 
+ coffee/components/details.js 
+ 
+import React from 'react'
+// import { Icon } from 'antd-mobile'
+import CartListCom from './cart.js'
+import ListAddDown from './listadddown.js'
+import '../style/details.scss'
+
+const Details = props => {
+  const { ChooseGoods,
+    goOrderMmessage, handleOnClose,
+    goodsCartarr, handleReduceNum, addCartFn, ReduceCartNum, ReduceCartListNum,
+  } = props
+  return (
+    <div className='detailsWrap'>
+      <div className='detailsMian'>
+        {
+          ChooseGoods ? (
+            <div>
+              <img alt='' src={ ChooseGoods.largePhotoUrl } />
+              <DetailsShow ChooseGoods={ ChooseGoods }
+                goodsCartarr={ goodsCartarr }
+                addCartFn={ addCartFn }
+                ReduceCartNum={ ReduceCartNum }
+                ReduceCartListNum={ ReduceCartListNum }
+              />
+            </div>
+          ) : (
+            <div />
+          )
+        }
+      </div>
+      <div className='footerCart'>
+        <CartListCom onChange={ goOrderMmessage }
+          goodsCartarr={ goodsCartarr }
+          handleReduceNum={ handleReduceNum }
+          handleOnClose={ handleOnClose }
+        />
+      </div>
+    </div>
+  )
+}
+
+const DetailsShow = ({ ChooseGoods, goodsCartarr, addCartFn, ReduceCartNum, ReduceCartListNum }) => {
+  const { description, price, productId, productName, attribute } = ChooseGoods
+  const tipsText = '加入购物车'
+  return (
+    <div className='details'>
+      <div className='title'>
+        <span>{ productName }</span>
+        {
+          attribute ? (<span className='attribute'>多规格</span>) : ('')
+        }
+      </div>
+      <div className='price'>
+        <span className='price_l'>¥ </span>
+        <span className='price_c'> { price }</span>
+        <ListAddDown
+          productId={ productId }
+          goodsCartarr={ goodsCartarr }
+          data={ ChooseGoods }
+          addCartFn={ addCartFn }
+          ReduceCartNum={ ReduceCartNum }
+          ReduceCartListNum={ ReduceCartListNum }
+          tipsText={ tipsText }
+        />
+      </div>
+      <div className='description'>{ description }</div>
+    </div>
+  )
+}
+export default Details
+         
+ 
+ 
+ 
+ coffee/components/editcontact.js 
+ 
+import React from 'react'
+// import { browserHistory } from 'react-router'
+// import { Toast } from 'antd-mobile'
+import { setStore, getStore, get } from '@boluome/common-lib'
+import { ContactForm, Mask } from '@boluome/oto_saas_web_app_component'
+
+class EditContact extends React.Component {
+  constructor(props) {
+    super(props)
+    console.log(props)
+    this.handleBackgoorder = this.handleBackgoorder.bind(this)
+    this.fetchContact = this.fetchContact.bind(this)
+  }
+  fetchContact(contactId) {
+    const userId = getStore('customerUserId', 'session')
+    get('/user/v1/contacts', { userId })
+    .then(({ code, data, message }) => {
+      if (code === 0) {
+        if (data.length !== 0) { // 在外卖中改的，2017-7-06
+          for (let i = 0; i < data.length; i++) {
+            if (contactId === data[i].contactId) {
+              setStore('coffee_contact', data[i], 'session')
+              window.history.back()
+            }
+          }
+        }
+      } else {
+        window.history.back()
+        console.log('coffee编辑地址', message)
+      }
+    })
+  }
+  handleBackgoorder() {
+    const { contactId } = this.state
+    console.log(contactId)
+    this.fetchContact(contactId)
+  }
+  componentWillMount() {
+    const editContact = getStore('coffee_contact', 'session')
+    this.setState({
+      editContact,
+      contactId: editContact.contactId,
+    })
+  }
+  componentWillUnmount() {
+    Mask.closeAll()
+  }
+  render() {
+    const { editContact } = this.state
+    console.log('editContact---', editContact)
+    return (
+      <div className='contacttWrap'>
+        <ContactForm { ...{ editContact } } onSuccess={ this.handleBackgoorder } cannotEdit='true' source='coffee' fromWhich='true' />
+      </div>
+    )
+  }
+}
+
+export default EditContact
+         
+ 
+ 
+ 
+ coffee/components/goodslist.js 
+ 
+import React from 'react'
+import BScroll from 'better-scroll'
+import { Icon } from 'antd-mobile'
+import { getStore } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import ListAddDown from './listadddown.js'
+import '../style/goodslist.scss'
+
+import pnglogo from '../img/logobig.png'
+import iconcha from '../img/cha.svg'
+
+class GoodslistMain extends React.Component {
+  constructor(props) {
+    super(props)
+    // console.log('GoodslistMain--f----', props)
+    this.state = {
+      ...props,
+      tagsIndex: 0,
+    }
+    // console.log('goods', props)
+    this.listHeight = []
+    this.scrollY = 0
+    this.isScroll = false
+    this.mypos = 0
+    this.tagsIndex = 0
+    this.changeHeight = 0
+    this.calculateHeight = this.calculateHeight.bind(this)
+    this.currentIndex = this.currentIndex.bind(this)
+    this.handleTagsMark = this.handleTagsMark.bind(this)
+    this.initScroll = this.initScroll.bind(this)
+    this.handleGoDetails = this.handleGoDetails.bind(this)
+    this.ChooseContactFn = this.ChooseContactFn.bind(this)
+    this.toggleActiveTag = this.toggleActiveTag.bind(this)
+  }
+  componentWillMount() {
+    // console.log(this.state)
+  }
+  componentWillUnmount() {
+    Mask.closeAll()
+    const tagsmark = getStore('tagsmark', 'session')
+    const tagsIndex = getStore('tagsIndex', 'session')
+    if (tagsIndex && tagsmark) {
+      this.setState({
+        tagsmark,
+        tagsIndex,
+      })
+    }
+  }
+  componentDidMount() {
+    this.initScroll()
+    this.calculateHeight()
+    this.imageHeight = document.querySelector('.indexBanner').clientHeight
+    this.mainWrap = document.querySelector('.mainWrap')
+    this.minTranslateY = -this.imageHeight
+    this.mainHeight = this.indexMainWrap.clientHeight
+    document.querySelector('.coffee_kong').style.height = this.mainWrap.clientHeight // this.imageHeight // 2017-10-25 天津银行
+    // this.t = document.querySelectorAll('.tagsitem')
+    // console.log('test---', this.mainWrap.clientHeight)
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  calculateHeight() {
+    const listHeight = this.listHeight
+    const foodList = document.getElementsByClassName('foodlist')
+    let height = 0
+    listHeight.push(height)
+    for (let i = 0; i < foodList.length; i++) {
+      const item = foodList[i]
+      height += item.clientHeight
+      listHeight.push(height)
+    }
+  }
+  currentIndex(i = 0, els = document.querySelectorAll('.foodList')) {
+    const { scrollY } = this
+    for (; i < els.length; i++) {
+      const { offsetTop } = els[i]
+      // console.log(offsetTop, scrollY)
+      if (scrollY < offsetTop) break
+    }
+    this.followScroll(i)
+
+    return i - 1
+  }
+  initScroll() {
+    // const toggleActiveTag = () => {
+    //   const tags = document.querySelectorAll('.tagsitem')
+    //   for (let i = 0; i < tags.length; i++) {
+    //     tags[i].className = tags[i].className.replace(/tagsmark/g, '')
+    //   }
+    //   tags[this.currentIndex()].className += ' tagsmark'
+    // }
+    this.mainTitleScroll = new BScroll(this.mainTitle, {
+      click:  true,
+      bounce: false,
+    })
+    this.mainListScroll = new BScroll(this.mainList, {
+      click:        true,
+      probeType:    2,
+      bounce:       false,
+      deceleration: 0.003,
+    })
+    this.mainListScroll.on('scrollStart', () => {
+      this.indexMainWrap.style.webkitTransition = ''
+      this.isScroll = true
+    })
+    this.mainListScroll.on('scrollEnd', pos => {
+      this.scrollY = Math.abs(Math.round(pos.y))
+      // console.log(this.scrollY)
+      this.toggleActiveTag(this.currentIndex())
+      if (!this.isScroll) {
+        this.mainWrap.style.webkitTransition = 'all .3s ease'
+        this.ListeningScroll(pos.y)
+      }
+      if (this.isScroll && this.scrollY === 0) { // 这里修改的是 高度不准 下不去的现象
+        this.mainWrap.style.webkitTransition = 'all .1s ease'
+        this.ListeningScroll(pos.y)
+      }
+      this.mainListScroll.refresh()
+    })
+    this.mainListScroll.on('scroll', pos => {
+      if (!pos.y) {
+        return
+      }
+      if (this.isScroll) {
+        this.mypos = pos.y
+        this.ListeningScroll(this.mypos)
+      }
+      this.scrollY = Math.abs(Math.round(pos.y))
+      this.toggleActiveTag(this.currentIndex())
+    })
+  }
+  followScroll(index) {
+    const el = document.querySelectorAll('.tagsitem')[index]
+    this.mainTitleScroll.scrollToElement(el, 100, 0, -200)
+  }
+  // className切换
+  toggleActiveTag(index) {
+    const tags = document.querySelectorAll('.tagsitem')
+    for (let i = 0; i < tags.length; i++) {
+      tags[i].className = tags[i].className.replace(/tagsmark/g, '')
+    }
+    tags[index].className += ' tagsmark'
+  }
+  // banner 距离判断
+  ListeningScroll(newVal) {
+    const translateY = Math.max(this.minTranslateY, newVal)
+    const height = Math.abs(translateY)
+    this.changeHeight = height
+    this.mainWrap.style.transform = `translate3d(0,${ translateY }px, 0)`
+    this.mainWrap.style.webkitTransform = `translate3d(0,${ translateY }px, 0)`
+    this.indexMainWrap.style.height = `${ this.mainHeight + height }`
+  }
+  // 选择tags，即改变商品类别
+  handleTagsMark(item, index) {
+    // console.log('qqqq', item, index)
+    this.toggleActiveTag(index)
+    this.isScroll = false
+    this.mypos = 0
+    const mainListScroll = this.mainListScroll
+    const el = document.querySelectorAll('.foodlist')[index]
+    mainListScroll.scrollToElement(el, 400)
+    this.mainListScroll.refresh()
+  }
+  ChooseContactFn() {
+    const { contactData = [], handleChangeContact, goContactList } = this.state
+    console.log('dddd', handleChangeContact)
+    Mask(<ChooseContact contactData={ contactData } handleChangeContact={ handleChangeContact } goContactList={ goContactList } />)
+  }
+  handleGoDetails(item) {
+    const { OptimalContact, goDetailsShow } = this.state
+    console.log('handleGoDetails---', OptimalContact)
+    if (OptimalContact) {
+      goDetailsShow(item)
+    } else {
+      this.ChooseContactFn()
+    }
+  }
+  render() {
+    const { goodslist,
+      goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+      goDetailsShow, tagsIndex, name,
+    } = this.state
+    if (goodslist) {
+      return (
+        <div className='mainWrap'>
+          <div className='indexBanner'>
+            <div className='banner_l'>
+              <img alt='' src={ pnglogo } />
+            </div>
+            <div className='banner_r'>
+              <div className='banner_title oto'>{ name }</div>
+              <div className='banner_yu oto'>欢迎来到星巴克</div>
+              <div className='banner_tips oto'>公告: *代购服务由邻趣提供*</div>
+            </div>
+          </div>
+          <div className='indexMainWrap' ref={ c => { this.indexMainWrap = c } }>
+            <div className='mainTitle' ref={ c => { this.mainTitle = c } }>
+              <TagListshow goodslist={ goodslist }
+                tagsIndex={ tagsIndex }
+                handleTagsMark={ this.handleTagsMark }
+              />
+            </div>
+            <div className='mainList' ref={ c => { this.mainList = c } }>
+              <FoodslistMain
+                goDetailsShow={ goDetailsShow }
+                goodsCartarr={ goodsCartarr }
+                addCartFn={ addCartFn }
+                ReduceCartNum={ ReduceCartNum }
+                ReduceCartListNum={ ReduceCartListNum }
+                ChooseContactFn={ this.ChooseContactFn }
+                handleGoDetails={ this.handleGoDetails }
+                goodslist={ goodslist }
+              />
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return (<div />)
+  }
+}
+
+export default GoodslistMain
+
+// { goodslist, handleGoDetails,
+//   goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+//   ChooseContactFn,
+//  }
+const FoodslistMain = props => {
+  const { goodslist } = props
+  const { productItem, tags } = goodslist
+  // console.log('xuanrang', props)
+  return (
+    <div className='productlist'>
+      {
+        tags.map(tag => (
+          <div className='foodlist' key={ tag }>
+            <p className='title'>{ tag }</p>
+            {
+              productItem[tag].map(item => {
+                return (
+                  <Food { ...{ item, ...props } } key={ item.productId } />
+                )
+              })
+            }
+          </div>
+        ))
+      }
+      <div className='coffee_kong' />
+    </div>
+  )
+}
+
+const Food = ({ item, handleGoDetails, goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum, ChooseContactFn }) => (
+  <div className='item' >
+    <div className='item_pic' onClick={ () => handleGoDetails(item) }>
+      <img alt='' src={ item.photoUrl } />
+    </div>
+    <div className='item_main'>
+      <div className='name' onClick={ () => handleGoDetails(item) }>
+        <span className='name_l'>{ item.productName }</span>
+        {
+          item.attribute ? (<span className='name_r'>多规格</span>) : ('')
+        }
+      </div>
+      <div className='Introduced' onClick={ () => handleGoDetails(item) }>
+        { item.description }
+      </div>
+      <div className='price'>
+        <span className='price_span price_l'>¥</span>
+        <span className='price_span price_c'>{ item.price }</span>
+        <ListAddDown
+          productId={ item.productId }
+          goodsCartarr={ goodsCartarr }
+          data={ item }
+          addCartFn={ addCartFn }
+          ReduceCartNum={ ReduceCartNum }
+          ReduceCartListNum={ ReduceCartListNum }
+          ChooseContactFn={ ChooseContactFn }
+        />
+      </div>
+    </div>
+    <div className='line' />
+  </div>
+)
+
+const TagListshow = ({ goodslist, handleTagsMark, tagsIndex }) => {
+  const { tags } = goodslist
+  return (
+    <div className='taglist'>
+      {
+        tags.map((item, index) => (
+          <div className={ `tagsitem ${ tagsIndex === index ? 'tagsmark' : '' }` } key={ item } onClick={ () => handleTagsMark(item, index) }>{ item }</div>
+        ))
+      }
+    </div>
+  )
+}
+
+// 请选择收货地址
+const ChooseContact = ({ contactData, handleChangeContact, goContactList, handleContainerClose }) => {
+  return (
+    <div className='ChooseContact'>
+      <div className='title'>请选择收货地址<span className='close'><Icon onClick={ () => handleContainerClose() } type={ iconcha } /></span></div>
+      <div className='contactList'>
+        {
+          contactData.length > 0 ? (contactData.map(i => (
+            <div className='item' key={ i.contactId } onClick={ () => handleChangeContact(i, handleContainerClose) }>
+              { i.detail }
+            </div>
+          ))) : (<div className='no_contact'><img alt='' src={ require('../img/Noaddress.png') } /></div>)
+        }
+        {
+          contactData.length > 0 ? ('') : (<p className='otherTip'>你还没有收货地址</p>)
+        }
+      </div>
+      {
+        contactData.length > 0 ? (<div className='other' onClick={ () => goContactList() }>其他地址</div>) : (<div className='other otherOrg' onClick={ () => goContactList() }>新增地址</div>)
+      }
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ coffee/components/goodslist0.js 
+ 
+import React from 'react'
+// import BScroll from 'better-scroll'
+import { Icon } from 'antd-mobile'
+import { getStore } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import ListAddDown from './listadddown.js'
+import '../style/goodslist.scss'
+
+import pnglogo from '../img/logobig.png'
+import iconcha from '../img/cha.svg'
+
+class GoodslistMain extends React.Component {
+  constructor(props) {
+    super(props)
+    // console.log('GoodslistMain--f----', props)
+    this.state = {
+      ...props,
+      tagsIndex: 0,
+    }
+    // console.log('goods', props)
+    this.listHeight = []
+    this.scrollY = 0
+    this.isScroll = false
+    this.mypos = 0
+    this.tagsIndex = 0
+    this.changeHeight = 0
+    // this.calculateHeight = this.calculateHeight.bind(this)
+    // this.currentIndex = this.currentIndex.bind(this)
+    this.handleTagsMark = this.handleTagsMark.bind(this)
+    // this.initScroll = this.initScroll.bind(this)
+    this.handleGoDetails = this.handleGoDetails.bind(this)
+    this.ChooseContactFn = this.ChooseContactFn.bind(this)
+  }
+  componentWillMount() {
+    // console.log(this.state)
+  }
+  componentWillUnmount() {
+    Mask.closeAll()
+    const tagsmark = getStore('tagsmark', 'session')
+    const tagsIndex = getStore('tagsIndex', 'session')
+    if (tagsIndex && tagsmark) {
+      this.setState({
+        tagsmark,
+        tagsIndex,
+      })
+    }
+  }
+  componentDidMount() {
+    // this.initScroll()
+    // this.calculateHeight()
+    this.imageHeight = document.querySelector('.indexBanner').clientHeight
+    this.mainWrap = document.querySelector('.mainWrap')
+    this.minTranslateY = -this.imageHeight
+    this.mainHeight = this.indexMainWrap.clientHeight
+    document.querySelector('.coffee_kong').style.height = this.imageHeight
+    // this.t = document.querySelectorAll('.tagsitem')
+    window.addEventListener('scroll', this.handleScrollTop.bind(this))
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  // calculateHeight() {
+  //   const listHeight = this.listHeight
+  //   const foodList = document.getElementsByClassName('foodlist')
+  //   let height = 0
+  //   listHeight.push(height)
+  //   for (let i = 0; i < foodList.length; i++) {
+  //     const item = foodList[i]
+  //     height += item.clientHeight
+  //     listHeight.push(height)
+  //   }
+  // }
+  // currentIndex(i = 0, els = document.querySelectorAll('.foodList')) {
+  //   const { scrollY } = this
+  //   for (; i < els.length; i++) {
+  //     const { offsetTop } = els[i]
+  //     // console.log(offsetTop, scrollY)
+  //     if (scrollY < offsetTop) break
+  //   }
+  //   this.followScroll(i)
+  //
+  //   return i - 1
+  // }
+  // initScroll() {
+  //   const toggleActiveTag = () => {
+  //     const tags = document.querySelectorAll('.tagsitem')
+  //     for (let i = 0; i < tags.length; i++) {
+  //       tags[i].className = tags[i].className.replace(/tagsmark/g, '')
+  //     }
+  //     tags[this.currentIndex()].className += ' tagsmark'
+  //   }
+  //   this.mainTitleScroll = new BScroll(this.mainTitle, {
+  //     click:  true,
+  //     bounce: false,
+  //   })
+  //   this.mainListScroll = new BScroll(this.mainList, {
+  //     click:        true,
+  //     probeType:    2,
+  //     bounce:       false,
+  //     deceleration: 0.003,
+  //   })
+  //   this.mainListScroll.on('scrollStart', () => {
+  //     this.indexMainWrap.style.webkitTransition = ''
+  //     this.isScroll = true
+  //   })
+  //   this.mainListScroll.on('scrollEnd', pos => {
+  //     this.scrollY = Math.abs(Math.round(pos.y))
+  //     toggleActiveTag()
+  //     if (!this.isScroll) {
+  //       this.mainWrap.style.webkitTransition = 'all .3s ease'
+  //       this.ListeningScroll(pos.y)
+  //     }
+  //   })
+  //   this.mainListScroll.on('scroll', pos => {
+  //     if (!pos.y) {
+  //       return
+  //     }
+  //     if (this.isScroll) {
+  //       this.mypos = pos.y
+  //       this.ListeningScroll(this.mypos)
+  //     }
+  //     this.scrollY = Math.abs(Math.round(pos.y))
+  //     toggleActiveTag()
+  //   })
+  // }
+  followScroll(index) {
+    const el = document.querySelectorAll('.tagsitem')[index]
+    this.mainTitleScroll.scrollToElement(el, 100, 0, -200)
+  }
+  // banner 距离判断
+  ListeningScroll(newVal) {
+    const translateY = Math.max(this.minTranslateY, newVal)
+    const height = Math.abs(translateY)
+    this.changeHeight = height
+    this.mainWrap.style.transform = `translate3d(0,${ translateY }px, 0)`
+    this.mainWrap.style.webkitTransform = `translate3d(0,${ translateY }px, 0)`
+    this.indexMainWrap.style.height = `${ this.mainHeight + height }`
+  }
+  // 选择tags，即改变商品类别
+  handleTagsMark(item, index) {
+    // console.log('qqqq', index)
+    const tags = document.querySelectorAll('.tagsitem')
+    tags[index].className = tags[index].className.replace(/tagsmark/g, '')
+    this.isScroll = false
+    this.mypos = 0
+    const mainListScroll = this.mainListScroll
+    const el = document.querySelectorAll('.foodlist')[index]
+    mainListScroll.scrollToElement(el, 400)
+  }
+  ChooseContactFn() {
+    const { contactData = [], handleChangeContact, goContactList } = this.state
+    // console.log('dddd', handleChangeContact)
+    Mask(<ChooseContact contactData={ contactData } handleChangeContact={ handleChangeContact } goContactList={ goContactList } />)
+  }
+  handleGoDetails(item) {
+    const { OptimalContact, goDetailsShow } = this.state
+    if (OptimalContact) {
+      goDetailsShow(item)
+    } else {
+      this.ChooseContactFn()
+    }
+  }
+  // 测试原生滚动条
+  handleScrollTop(scroll) {
+    // console.log('---', scroll)
+    // let o = scroll
+    // o = 0
+    console.log(scroll)
+  }
+  render() {
+    const { goodslist,
+      goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+      goDetailsShow, tagsIndex, name,
+    } = this.state
+    if (goodslist) {
+      return (
+        <div className='mainWrap'>
+          <div className='indexBanner'>
+            <div className='banner_l'>
+              <img alt='' src={ pnglogo } />
+            </div>
+            <div className='banner_r'>
+              <div className='banner_title oto'>{ name }</div>
+              <div className='banner_yu oto'>欢迎来到星巴克</div>
+              <div className='banner_tips oto'>公告: *代购服务由邻趣提供*</div>
+            </div>
+          </div>
+          <div className='indexMainWrap' ref={ c => { this.indexMainWrap = c } }>
+            <div className='mainTitle' ref={ c => { this.mainTitle = c } }>
+              <TagListshow goodslist={ goodslist }
+                tagsIndex={ tagsIndex }
+                handleTagsMark={ this.handleTagsMark }
+              />
+            </div>
+            <div className='mainList'
+              ref={ c => { this.mainList = c } }
+              onScroll={ e => this.handleScrollTop(e, e.target.scrollTop) }
+            >
+              <FoodslistMain
+                goDetailsShow={ goDetailsShow }
+                goodsCartarr={ goodsCartarr }
+                addCartFn={ addCartFn }
+                ReduceCartNum={ ReduceCartNum }
+                ReduceCartListNum={ ReduceCartListNum }
+                ChooseContactFn={ this.ChooseContactFn }
+                handleGoDetails={ this.handleGoDetails }
+                goodslist={ goodslist }
+              />
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return (<div />)
+  }
+}
+
+export default GoodslistMain
+
+// { goodslist, handleGoDetails,
+//   goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+//   ChooseContactFn,
+//  }
+const FoodslistMain = props => {
+  const { goodslist } = props
+  const { productItem, tags } = goodslist
+  // console.log('xuanrang', props)
+  return (
+    <div className='productlist'>
+      {
+        tags.map(tag => (
+          <div className='foodlist' key={ tag }>
+            <p className='title'>{ tag }</p>
+            {
+              productItem[tag].map(item => {
+                return (
+                  <Food { ...{ item, ...props } } key={ item.productId } />
+                )
+              })
+            }
+          </div>
+        ))
+      }
+      <div className='coffee_kong' />
+    </div>
+  )
+}
+
+const Food = ({ item, handleGoDetails, goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum, ChooseContactFn }) => (
+  <div className='item' >
+    <div className='item_pic' onClick={ () => handleGoDetails(item) }>
+      <img alt='' src={ item.photoUrl } />
+    </div>
+    <div className='item_main'>
+      <div className='name' onClick={ () => handleGoDetails(item) }>
+        <span className='name_l'>{ item.productName }</span>
+        {
+          item.attribute ? (<span className='name_r'>多规格</span>) : ('')
+        }
+      </div>
+      <div className='Introduced' onClick={ () => handleGoDetails(item) }>
+        { item.description }
+      </div>
+      <div className='price'>
+        <span className='price_span price_l'>¥</span>
+        <span className='price_span price_c'>{ item.price }</span>
+        <ListAddDown
+          productId={ item.productId }
+          goodsCartarr={ goodsCartarr }
+          data={ item }
+          addCartFn={ addCartFn }
+          ReduceCartNum={ ReduceCartNum }
+          ReduceCartListNum={ ReduceCartListNum }
+          ChooseContactFn={ ChooseContactFn }
+        />
+      </div>
+    </div>
+    <div className='line' />
+  </div>
+)
+
+const TagListshow = ({ goodslist, handleTagsMark, tagsIndex }) => {
+  const { tags } = goodslist
+  return (
+    <div className='taglist'>
+      {
+        tags.map((item, index) => (
+          <div className={ `tagsitem ${ tagsIndex === index ? 'tagsmark' : '' }` } key={ item } onClick={ () => handleTagsMark(item, index) }>{ item }</div>
+        ))
+      }
+    </div>
+  )
+}
+
+// 请选择收货地址
+const ChooseContact = ({ contactData, handleChangeContact, goContactList }) => {
+  return (
+    <div className='ChooseContact'>
+      <div className='title'>请选择收货地址<span className='close'><Icon onClick={ () => Mask.closeAll() } type={ iconcha } /></span></div>
+      <div className='contactList'>
+        {
+          contactData.length > 0 ? (contactData.map(i => (
+            <div className='item' key={ i.contactId } onClick={ () => handleChangeContact(i) }>
+              { i.detail }
+            </div>
+          ))) : (<div className='no_contact'><img alt='' src={ require('../img/Noaddress.png') } /></div>)
+        }
+        {
+          contactData.length > 0 ? ('') : (<p className='otherTip'>你还没有收货地址</p>)
+        }
+      </div>
+      {
+        contactData.length > 0 ? (<div className='other' onClick={ () => goContactList() }>其他地址</div>) : (<div className='other otherOrg' onClick={ () => goContactList() }>新增地址</div>)
+      }
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ coffee/components/goodslist1.js 
+ 
+import React from 'react'
+import BScroll from 'better-scroll'
+import { Icon } from 'antd-mobile'
+import { getStore } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import ListAddDown from './listadddown.js'
+import '../style/goodslist.scss'
+
+import pnglogo from '../img/logobig.png'
+import iconcha from '../img/cha.svg'
+
+class GoodslistMain extends React.Component {
+  constructor(props) {
+    super(props)
+    // console.log('GoodslistMain--f----', props)
+    this.state = {
+      ...props,
+      tagsIndex: 0,
+    }
+    // console.log('goods', props)
+    this.listHeight = []
+    this.scrollY = 0
+    this.isScroll = false
+    this.mypos = 0
+    this.tagsIndex = 0
+    this.changeHeight = 0
+    this.calculateHeight = this.calculateHeight.bind(this)
+    this.currentIndex = this.currentIndex.bind(this)
+    this.handleTagsMark = this.handleTagsMark.bind(this)
+    this.initScroll = this.initScroll.bind(this)
+    this.handleGoDetails = this.handleGoDetails.bind(this)
+    this.ChooseContactFn = this.ChooseContactFn.bind(this)
+  }
+  componentWillMount() {
+    // console.log(this.state)
+  }
+  componentWillUnmount() {
+    Mask.closeAll()
+    const tagsmark = getStore('tagsmark', 'session')
+    const tagsIndex = getStore('tagsIndex', 'session')
+    if (tagsIndex && tagsmark) {
+      this.setState({
+        tagsmark,
+        tagsIndex,
+      })
+    }
+  }
+  componentDidMount() {
+    this.initScroll()
+    this.calculateHeight()
+    this.imageHeight = document.querySelector('.indexBanner').clientHeight
+    this.mainWrap = document.querySelector('.mainWrap')
+    this.minTranslateY = -this.imageHeight
+    this.mainHeight = this.indexMainWrap.clientHeight
+    document.querySelector('.coffee_kong').style.height = this.imageHeight
+    // this.t = document.querySelectorAll('.tagsitem')
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  calculateHeight() {
+    const listHeight = this.listHeight
+    const foodList = document.getElementsByClassName('foodlist')
+    let height = 0
+    listHeight.push(height)
+    for (let i = 0; i < foodList.length; i++) {
+      const item = foodList[i]
+      height += item.clientHeight
+      listHeight.push(height)
+    }
+  }
+  currentIndex(i = 0, els = document.querySelectorAll('.foodList')) {
+    const { scrollY } = this
+    for (; i < els.length; i++) {
+      const { offsetTop } = els[i]
+      // console.log(offsetTop, scrollY)
+      if (scrollY < offsetTop) break
+    }
+    this.followScroll(i)
+
+    return i - 1
+  }
+  initScroll() {
+    const toggleActiveTag = () => {
+      const tags = document.querySelectorAll('.tagsitem')
+      for (let i = 0; i < tags.length; i++) {
+        tags[i].className = tags[i].className.replace(/tagsmark/g, '')
+      }
+      tags[this.currentIndex()].className += ' tagsmark'
+    }
+    this.mainTitleScroll = new BScroll(this.mainTitle, {
+      click:  true,
+      bounce: false,
+    })
+    this.mainListScroll = new BScroll(this.mainList, {
+      click:        true,
+      probeType:    2,
+      bounce:       false,
+      deceleration: 0.003,
+    })
+    this.mainListScroll.on('scrollStart', () => {
+      this.indexMainWrap.style.webkitTransition = ''
+      this.isScroll = true
+    })
+    this.mainListScroll.on('scrollEnd', pos => {
+      this.scrollY = Math.abs(Math.round(pos.y))
+      toggleActiveTag()
+      if (!this.isScroll) {
+        this.mainWrap.style.webkitTransition = 'all .3s ease'
+        this.ListeningScroll(pos.y)
+      }
+    })
+    this.mainListScroll.on('scroll', pos => {
+      if (!pos.y) {
+        return
+      }
+      if (this.isScroll) {
+        this.mypos = pos.y
+        this.ListeningScroll(this.mypos)
+      }
+      this.scrollY = Math.abs(Math.round(pos.y))
+      toggleActiveTag()
+    })
+  }
+  followScroll(index) {
+    const el = document.querySelectorAll('.tagsitem')[index]
+    this.mainTitleScroll.scrollToElement(el, 100, 0, -200)
+  }
+  // banner 距离判断
+  ListeningScroll(newVal) {
+    const translateY = Math.max(this.minTranslateY, newVal)
+    const height = Math.abs(translateY)
+    this.changeHeight = height
+    this.mainWrap.style.transform = `translate3d(0,${ translateY }px, 0)`
+    this.mainWrap.style.webkitTransform = `translate3d(0,${ translateY }px, 0)`
+    this.indexMainWrap.style.height = `${ this.mainHeight + height }`
+  }
+  // 选择tags，即改变商品类别
+  handleTagsMark(item, index) {
+    // console.log('qqqq', index)
+    const tags = document.querySelectorAll('.tagsitem')
+    tags[index].className = tags[index].className.replace(/tagsmark/g, '')
+    this.isScroll = false
+    this.mypos = 0
+    const mainListScroll = this.mainListScroll
+    const el = document.querySelectorAll('.foodlist')[index]
+    mainListScroll.scrollToElement(el, 400)
+  }
+  ChooseContactFn() {
+    const { contactData = [], handleChangeContact, goContactList } = this.state
+    console.log('dddd', handleChangeContact)
+    Mask(<ChooseContact contactData={ contactData } handleChangeContact={ handleChangeContact } goContactList={ goContactList } />)
+  }
+  handleGoDetails(item) {
+    const { OptimalContact, goDetailsShow } = this.state
+    if (OptimalContact) {
+      goDetailsShow(item)
+    } else {
+      this.ChooseContactFn()
+    }
+  }
+  render() {
+    const { goodslist,
+      goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+      goDetailsShow, tagsIndex, name,
+    } = this.state
+    if (goodslist) {
+      return (
+        <div className='mainWrap'>
+          <div className='indexBanner'>
+            <div className='banner_l'>
+              <img alt='' src={ pnglogo } />
+            </div>
+            <div className='banner_r'>
+              <div className='banner_title oto'>{ name }</div>
+              <div className='banner_yu oto'>欢迎来到星巴克</div>
+              <div className='banner_tips oto'>公告: *代购服务由邻趣提供*</div>
+            </div>
+          </div>
+          <div className='indexMainWrap' ref={ c => { this.indexMainWrap = c } }>
+            <div className='mainTitle' ref={ c => { this.mainTitle = c } }>
+              <TagListshow goodslist={ goodslist }
+                tagsIndex={ tagsIndex }
+                handleTagsMark={ this.handleTagsMark }
+              />
+            </div>
+            <div className='mainList' ref={ c => { this.mainList = c } }>
+              <FoodslistMain
+                goDetailsShow={ goDetailsShow }
+                goodsCartarr={ goodsCartarr }
+                addCartFn={ addCartFn }
+                ReduceCartNum={ ReduceCartNum }
+                ReduceCartListNum={ ReduceCartListNum }
+                ChooseContactFn={ this.ChooseContactFn }
+                handleGoDetails={ this.handleGoDetails }
+                goodslist={ goodslist }
+              />
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return (<div />)
+  }
+}
+
+export default GoodslistMain
+
+// { goodslist, handleGoDetails,
+//   goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum,
+//   ChooseContactFn,
+//  }
+const FoodslistMain = props => {
+  const { goodslist } = props
+  const { productItem, tags } = goodslist
+  console.log('xuanrang', props)
+  return (
+    <div className='productlist'>
+      {
+        tags.map(tag => (
+          <div className='foodlist' key={ tag }>
+            <p className='title'>{ tag }</p>
+            {
+              productItem[tag].map(item => {
+                return (
+                  <Food { ...{ item, ...props } } key={ item.productId } />
+                )
+              })
+            }
+          </div>
+        ))
+      }
+      <div className='coffee_kong' />
+    </div>
+  )
+}
+
+const Food = ({ item, handleGoDetails, goodsCartarr, addCartFn, ReduceCartListNum, ReduceCartNum, ChooseContactFn }) => (
+  <div className='item' >
+    <div className='item_pic' onClick={ () => handleGoDetails(item) }>
+      <img alt='' src={ item.photoUrl } />
+    </div>
+    <div className='item_main'>
+      <div className='name' onClick={ () => handleGoDetails(item) }>
+        <span className='name_l'>{ item.productName }</span>
+        {
+          item.attribute ? (<span className='name_r'>多规格</span>) : ('')
+        }
+      </div>
+      <div className='Introduced' onClick={ () => handleGoDetails(item) }>
+        { item.description }
+      </div>
+      <div className='price'>
+        <span className='price_span price_l'>¥</span>
+        <span className='price_span price_c'>{ item.price }</span>
+        <ListAddDown
+          productId={ item.productId }
+          goodsCartarr={ goodsCartarr }
+          data={ item }
+          addCartFn={ addCartFn }
+          ReduceCartNum={ ReduceCartNum }
+          ReduceCartListNum={ ReduceCartListNum }
+          ChooseContactFn={ ChooseContactFn }
+        />
+      </div>
+    </div>
+    <div className='line' />
+  </div>
+)
+
+const TagListshow = ({ goodslist, handleTagsMark, tagsIndex }) => {
+  const { tags } = goodslist
+  return (
+    <div className='taglist'>
+      {
+        tags.map((item, index) => (
+          <div className={ `tagsitem ${ tagsIndex === index ? 'tagsmark' : '' }` } key={ item } onClick={ () => handleTagsMark(item, index) }>{ item }</div>
+        ))
+      }
+    </div>
+  )
+}
+
+// 请选择收货地址
+const ChooseContact = ({ contactData, handleChangeContact, goContactList }) => {
+  return (
+    <div className='ChooseContact'>
+      <div className='title'>请选择收货地址<span className='close'><Icon onClick={ () => Mask.closeAll() } type={ iconcha } /></span></div>
+      <div className='contactList'>
+        {
+          contactData.length > 0 ? (contactData.map(i => (
+            <div className='item' key={ i.contactId } onClick={ () => handleChangeContact(i) }>
+              { i.detail }
+            </div>
+          ))) : (<div className='no_contact'><img alt='' src={ require('../img/Noaddress.png') } /></div>)
+        }
+        {
+          contactData.length > 0 ? ('') : (<p className='otherTip'>你还没有收货地址</p>)
+        }
+      </div>
+      {
+        contactData.length > 0 ? (<div className='other' onClick={ () => goContactList() }>其他地址</div>) : (<div className='other otherOrg' onClick={ () => goContactList() }>新增地址</div>)
+      }
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ coffee/components/listadddown.js 
+ 
+import React from 'react'
+// import { browserHistory } from 'react-router'
+import { Icon } from 'antd-mobile'
+import { getStore } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import AttributeCom from './attribute.js'
+import '../style/listadddown.scss'
+
+import iconadd from '../img/jia.svg'
+import iconbigdown from '../img/bigdown1.svg'
+
+// const Item = List.Item
+class ListAddDown extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+    // console.log('ListAddDown-----', props)
+    this.handleAttribute = this.handleAttribute.bind(this)
+    this.handleGoodsNumber = this.handleGoodsNumber.bind(this)
+    this.handleattribute = this.handleattribute.bind(this)
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      goodsCartarr: nextProps.goodsCartarr,
+      data:         nextProps.data,
+    })
+  }
+  componentWillMount() {
+    const contact = getStore('coffee_contact', 'session')
+    if (contact) {
+      this.setState({
+        contact,
+      })
+    }
+  }
+  // componentWillReceiveProps(nextProps) {
+  //   const contact = getStore('coffee_contact', 'session')
+  //   console.log('componentDidMount--', contact, nextProps)
+  // }
+  componentWillUnmount() {
+    Mask.closeAll()
+  }
+  handleCloseEvent() {
+    Mask.closeAll()
+  }
+  // 添加物品的时候分为多规格和无规格
+  handleAttribute(data) {
+    const { addCartFn, ChooseContactFn } = this.state
+    const contact = getStore('coffee_contact', 'session')
+    // console.log('handleAttribute', contact)
+    if (contact) {
+      if (data.attribute) {
+        Mask(<AttributeCom data={ data } addCartFn={ addCartFn } />)
+      } else {
+        addCartFn('no', data)
+      }
+    } else {
+      ChooseContactFn()
+    }
+  }
+  handleattribute(goodsCartarr, productId, ReduceCartNum, ReduceCartListNum, data) {
+    const arr = []
+    for (let j = 0; j < goodsCartarr.length; j++) {
+      if (productId === goodsCartarr[j].data.productId) {
+        arr.push(goodsCartarr[j])
+      }
+    }
+    if (arr.length > 1) {
+      ReduceCartListNum(data)
+    } else {
+      ReduceCartNum(data)
+    }
+  }
+  // 减少购买数量的时候
+  handleGoodsNumber(data, goodsNumber) {
+    // console.log('handleGoodsNumber---', data, goodsNumber)
+    const { ReduceCartNum, ReduceCartListNum, goodsCartarr, productId } = this.state
+    if (goodsNumber === 1) {
+      ReduceCartNum(data)
+    } else if (!data.attribute) {
+      ReduceCartNum(data)
+    } else if (data.attribute) {
+      this.handleattribute(goodsCartarr, productId, ReduceCartNum, ReduceCartListNum, data)
+    } else {
+      ReduceCartListNum(data)
+    }
+  }
+  render() {
+    const { goodsCartarr, data, productId, tipsText } = this.state
+    let goodsNumber = 0
+    for (let s = 0; s < goodsCartarr.length; s++) {
+      if (productId === goodsCartarr[s].data.productId) {
+        goodsNumber += goodsCartarr[s].quantity
+      }
+    }
+    if (goodsNumber !== 0) {
+      return (
+        <span className='price_span price_r'>
+          <span className='carthano carthas'><span className='price_down icon' onClick={ () => this.handleGoodsNumber(data, goodsNumber) }><Icon type={ iconbigdown } /></span><span className='Sum'>{ goodsNumber }</span></span>
+          <span className='price_add icon' onClick={ () => this.handleAttribute(data) }><Icon type={ iconadd } /></span>
+        </span>
+      )
+    }
+    return (
+      <span className={ `${ tipsText ? 'price_no' : 'price_span price_r' }` }>
+        {
+          tipsText ? (<span className='price_add icon' onClick={ () => this.handleAttribute(data) }>{ tipsText }</span>) : (<span className='price_add icon' onClick={ () => this.handleAttribute(data) }><Icon type={ iconadd } /></span>)
+        }
+      </span>
+    )
+  }
+}
+export default ListAddDown
+         
+ 
+ 
+ 
+ coffee/components/order.js 
+ 
+import React from 'react'
+import { Picker, List, WhiteSpace, Slider, Icon, createTooltip, Modal } from 'antd-mobile'
+import { ContactShow, NewPromotion, SlidePage, Mask } from '@boluome/oto_saas_web_app_component'
+// import { setStore, getStore } from '@boluome/common-lib'
+import '../style/order.scss'
+import tips from '../img/tips.svg'
+import icontime from '../img/time.svg'
+
+const Item = List.Item
+const SliderWithTooltip = createTooltip(Slider)
+const Order = props => {
+  const { contact = '',
+    handleChangeTips, handlePromotion, handleGoOrder,
+    goContactEdit, handleNotesText, noteText, merchant,
+    tipsPrice, deliverFees, goodsCartarr, Promotion,
+    orderTimeDate = [], serviceDate = '', handleServiceDate,
+    visible, handleTipsNotice,
+  } = props
+  const seasons = orderTimeDate.map(({ deliverDate, deliverTime }) => ({ label: deliverDate, value: deliverDate, children: deliverTime.map(key => ({ label: key, value: key })) }))
+  const EditNotes = () => {
+    Mask(
+      <SlidePage target='right' type='root' showClose={ false }>
+        <NotesComponent handleNotesText={ handleNotesText } noteText={ noteText } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  // const onCloseModal = () => {
+  //   Modal.hide()
+  // }
+  // const handleTipsNotice = () => {
+  //
+  // }
+  let Sum = 0
+  let SumPrice = 0.00
+  if (goodsCartarr) {
+    for (let s = 0; s < goodsCartarr.length; s++) {
+      Sum += goodsCartarr[s].quantity
+      SumPrice += (goodsCartarr[s].quantity * goodsCartarr[s].oprice)
+    }
+  }
+  if (goodsCartarr) {
+    return (
+      <div className='orderWrap'>
+        <div className='orderMain'>
+          <ContactShow { ...{ contact } } handleSuccess={ goContactEdit } />
+          <WhiteSpace size='lg' />
+          <List className='orderTime'>
+            <Picker
+              data={ seasons }
+              title='选择日期'
+              extra={ serviceDate ? (`${ serviceDate[0] } ${ serviceDate[1] }`) : '请选择上门服务时间' }
+              cols={ 2 }
+              onChange={ v => handleServiceDate(v, contact) }
+            >
+              <Item arrow='horizontal' className='timeIcon'><Icon type={ icontime } /><span>送达时间</span></Item>
+            </Picker>
+          </List>
+          <WhiteSpace size='lg' />
+          <Item extra='在线支付'>支付方式</Item>
+          <WhiteSpace size='lg' />
+          <List>
+            <Item>星巴克代购</Item>
+            {
+              goodsCartarr.map((item, index) => (
+                <Item key={ `${ index + item.markId }` } className='oto_item' extra={ <GoodsPrice goods={ item } /> }>{ item.data.productName }</Item>
+              ))
+            }
+          </List>
+          <List className='tipsWrap'>
+            <Item extra={ `¥ ${ deliverFees }` }>配送费</Item>
+            <Item extra={
+              <div className='iconWrapper'>
+                <Icon type={ tips } />
+                <SliderWithTooltip min={ 0 } max={ 20 } defaultValue={ 0 } onChange={ handleChangeTips } />
+                <Icon onClick={ () => handleTipsNotice('show') } type={ tips } />
+              </div>
+            }
+            >
+              小费 <span className='tipsPrice'>{ tipsPrice }元</span>
+            </Item>
+          </List>
+          <WhiteSpace size='lg' />
+          <NewPromotion orderType='coffee' amount={ (SumPrice + tipsPrice) * 1 } count={ Sum } channel='linqu' handleChange={ reply => handlePromotion(reply) } />
+          <WhiteSpace size='lg' />
+          <Item className='noteText' arrow='horizontal' extra={ noteText === '' ? '口味，偏好等' : noteText } onClick={ () => EditNotes() }>订单备注</Item>
+          <WhiteSpace size='lg' />
+        </div>
+        <FooterSumPrice
+          tipsPrice={ tipsPrice }
+          contact={ contact }
+          serviceDate={ serviceDate }
+          goodsCartarr={ goodsCartarr }
+          SumPrice={ SumPrice }
+          Promotion={ Promotion }
+          deliverFees={ deliverFees }
+          handleGoOrder={ handleGoOrder }
+          merchant={ merchant }
+          noteText={ noteText }
+        />
+        <Modal
+          title='关于小费'
+          transparent
+          visible={ visible }
+          footer={ [{ text: '知道了', onPress: () => { handleTipsNotice('colse') } }] }
+        >
+          支付小费后配送员会更及时接单，得到更优质的服务。付小费让小邻哥飞起来吧！
+        </Modal>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+export default Order
+
+// 订单页面的商品展示
+const GoodsPrice = ({ goods }) => {
+  const { oprice, quantity } = goods
+  return (
+    <div className='goodsshow'>
+      <span>x { quantity }</span>
+      <span className='goodsSpan'>¥ { oprice }</span>
+    </div>
+  )
+}
+
+// 小费说明
+// const TipsNotice = () => {
+//   return (
+//     <Modal
+//       title='关于小费'
+//       transparent
+//       maskClosable='true'
+//       visible='true'
+//       footer={ [{ text: '知道了', onPress: () => { Modal.close() } }] }
+//     >
+//       支付小费后配送员会更及时接单，得到更优质的服务。付小费让小邻哥飞起来吧！
+//     </Modal>
+//   )
+// }
+// 订单备注
+const NotesComponent = ({ handleNotesText, noteText }) => {
+  return (
+    <div className='notes'>
+      <Item className='noteHeader'>订单备注</Item>
+      <WhiteSpace size='lg' />
+      <Item className='title'>其他备注</Item>
+      <div className='note'>
+        <textarea className='textarea' maxLength='50' placeholder='请输入备注内容(可不填)'>{ noteText === '口味，偏好等' ? '' : noteText }</textarea>
+      </div>
+      <WhiteSpace size='lg' />
+      <WhiteSpace size='lg' />
+      <div className='saveBtn' onClick={ () => handleNotesText(noteText) }>确定</div>
+    </div>
+  )
+}
+
+// 底部总价计算
+const FooterSumPrice = ({ tipsPrice, contact, merchant, serviceDate, goodsCartarr, SumPrice, Promotion, deliverFees, noteText, handleGoOrder }) => {
+  // console.log(tipsPrice, contact, serviceDate, goodsCartarr, SumPrice, Promotion, deliverFees)
+  const { discount = 0 } = Promotion
+  const orderPrice = (SumPrice + tipsPrice + deliverFees) - discount
+  return (
+    <div className='footerPrice'>
+      <div className='footerL'>
+        实付: ¥ <span className='price'>{ orderPrice }</span>{ discount === 0 ? ('') : (<span className='downprice'>优惠¥{ discount }</span>) }
+      </div>
+      <div className='footerR' onClick={ () => handleGoOrder(tipsPrice, contact, merchant, serviceDate, goodsCartarr, Promotion, deliverFees, noteText) }>立即下单</div>
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ coffee/components/orderDetails.js 
+ 
+import React from 'react'
+import { afterOrdering, login } from 'business'
+import { List, WhiteSpace } from 'antd-mobile'
+import { moment, setStore } from '@boluome/common-lib'
+import { OrderDetail, OrderPreferential } from '@boluome/oto_saas_web_app_component'
+
+import '../style/orderDetails.scss'
+import logo from '../img/logocoffees.png'
+
+const Item = List.Item
+const orderDetails = props => {
+  console.log('od---', props)
+  const { params, goBackIndex } = props
+  const orderId = params ? params.id : ''
+  return (
+    <div className='orderDetailsWrap'>
+      <OrderDetail
+        content={ <OrderComponent goBackIndex={ goBackIndex } /> }
+        login={ login }
+        id={ orderId }
+        orderType='coffee'
+        goPay={ () => afterOrdering({ id: orderId }) }
+      />
+    </div>
+  )
+}
+
+export default orderDetails
+
+// 订单详情页面的主要内容
+const OrderComponent = ({ goBackIndex, orderDetailInfo }) => {
+  console.log('test---', orderDetailInfo)
+  const { merchant, deliverFee, orderItem, contactor, createdAt, id, contact, type,
+    comment, platformActivity = {}, coupon = {}, realPayPrice = 0, orderPrice = 0, deliverTime, tipFee,
+  } = orderDetailInfo
+  if (contact) {
+    setStore('coffee_contact', contact, 'session')
+  }
+  const { price, title } = platformActivity
+  const proCouponObj = {
+    topTitle:              '小计',
+    platformActivityPrice: price,
+    couponPrice:           coupon.price,
+    realPayPrice:          realPayPrice.toFixed(2),
+    sumPrice:              orderPrice.toFixed(2),
+    atitle:                title,
+    ctitle:                coupon.title,
+    realPayTitle:          '实付金额',
+  }
+  return (
+    <div className='menpiaoOrderDetails'>
+      <WhiteSpace size='lg' />
+      {
+        merchant ? (<Detailsinfo goBackIndex={ goBackIndex } merchant={ merchant } deliverFee={ deliverFee } orderItem={ orderItem } tipFee={ tipFee } />) : ('')
+      }
+      <WhiteSpace size='lg' />
+      {
+        realPayPrice && orderPrice ? (<OrderPreferential propsObj={ proCouponObj } />) : ''
+      }
+      <OrderTimeCom id={ id } createdAt={ createdAt } />
+      <WhiteSpace size='lg' />
+      {
+        contactor ? (<PersonalInfo contactor={ contactor } comment={ comment } deliverTime={ deliverTime } type={ type } />) : ('')
+      }
+    </div>
+  )
+}
+
+// 详情展示部分
+const Detailsinfo = ({ goBackIndex, merchant, deliverFee, orderItem, tipFee }) => {
+  const { name } = merchant
+  return (
+    <div className='orderDetailsinfo'>
+      <List>
+        <Item arrow='horizontal' onClick={ () => { goBackIndex() } }><span><img src={ logo } alt='' /></span> { name }</Item>
+        <div className='infowrap'>
+          {
+            orderItem && orderItem.map(o => (
+              <div className='infoitem' key={ `${ o.productId + o.attribute }` }><div className='infoname'>{ o.productName }</div><div className='infoto'><span>x{ o.count }</span><span>¥ { o.price }</span></div></div>
+            ))
+          }
+        </div>
+        <Item extra={ `¥ ${ deliverFee }` }>配送费</Item>
+        {
+          tipFee && tipFee !== 0 ? (<Item extra={ `¥ ${ tipFee }` }>小费</Item>) : ('')
+        }
+      </List>
+    </div>
+  )
+}
+
+// 信息展示
+const PersonalInfo = ({ contactor, comment, deliverTime, type }) => {
+  const { name, phone, address } = contactor
+  let sxetype = '女士'
+  if (type === 0) {
+    sxetype = '男士'
+  }
+  return (
+    <div className='PersonalInfoWrap'>
+      <List>
+        <Item extra={ '在线支付' }>支付方式</Item>
+        {
+          comment ? (<Item extra={ comment }>订单备注</Item>) : (<Item extra={ '无' }>订单备注</Item>)
+        }
+        <Item extra={ `${ deliverTime }` }>送达时间</Item>
+        <Item>
+          <div className='orderContact'>收货地址</div>
+          <div className='cantactMain'>
+            <div className='oto'><span>{ name }</span><span>{ sxetype }</span></div>
+            <div className='oto'>{ phone }</div>
+            <div className='oto'>{ `${ address } ` }</div>
+          </div>
+        </Item>
+      </List>
+    </div>
+  )
+}
+
+// 订单编号和下单时间
+const OrderTimeCom = ({ id, createdAt, partnerId }) => {
+  return (
+    <List>
+      <Item extra={ id }>订单编号</Item>
+      {
+        partnerId ? (<Item extra={ partnerId }>供应商订单号</Item>) : ('')
+      }
+      <Item extra={ `${ moment('YYYY-MM-DD HH:mm:ss')(createdAt) }` }>下单时间</Item>
+    </List>
+  )
+}
+         
+ 
+ 
+ 
+ coffee/components/root.js 
+ 
+import React from 'react'
+import customize from 'customize'
+
+export default customize(
+  ({ children }) => (
+    <div>{ children }</div>
+  )
+)
+         
+ 
+ 
+ 
+ coffee/containers/app.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Popup, Toast } from 'antd-mobile'
+import { setStore, getStore } from '@boluome/common-lib'
+import { wrap, Mask, Loading } from '@boluome/oto_saas_web_app_component'
+import { login, getLocationGaode } from 'business' // getLocation,
+import App from '../components/app'
+import { indexDatalist, getOptimalContact, getContactList } from '../actions/index'
+import addGoodsCartFns from '../components/addGoodsCartFns'
+
+// console.log('addGoodsCartFns---', addGoodsCartFns)
+
+const mapStateToProps = state => {
+  // console.log('state---', state)
+  const { app } = state
+  // const { goodslist, tagsmark, markPopup, goodsCartarr,
+  //   contactData, OptimalContact, titleAddress, scroll, top, tagsClick,
+  //   tagsIndex, nolocation, outRange,
+  // } = app
+  // console.log('goodsCartarr', goodsCartarr)
+  return {
+    ...app,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  // 在添加到购物车方法里面的公共部分
+  const callback = data => {
+    // console.log('call')
+    dispatch({ type: 'GOODS_CARTARR', goodsCartarr: data })
+  }
+  return {
+    dispatch,
+    // 测试首页需要的订单详情页面的入口
+    goOrderDetails: () => {
+      browserHistory.push('/coffee/orderDetails')
+    },
+    // 没有规格的添加到购物车
+    addCartFn: (yesOrno, data, standard, sum) => {
+      if (yesOrno === 'no') { // 当没有规格时
+        // console.log('没有规格', data)
+        const num = 1
+        standard = []
+        addGoodsCartFns(data, num, standard, 0, callback)
+      } else if (yesOrno === 'yes') { // 这里是有规格
+        // console.log('有规格', data, standard)
+        let sPrice = 0
+        standard.map(item => (
+          sPrice += item.price
+        ))
+        addGoodsCartFns(data, sum, standard, sPrice, callback)
+      } else if (yesOrno === 'both') { // 这里是清除购物车的时候
+        console.log('清空购物车', data)
+      }
+    },
+    // 没有规格的减少购物车里的数量
+    ReduceCartNum: data => {
+      // console.log('ReduceCartNum----', data)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let t = 0; t < goodsCartarr.length; t++) {
+        if (goodsCartarr[t].data.productId === data.productId) {
+          if (goodsCartarr[t].quantity > 1) {
+            goodsCartarr[t].quantity--
+          } else {
+            goodsCartarr.splice(t, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    },
+    // 有规格的商品的数量减少
+    ReduceCartListNum: () => {
+      // console.log(data)
+      Toast.info('多规格请到购物车里减少', 1)
+    },
+    // 这个是购物车列表展示的时候加减组件
+    handleReduceNum: (markId, number) => {
+      // console.log('handleReduceNum---', markId, number)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let j = 0; j < goodsCartarr.length; j++) {
+        if (goodsCartarr[j].markId === markId) {
+          goodsCartarr[j].quantity += number
+          if (goodsCartarr[j].quantity === 0) {
+            goodsCartarr.splice(j, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+      return goodsCartarr
+      // 这里是解决Popup 组件购物车的实时更新
+    },
+    // 清空购物车，需要传给组件的事件
+    handleOnClose: () => {
+      setStore('goodsCartarr', [], 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr: [] })
+      Popup.hide()
+    },
+    // 这个是点击头部去收货地址列表页面
+    // handleChooseContact: conatct => {
+    //   console.log('handleChooseContact', conatct)
+    // },
+    // 这个是跳出收货地址列表让他选择，主要出现在点击添加到购物车
+    handleChangeContact: (contact, handleContainerClose) => {
+      const { latitude, longitude } = contact
+      Loading()
+      dispatch({
+        type:           'KJIN_OPTIMALCONTACT',
+        OptimalContact: contact,
+        userPoint:      { latitude, longitude },
+      })
+      setStore('coffee_loading', false, 'session')
+      setStore('coffee_contact', contact, 'session')
+      dispatch(indexDatalist({ latitude, longitude }))
+      dispatch({ type: 'TITLE_ADDRESS', titleAddress: contact.detail })
+      Mask.closeAll()
+      handleContainerClose()
+    },
+    handleBtnEvevtR: () => {
+      getLocationGaode(err => {
+        if (err) {
+          dispatch({ type: 'NOLOCATION', nolocation: false })
+        } else {
+          dispatch({ type: 'NOLOCATION', nolocation: true })
+          const latOrlng = getStore('geopoint', 'session')
+          dispatch(getOptimalContact(latOrlng))
+        }
+      })
+    },
+    goDetailsShow: product => {
+      setStore('ChooseGoods', product, 'session')
+      browserHistory.push(`/coffee/details?productId=${ product.productId }`)
+    },
+    goOrderMmessage: () => {
+      Popup.hide()
+      browserHistory.push('/coffee/order')
+    },
+    goContactList: () => {
+      dispatch({ type: 'NOLOCATION', nolocation: true })
+      browserHistory.push('/coffee/contactlist')
+    },
+    // 当选择了收货地址之后的事件
+    handleChooseContact(contact) {
+      if (contact) {
+        dispatch({ type: 'NOLOCATION', nolocation: true })
+        const latOrlng = { latitude: contact.latitude, longitude: contact.longitude }
+        dispatch({
+          type:           'KJIN_OPTIMALCONTACT',
+          OptimalContact: contact,
+          userPoint:      latOrlng,
+        })
+        dispatch(indexDatalist(latOrlng))
+        dispatch({ type: 'TITLE_ADDRESS', titleAddress: contact.detail })
+        setStore('coffee_contact', contact, 'session')
+      } else {
+        const latOrlng = getStore('geopoint', 'session')
+        const currentPosition = getStore('currentPosition', 'session')
+        dispatch({
+          type:           'KJIN_OPTIMALCONTACT',
+          OptimalContact: '',
+          userPoint:      latOrlng,
+        })
+        dispatch(indexDatalist(latOrlng))
+        dispatch({ type: 'TITLE_ADDRESS', titleAddress: `${ currentPosition.street + currentPosition.streetNumber }` })
+      }
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr: [] })
+      setStore('goodsCartarr', [], 'session')
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    login(err => {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log('我是用户绑定')
+        dispatch(getContactList())
+      }
+    })
+    // 如果是选择收货地址在这里处理事件
+    const contact = getStore('coffee_contact', 'session')
+    if (contact) {
+      // console.log('我是收货地址', contact)
+      const latOrlng = { latitude: contact.latitude, longitude: contact.longitude }
+      dispatch({
+        type:           'KJIN_OPTIMALCONTACT',
+        OptimalContact: contact,
+        userPoint:      latOrlng,
+      })
+      dispatch(indexDatalist(latOrlng))
+      dispatch({ type: 'TITLE_ADDRESS', titleAddress: contact.detail })
+      Mask.closeAll() // 2017-11-07 loading
+    } else {
+      getLocationGaode(err => {
+        if (err) {
+          console.log(err)
+          dispatch({ type: 'NOLOCATION', nolocation: false })
+          Mask.closeAll()
+        } else {
+          dispatch({ type: 'NOLOCATION', nolocation: true })
+          const latOrlng = getStore('geopoint', 'session')
+          const currentPosition = getStore('currentPosition', 'session')
+          dispatch({ type: 'TITLE_ADDRESS', titleAddress: `${ currentPosition.street + currentPosition.streetNumber }` })
+          dispatch(getOptimalContact(latOrlng))
+        }
+      })
+    }
+    setStore('scrollTop', 0, 'session')
+    const tagsIndex = getStore('tagsIndex', 'session')
+    if (tagsIndex) {
+      dispatch({ type: 'TAGS_INDEX', tagsIndex })
+    }
+  },
+  componentDidMount: () => {
+    // dispatch(getContactList())
+    const goodsCartarr = getStore('goodsCartarr', 'session')
+    if (goodsCartarr) {
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    } else {
+      setStore('goodsCartarr', [], 'session')
+    }
+  },
+  componentWillUnmount() {
+    Popup.hide()
+  },
+  // componentWillReceiveProps(nextProps) {
+  //   console.log('nextProps--app-', nextProps)
+  //   // dispatch({ type: 'GOODS_CARTARR', goodsCartarr: nextProps.goodsCartarr })
+  // },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+         
+ 
+ 
+ 
+ coffee/containers/app0.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Popup, Toast } from 'antd-mobile'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+import { setStore, getStore } from '@boluome/common-lib'
+import App from '../components/app'
+import { indexDatalist } from '../actions/index'
+import addGoodsCartFns from '../components/addGoodsCartFns'
+
+console.log('addGoodsCartFns---', addGoodsCartFns)
+
+const mapStateToProps = state => {
+  // console.log('state---', state)
+  const { app } = state
+  const { goodslist, tagsmark, markPopup, goodsCartarr } = app
+  return {
+    goodslist,
+    tagsmark,
+    markPopup,
+    goodsCartarr,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  // 整理一个兼容有无规格的购物车数组
+  // const addGoodsCartFn = (datas, num, standard, sPrice) => {
+  //   console.log(datas)
+  //   const goods = {}
+  //   goods.data = datas
+  //   goods.quantity = num
+  //   goods.standard = standard
+  //   goods.markId = standard.length === 0 ? (datas.productId) : (datas.productId + standard.map(i => { return i.name + i.value + i.price }).join(''))
+  //   // goods.oprice = sPrice === 0 ? datas.price : sPrice
+  //   goods.oprice = sPrice === 0 ? datas.price : (datas.price + sPrice) * 1
+  //   const goodsCartarr = getStore('goodsCartarr', 'session')
+  //   console.log('goods---', goods, standard.map(i => { return i.name + i.value + i.price }).join(''))
+  //   if (goodsCartarr.length > 0) {
+  //     const cartArr = goodsCartarr.filter(item => {
+  //       return (item.markId) === (goods.markId)
+  //     })
+  //     console.log('cartArr----', cartArr)
+  //     if (cartArr.length > 0) {
+  //       const cartStan = cartArr[0].standard
+  //       cartArr[0].quantity += goods.quantity
+  //       console.log(cartStan)
+  //     } else {
+  //       goodsCartarr.push(goods)
+  //     }
+  //   } else {
+  //     goodsCartarr.push(goods)
+  //   }
+  //   setStore('goodsCartarr', goodsCartarr, 'session')
+  //   dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+  //   console.log('goodsCartarr----', getStore('goodsCartarr', 'session'))
+  // }
+  const callback = data => {
+    dispatch({ type: 'GOODS_CARTARR', goodsCartarr: data })
+  }
+  return {
+    dispatch,
+    // 选择tags，即改变商品类别
+    handleTagsMark: item => {
+      dispatch({ type: 'KJIN_GOODSLIST', tagsmark: item })
+    },
+    // 没有规格的添加到购物车
+    addCartFn: (yesOrno, data, standard, sum) => {
+      if (yesOrno === 'no') { // 当没有规格时
+        console.log('没有规格', data)
+        const num = 1
+        standard = []
+        console.log('call----', callback)
+        addGoodsCartFns(data, num, standard, 0, callback)
+      } else if (yesOrno === 'yes') { // 这里是有规格
+        console.log('有规格', data, standard)
+        let sPrice = 0
+        standard.map(item => (
+          sPrice += item.price
+        ))
+        console.log('sPrice---', sPrice)
+        addGoodsCartFns(data, sum, standard, sPrice, callback)
+      } else if (yesOrno === 'both') { // 这里是清除购物车的时候
+        console.log('清空购物车', data)
+      }
+    },
+    // 没有规格的减少购物车里的数量
+    ReduceCartNum: data => {
+      console.log('ReduceCartNum----', data)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let t = 0; t < goodsCartarr.length; t++) {
+        if (goodsCartarr[t].data.productId === data.productId) {
+          if (goodsCartarr[t].quantity > 1) {
+            goodsCartarr[t].quantity--
+          } else {
+            goodsCartarr.splice(t, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    },
+    // 有规格的商品的数量减少
+    ReduceCartListNum: data => {
+      console.log(data)
+      Toast.info('多规格请到购物车里减少', 1)
+    },
+    handleReduceNum: (markId, number) => {
+      console.log('handleReduceNum---', markId, number)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let j = 0; j < goodsCartarr.length; j++) {
+        if (goodsCartarr[j].markId === markId) {
+          goodsCartarr[j].quantity += number
+          if (goodsCartarr[j].quantity === 0) {
+            goodsCartarr.splice(j, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+      return goodsCartarr
+      // 这里是解决Popup 组件购物车的实时更新
+    },
+    // 清空购物车，需要传给组件的事件
+    handleOnClose: () => {
+      setStore('goodsCartarr', [], 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr: [] })
+      Popup.hide()
+    },
+    // goContactList: () => {
+    //   browserHistory.push('/coffee/contactlist')
+    // },
+    goDetailsShow: product => {
+      setStore('ChooseGoods', product, 'session')
+      browserHistory.push(`/coffee/details?productId=${ product.productId }`)
+    },
+    goOrderMmessage: () => {
+      Popup.hide()
+      browserHistory.push('/coffee/order')
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    // dispatch(indexDatalist())
+  },
+  componentDidMount: () => {
+    dispatch(indexDatalist())
+    const goodsCartarr = getStore('goodsCartarr', 'session')
+    if (goodsCartarr) {
+      console.log('购物车不为空')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    } else {
+      setStore('goodsCartarr', [], 'session')
+    }
+  },
+  componentWillUnmount() {
+    Popup.hide()
+    console.log('componentWillUnmount--app---', dispatch)
+  },
+  // componentWillReceiveProps(nextProps) {
+  //   console.log('nextProps---', nextProps)
+  //   // dispatch({ type: 'GOODS_CARTARR', goodsCartarr: nextProps.goodsCartarr })
+  // },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+         
+ 
+ 
+ 
+ coffee/containers/details.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Popup, Toast } from 'antd-mobile'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+import { getStore, setStore } from '@boluome/common-lib'
+import Details from '../components/details'
+import addGoodsCartFns from '../components/addGoodsCartFns'
+
+const mapStateToProps = state => {
+  console.log('state---', state)
+  const { details, app } = state
+  const { ChooseGoods } = details
+  const { goodsCartarr } = app
+  return {
+    ChooseGoods,
+    goodsCartarr,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  // 在添加到购物车方法里面的公共部分
+  const callback = data => {
+    dispatch({ type: 'GOODS_CARTARR', goodsCartarr: data })
+  }
+  return {
+    dispatch,
+    goOrderMmessage: () => {
+      Popup.hide()
+      browserHistory.push('/coffee/order')
+    },
+    // 选择tags，即改变商品类别
+    handleTagsMark: item => {
+      dispatch({ type: 'KJIN_GOODSLIST', tagsmark: item })
+    },
+    // 没有规格的添加到购物车
+    addCartFn: (yesOrno, data, standard, sum) => {
+      if (yesOrno === 'no') { // 当没有规格时
+        // console.log('没有规格', data)
+        const num = 1
+        standard = []
+        addGoodsCartFns(data, num, standard, 0, callback)
+      } else if (yesOrno === 'yes') { // 这里是有规格
+        // console.log('有规格', data, standard)
+        let sPrice = 0
+        standard.map(item => (
+          sPrice += item.price
+        ))
+        addGoodsCartFns(data, sum, standard, sPrice, callback)
+      } else if (yesOrno === 'both') { // 这里是清除购物车的时候
+        console.log('清空购物车', data)
+      }
+    },
+    // 没有规格的减少购物车里的数量
+    ReduceCartNum: data => {
+      // console.log('ReduceCartNum----', data)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let t = 0; t < goodsCartarr.length; t++) {
+        if (goodsCartarr[t].data.productId === data.productId) {
+          if (goodsCartarr[t].quantity > 1) {
+            goodsCartarr[t].quantity--
+          } else {
+            goodsCartarr.splice(t, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    },
+    // 有规格的商品的数量减少
+    ReduceCartListNum: data => {
+      console.log(data)
+      Toast.info('多规格请到购物车里减少', 1)
+    },
+    // 这个是购物车列表展示的时候加减组件
+    handleReduceNum: (markId, number) => {
+      // console.log('handleReduceNum---', markId, number)
+      const goodsCartarr = getStore('goodsCartarr', 'session')
+      for (let j = 0; j < goodsCartarr.length; j++) {
+        if (goodsCartarr[j].markId === markId) {
+          goodsCartarr[j].quantity += number
+          if (goodsCartarr[j].quantity === 0) {
+            goodsCartarr.splice(j, 1)
+          }
+        }
+      }
+      setStore('goodsCartarr', goodsCartarr, 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+      return goodsCartarr
+      // 这里是解决Popup 组件购物车的实时更新
+    },
+    // 清空购物车，需要传给组件的事件
+    handleOnClose: () => {
+      setStore('goodsCartarr', [], 'session')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr: [] })
+      Popup.hide()
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    document.title = '商品详情'
+    // dispatch(indexDatalist())
+    const ChooseGoods = getStore('ChooseGoods', 'session')
+    dispatch({ type: 'GOODSDETAILS', ChooseGoods })
+  },
+  componentDidMount: () => {
+    const goodsCartarr = getStore('goodsCartarr', 'session')
+    if (goodsCartarr) {
+      console.log('购物车不为空')
+      dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+    } else {
+      setStore('goodsCartarr', [], 'session')
+    }
+  },
+  componentWillUnmount: () => {
+    dispatch({ type: 'GOODSDETAILS', ChooseGoods: '' })
+    Popup.hide()
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Details)
+)
+         
+ 
+ 
+ 
+ coffee/containers/order.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap, Mask }    from '@boluome/oto_saas_web_app_component'
+import { getStore } from '@boluome/common-lib'
+import Order from '../components/order'
+import { orderDeliverTime, deliverFee, handleGoOrder } from '../actions/order'
+
+const mapStateToProps = state => {
+  // console.log('state---', state)
+  const { order } = state
+  const { tipsPrice, deliverFees,
+    orderTimeDate, serviceDate, availableTime,
+    merchant, goodsCartarr, contact,
+    noteText, Promotion, visible,
+  } = order
+  return {
+    tipsPrice,
+    deliverFees,
+    orderTimeDate,
+    serviceDate,
+    merchant,
+    availableTime,
+    goodsCartarr,
+    contact,
+    noteText,
+    Promotion,
+    handleGoOrder,
+    visible,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goContactEdit: () => {
+      browserHistory.push('/coffee/editcontact')
+    },
+    handleChangeTips: v => {
+      dispatch({ type: 'TIPSPRICE', tipsPrice: v })
+    },
+    handleServiceDate: (time, contact) => {
+      console.log('--serviceDate--', time, time[0], time[1])
+      if (time) {
+        const serviceDate = `${ time[0] } ${ time[1] }`
+        console.log('test---', serviceDate)
+        dispatch({ type: 'KJIN_DELIVERTIME', serviceDate: time })
+        dispatch(deliverFee(serviceDate, contact))
+      }
+    },
+    handleNotesText: () => {
+      const text = document.getElementsByClassName('textarea')[0].value
+      dispatch({ type: 'NOTESTEXT', noteText: text })
+      Mask.closeAll()
+    },
+    handlePromotion: reply => {
+      dispatch({ type: 'PROMOTION', Promotion: reply })
+    },
+    handleTipsNotice: mark => {
+      if (mark === 'show') {
+        dispatch({ type: 'VISIBLE', visible: true })
+      } else {
+        dispatch({ type: 'VISIBLE', visible: false })
+      }
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    const contact = getStore('coffee_contact', 'session')
+    // console.log('componentWillMount---', contact)
+    dispatch(orderDeliverTime(contact))
+    const goodsCartarr = getStore('goodsCartarr', 'session')
+    dispatch({ type: 'GOODS_CARTARR', goodsCartarr })
+  },
+  componentDidMount: () => {
+    const availableTime = getStore('coffee_availableTime', 'session')
+    const merchant = getStore('coffee_merchant', 'session')
+    const serviceDate = getStore('coffee_serviceDate', 'session')
+    const contact = getStore('coffee_contact', 'session')
+    dispatch({ type: 'AVAILABLETIME', availableTime })
+    dispatch({ type: 'MERCHANT', merchant })
+    dispatch({ type: 'KJIN_DELIVERTIME', serviceDate })
+    dispatch({ type: 'ORDER_CONTACT', contact })
+    if (serviceDate) {
+      const time = `${ serviceDate[0] } ${ serviceDate[1] }`
+      dispatch(deliverFee(time, contact))
+    }
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Order)
+)
+         
+ 
+ 
+ 
+ coffee/containers/orderDetails.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+// import { getStore, setStore } from '@boluome/common-lib'
+import orderDetails         from '../components/orderDetails'
+
+const mapStateToProps = state => {
+  console.log(state.orderDetails)
+  return {
+    ...state.orderDetails,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goBackIndex: () => {
+      browserHistory.push('/coffee')
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    console.log(dispatch)
+  },
+  componentDidMount: () => console.log('root mounted', dispatch),
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(orderDetails)
+)
+         
+ 
+ 
+ 
+ coffee/img/bigdown.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M678.143483 534.248723 344.448448 534.248723c-12.786211 0-23.163559-10.378371-23.163559-23.162536 0-12.732999 10.377348-23.060205 23.163559-23.060205l333.696058 0c12.734022 0 23.060205 10.327206 23.060205 23.060205C701.203688 523.870352 690.878528 534.248723 678.143483 534.248723zM511.295454 959.391517c-247.214405 0-448.305329-201.089901-448.305329-448.305329 0-247.164263 201.090924-448.279746 448.305329-448.279746 247.164263 0 448.255187 201.116507 448.255187 448.279746C959.550641 758.301616 758.46074 959.391517 511.295454 959.391517zM511.295454 109.032252c-221.747383 0-402.080541 180.360787-402.080541 402.054959 0 221.696218 180.333158 402.080541 402.080541 402.080541 221.695195 0 402.030399-180.3833 402.030399-402.080541C913.325853 289.39304 732.990648 109.032252 511.295454 109.032252z" /></svg>         
+ 
+ 
+ 
+ coffee/img/bigdown1.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M512 0q-139.008 0-256.992 68.512t-186.496 186.496-68.512 256.992 68.512 256.992 186.496 186.496 256.992 68.512 256.992-68.512 186.496-186.496 68.512-256.992-68.512-256.992-186.496-186.496-256.992-68.512zM823.008 823.008q-60.992 60.992-140 94.016-80.992 35.008-171.008 35.008t-171.008-34.016q-79.008-34.016-140-95.008t-94.016-140q-35.008-80.992-35.008-171.008t34.016-171.008q34.016-79.008 95.008-140t140-94.016q80.992-35.008 171.008-35.008t171.008 34.016q79.008 34.016 140 95.008t94.016 140q35.008 80.992 35.008 171.008t-34.016 171.008q-34.016 79.008-95.008 140zM796 548l-568 0q-15.008 0-25.504-10.496t-10.496-25.504 10.496-25.504 25.504-10.496l568 0q15.008 0 25.504 10.496t10.496 25.504-10.496 25.504-25.504 10.496z" /></svg>         
+ 
+ 
+ 
+ coffee/img/cart.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#cccccc" d="M246.4 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM716.8 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM905.6 764.8l-537.6 0c-28.8 0-57.6-25.6-64-54.4l-96-566.4c-9.6-54.4-60.8-96-115.2-96l-22.4 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l22.4 0c28.8 0 57.6 25.6 64 54.4l96 566.4c9.6 54.4 60.8 96 115.2 96l537.6 0c12.8 0 25.6-12.8 25.6-25.6C931.2 777.6 921.6 764.8 905.6 764.8zM880 179.2l-572.8 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l572.8 0c25.6 0 38.4 16 32 41.6l-70.4 281.6c-6.4 32-41.6 57.6-73.6 60.8l-396.8 28.8c-12.8 0-25.6 12.8-22.4 28.8 0 12.8 12.8 25.6 28.8 22.4l396.8-28.8c54.4-3.2 105.6-48 118.4-99.2l70.4-281.6C976 230.4 937.6 179.2 880 179.2z" /></svg>         
+ 
+ 
+ 
+ coffee/img/cart_fff.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffffff" d="M246.4 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM716.8 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM905.6 764.8l-537.6 0c-28.8 0-57.6-25.6-64-54.4l-96-566.4c-9.6-54.4-60.8-96-115.2-96l-22.4 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l22.4 0c28.8 0 57.6 25.6 64 54.4l96 566.4c9.6 54.4 60.8 96 115.2 96l537.6 0c12.8 0 25.6-12.8 25.6-25.6C931.2 777.6 921.6 764.8 905.6 764.8zM880 179.2l-572.8 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l572.8 0c25.6 0 38.4 16 32 41.6l-70.4 281.6c-6.4 32-41.6 57.6-73.6 60.8l-396.8 28.8c-12.8 0-25.6 12.8-22.4 28.8 0 12.8 12.8 25.6 28.8 22.4l396.8-28.8c54.4-3.2 105.6-48 118.4-99.2l70.4-281.6C976 230.4 937.6 179.2 880 179.2z" /></svg>         
+ 
+ 
+ 
+ coffee/img/cart_no.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M246.4 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM716.8 912a2.1 2.1 0 1 0 134.4 0 2.1 2.1 0 1 0-134.4 0ZM905.6 764.8l-537.6 0c-28.8 0-57.6-25.6-64-54.4l-96-566.4c-9.6-54.4-60.8-96-115.2-96l-22.4 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l22.4 0c28.8 0 57.6 25.6 64 54.4l96 566.4c9.6 54.4 60.8 96 115.2 96l537.6 0c12.8 0 25.6-12.8 25.6-25.6C931.2 777.6 921.6 764.8 905.6 764.8zM880 179.2l-572.8 0c-12.8 0-25.6 12.8-25.6 25.6 0 12.8 12.8 25.6 25.6 25.6l572.8 0c25.6 0 38.4 16 32 41.6l-70.4 281.6c-6.4 32-41.6 57.6-73.6 60.8l-396.8 28.8c-12.8 0-25.6 12.8-22.4 28.8 0 12.8 12.8 25.6 28.8 22.4l396.8-28.8c54.4-3.2 105.6-48 118.4-99.2l70.4-281.6C976 230.4 937.6 179.2 880 179.2z" /></svg>         
+ 
+ 
+ 
+ coffee/img/cc.gif 
+ 
+GIF89a< < �  RST���qrr���EFG���������jklGHIJKLHIJcdeQRSFGHttu���stuSTU���lmm[\]]]^]^_���_`a���Z[\\\]���YZ[���{||ghi~����������������abcWXY���ccdOPQKLMPQR���abb���rstNOP|}}wxx���������pqqtuv~�����������IJK���rrshijnoo���MMN������������yz{VWX������VVWbcdstt������ffgdef���klm^_`MNOLMNiij���fgg���������z{|���deerss���������������fgh������lmo{|}������mno���������bce������WXX������lmn���ijk�����ᘘ�}}~������������xxyyyz���vvw��������Ο��`ab���TUVUVWijjsstssu�����ܺ�����z{{������ghh���wwx���������nop���jkk��������د����у��������\]^qqs�����������̲�����qrt���������vvx��̰��hii���������noq���XYYZ[[���ppqkll������^_afgi�����ʨ��������{{|���effcceghj������[\\QRTopr���opp���VVX��������������ˠ��������������jkm�����������؉�������������������ϛ����µ�������������⃃�stv������DEF!�NETSCAPE2.0   !�XMP DataXMP<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?> <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c067 79.157747, 2015/03/30-23:40:42        "> <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/" xmlns:stRef="http://ns.adobe.com/xap/1.0/sType/ResourceRef#" xmp:CreatorTool="Adobe Photoshop CC 2015 (Macintosh)" xmpMM:InstanceID="xmp.iid:15C344F9B02711E5977AF70E7B0CE82E" xmpMM:DocumentID="xmp.did:15C344FAB02711E5977AF70E7B0CE82E"> <xmpMM:DerivedFrom stRef:instanceID="xmp.iid:15C344F7B02711E5977AF70E7B0CE82E" stRef:documentID="xmp.did:15C344F8B02711E5977AF70E7B0CE82E"/> </rdf:Description> </rdf:RDF> </x:xmpmeta> <?xpacket end="r"?>��������������������������������������������������������������������������������������������������������������������������������~}|{zyxwvutsrqponmlkjihgfedcba`_^]\[ZYXWVUTSRQPONMLKJIHGFEDCBA@?>=<;:9876543210/.-,+*)('&%$#"! 
+	  !�    ,    < <  � �	H��A�.8�r�����#J|)���@�ȱ��B0b���ɓ����K�!Vb��&D"2/�ɳ`������H ؀�$
+ *@"�:�8�`�����ā8���<��/����;���Z1/ ��E���F��1V�l��:�h��+��%��〿W�Ssp��=�]��A���b�wЂLkp��#/�nC?0�@�H
+[�Y�G%��~;�A$��b�%��dȱ�"0H�+�!|	J��o�N�����A888���X.q���5 �0�{x~�&����E�rc� @OLY)�qD �y"�P!`�.���Jc@�QH[�&@��(����,��E '�b�(��A�I J	��`� 1���c���Ћ����#�=&LI���	�\�#H�(2��L�� )�`��ori�g�@	h��f����8F:��G�@!|�Ye�|����:}��E������Gz9(�tRx���Vz�Z:(�bE��&����)�C䛟.���On�������@/�##�6��ݎ=����F+��%pbG���
+$쒏9_��2�$AC("PM>����BD ���������&�����%y䀽��5}᯿���JIl���$B>R��0�$ i��I]������`PA��OTA����+k�O3� �� ���v�
+>���tͰ����3�A0 ]�0U�t��hrT�L�A1h-DG|ݮ#}Pv?��H��5�f��31m0��$��ND !`�k��0x?;<����A,0��]@��A@t	۠�IPA%0H���lHt�$��P�L�
+��2y(�C���\o��'+o����N����,T��G�e��	'$q#� !�    ,    < <  � �	H��A�Ҝ:����#J|x菾����ȱ�D#�0b�eģɓ1���K�GX���˛a���ΟѼXhDWFܩ"��ř"�HdQ�C'] ���#�U<]�bR���۲�#���
+�s���7C��y�!�Z�[�r�ҵ�\|�Bi�r&���Jn�qDa���9Ȍ&��3�JVˡ���q��4���&:D0�o��U��E]�`K"-Q.(��_�.��� �fOK�$��\wwap�X}*��t1�_��}`G蠂�Q~��[�c?������4��]&^G��@s�e�� %�! �Q� ���J�P�.`x��D@�&����0��R5���"����2� :���2\��@D��ϒL�c p �Ud�ϕ�L�%"���M�i@>e@p��0P�l���?,9��a.��|F%�C�|bIFKJ1g�LB�!}f�'�J��F!�f0��'�c�����(�d|I��e��a�%L�e�\����B�)��TZ�'��8΍9��#A?9d���j���&;Q,�倌��O?@����#�$)��7������=&�s� e����O�9�.|ꪫ�7-q������ ������u�! ǫǉ<p A�Pp��+�I(��p��@��Sĳ�pp��vХG~|�3=Pr�A���EKa!s�]dD#7��HIY�s�<�DGK-�A$]r��1��*,2���A\h�=�A�,S��42/qj�<�A��v|/|�qD� �`�C���O"I�v�<��P���
+��wy��<���4 ,q�D�(>�D) @��c���?(�'�b;D�(n��!����� j��g�1 KҰ0��Ct�2�hT@ !�    ,    < <  � �	H��A�!N�s"���#J|� ���0=�ȱ�D-�0b��ţɓ��K�'
+X���˛Ya���ΟMѼh
+hD� T�!q�ř"GI��b 0'Y��5��.5<]�b%��ӷ��G[��'E���$��#�P�ڿk�`�H�k׹����d��c�m�0��sEl���24{TS��+i��U�AP�9)`�`�Ҧ����k���6�#��ۂL���ˣ�Ն�!r��oq�Ub�b�����0�@,>"��@��"���kP��
+Za�W�Kb|��.(�>����&�i��I�w@>j eL3�)1XG���Sld�@+��K>J|�8`#���'�^�8����<��@\��
+A��A�eq�DADx<(P��c��V~@�<.`���)f�B@�O�`����� ��p Øt���I��g?A 1�C�)(?����� ������b��j&jԢ���J��^�矁V*&'hf���F�9g���O���%�;z�	��e��5Bi$�)ɤ�P�����k�D�h��XI�c(���>a  �(��Ϸ�Z��Q��3�>�x�P� ���8�,���[ 7����&�R���.����4�H�
+�@��p���m9P�=�� oA@,p$&�`���D�Sp�'"�L.]s��Ԃ",�H	S��oˑ7�p��,�|P1�[GG���mbB��lr =DM0G�\�A���]�
+Q?���~��C��c� �u��=�<�B�G0�CZ�.	@�q�,� Q$��A~�f���H
+���D @�����\+},Df���=f��[o� w�~�7=��Q״�I�AX�ͲX,�P
+;����� !�    ,    < <  � �	H��A�+~���c���#J|HdJ�����ȱ��*0bT�£ɓk�Y�K��X�o�˛�a���ΟѼ�hDu@,� ��ř"/I�vg�'���ǵ�q<]�"�G�
+�ÇąG[�r�a衏��|�U��/������)+gZ8�n��}�t1X�����Drp��}Gt\RY���p���b ��#�A����Bi�T�(#���dǮ���m��B	�຾��>2����~&�G�!d�Gp��u=@���  ����\b��?�g৽uӂ���y� |1PT83��uD@*�pL1F�����4(����P�A	4x����,���O
+ `�'?RD"L�Xo��G!���1��?H&�$�b��ϔTN��!�T ��\"����� �Ti�� �I�l�SD�F)��y@���Ƒmv�@��ifT�y�;}�	��gNyʚ�&�f�r6�hZF�e�#�Y��h�gd�L:�"���)蔱`)P�f��h#�:ģ�@
+ij������9`�I�b
+�r�3���
+%���[#��=����GA�Ϸ�  PO�r��؞k���n�3܄@٦�� (��.�T��$������NB"X����IЋn���`:쳏ƺ�0�����ۜAh�1!����x����ۊA
+���>%�W�/�G\�=�T��g��/��F��e2ә4C/s���VM�A����lP/�=<d�� H��lk�tnm ��[p�Pu���e���5@��[��� �cD"<���P^�L�������C$��~�,C�]�9S�k�ۈ(�;A@�3��d���V !�    ,    < <  � �	H��A���8�$���#J|�gV���4��ȱ�D�0b����ɓs���K�\Vb���&�P2/��ɳ ���P��H �!�$��F"�J�8�ņ���H\�h�]��3�/!	X�z�C˃;��x(�lٻ��r���o���n8x���w�u|З�?��p���w!tҘm��4d�8��2�|�:�����D��a��iӮ;�`}��A"A�v�2Y;&/|�����]�I`p���]N�`>�  ��$q����wN�rW���jz��ځ��hr�Ƌ����Jg@3�5P4$��2d��A�ꐰ��9 �IP��� �(��6��f� J	�H@bA���(��rB Z����x� =�	-�؀g����J���?)x��?��=�P`��@�`*�I;���T�S��=)����Y@��p-=� � &�hf�(8�`:�$�̈�晋:�r��$e2���k*覤��%���c�[*�嗜��?;Vy��E��xdq�������,���@1�h��8�j���&�ֆ&� � �>\x8�裋|��'��.�JD@����O=Q�@��;A�-������FM�o�a���>�[������>�+n�9��d����+�I��밸�D���3D�`���q�����zr%���ASd��Jx ���`�2�̏�������Q7�OY`t������K� �q5?{�ƽc<@G݄+u����%gqPt�70F�p(<t��lu����) ���D�xQ�ܻFv�@!?$ �H�� ��Q ޮ��8�C���~����A	q�lO$$�?�'�� !�    ,    < <  � �	H��A�:!C֩���#J|� �����1�ȱ�Dh0bD���ɓ�� �K��Vb4��&�O2/~�ɳ����~��H`L$:H"�% �8قǀ{X1x�Xh�(���oN�x`�j�^IM����d�L����{W��4�hR�a�*�ӑ�ߵX;<9�M&���*&�#������`��ٌwIG&��>`���F"1H�5�1�~|��"��{��:� �o
+���+��`���n��8)i��I<x�����\"� zm`A(�������	�M7@w%����d���^��b�P1�@)L"��W�̈́�����9 �I$@��,����<%p�n|!�T4 cA���%���J-�"�$�d��TQ��,��D>TVIe:D�#Kv�>%0pbO	@P��hR9�
+dt馒:�8�8Pi@�ܙ�?���J��FCA�'�RT�g~�9����&�y��h�q^H礓����I�9f�frZ����h�O��:w�J�
+Y
+$#�6������c�C����kl��F�ދ.��?���R9��s !�(�t�-%�BD@�����=��4�޶�C�+/>G�QS��n(��O��-.m���0� h�������I�{��.��
+���²� 1��){k2At�� ��<�){+�AX��>��JP13�[EG����u�s�t���9G0�A`4�4�1�����69;d��>P�N���!Glqp<u���n���C>�0�j����m�o{�ȋD�&�� �2Is�W$�S!�?]ȱ1�t����^{���?���?c��AF��>��6�A�����,�i�rJL� !�    ,    < <  � �	H��A�)v���#���#J|��˽��`�ȱ�D /0^��Ǔ(2�gB�E)cr1��K2sB43`dϋft
+-�%�C#x� ���F�%�����Ta��}�"A,!Ud	�H�[�φ��~������\��0��lmh����a�0Jh�R�S�2 KN֑���= �dt�A%�}����5R��r ��1D�Q�����P$RQ�0d�1�iÞTK}m����$NF�a������W�
+��}������&�@!�A�s�d@�x��I���@���u��p1x0�0��A�`�d/���@ �>��RjCCD �'�]�(����,�� !� C\�E�m�Cl�
+9(0$B�c��F�a�,�@��D)e����� ���2p@�P	��ʔdF�A�l�&?C�8A�)g?I���Lr��ʝ[��Ԟ|�yB�����p:eX&���.���,�C��J2���P�鋕���5ވ�@:��#�B��*무����6��X��>�x�J��	���4{ ��>D@��T��&�	�F>�<�췞v����^�HN�|�m�����.�P�����4�-��Zq�#�kA$�[n�8������-Ah�>�;�
+<o')����Nq�O<�A�l�vx���6�A�Q2>t4`�1*�+!G/��p>�p��6���W�� B��A�8qt/9�q��B�Q6��2.eP@G㓩A�l��S7�����	%�]rt�k����DK���*D�M1D]�A.!,�D@6$�"�(�]�(�P	�>�)�m���r�ެ��	V[]�	�?��7R�AZȂ;>����A`r3&�P'��	!� !�    ,    < <  � �	H��A����AF���#J|�¾��0x�ȱ���0bD���ɓ/�� ���09����>1sBtc���@~���KЈp��B��"$�@@a�����ʏT�:����ý���hᑀV�[#lxH�(���:�ݫ�*GlpW8؀%K�_�Kk-߹9�a��L63|�w���:V���*"YV9��s��MsdA�Â
+J�,���׮�1�H��V��dp���h1�l�8?	�ݧ�/�|Û������0&`����I�=ߓ�Bu�mP
+���r�3 P�w9l�<��E	���k�A`�Q� C�P�
+JWL(�$)`x�倉,����0eG0R*�E�1�H����-�&�!������ F��hD��c��V��0���X2�,:�@#X�i%9��$�oz��
+F�@j��O'�(��r.9 ����;}��Gjh�ȸ�$��2I'�w>�e'\
+��d�h&���2�oV�d�-N���Z�4c6��#����D։���+�D���� g��J8(A�A?������϶8k,DL�ϸ���EPc�O�۶jG	�+o?r\�-첻.>g��ϼ�ްL>��D��n�A
+@ ��������@��&�O%�C>����@L0
+&=�1���� Cp�3&���GҰ�.���B0�SFSQQ��/qt����s�Ap2�q����4�c��R#q�7�BGWl{0˷�m�R�coAaԼ#G ����x��0���R��s|{�z���}w�����sdqW�p�j]��0_"K�P��G-2�ԋQ?Rޏ��6د���C5�t�Ԃ
+���[�D�AOAD���Cy���� ;         
+ 
+ 
+ 
+ coffee/img/cha.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#cccccc" d="M768.992 839.542c-15.595 0-31.187-6.237-43.677-18.72l-530.309-530.309c-24.954-24.954-24.954-62.395 0-87.343s62.395-24.954 87.343 0l530.309 530.309c24.954 24.954 24.954 62.395 0 87.343-12.485 12.485-28.081 18.72-43.677 18.72z"  /><path fill="#cccccc" d="M238.682 839.542c-15.595 0-31.187-6.237-43.677-18.72-24.954-24.954-24.954-62.395 0-87.343l530.309-530.309c24.954-24.954 62.395-24.954 87.343 0s24.954 62.395 0 87.343l-530.309 530.309c-12.485 12.485-28.081 18.72-43.677 18.72z"  /></svg>         
+ 
+ 
+ 
+ coffee/img/delete.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M898.56 268.8c-10.24 0-20.48 10.24-20.48 20.48v668.16H153.6v-668.16c0-10.24-10.24-20.48-20.48-20.48s-20.48 10.24-20.48 20.48v688.64c0 10.24 10.24 20.48 20.48 20.48h762.88c10.24 0 20.48-10.24 20.48-20.48v-688.64c2.56-10.24-5.12-20.48-17.92-20.48M977.92 117.76h-266.24l-84.48-87.04c-2.56-2.56-7.68-5.12-15.36-5.12h-176.64c-5.12 0-10.24 2.56-12.8 5.12l-92.16 87.04h-281.6c-10.24 0-20.48 10.24-20.48 20.48s10.24 20.48 20.48 20.48h289.28c5.12 0 10.24-2.56 12.8-5.12l92.16-87.04h161.28l84.48 87.04c2.56 2.56 7.68 5.12 15.36 5.12h276.48c10.24 0 20.48-10.24 20.48-20.48s-12.8-20.48-23.04-20.48"  /><path fill="#999999" d="M358.4 826.88v-522.24c0-10.24-10.24-20.48-20.48-20.48s-20.48 10.24-20.48 20.48v522.24c0 10.24 10.24 20.48 20.48 20.48s20.48-7.68 20.48-20.48M535.04 826.88v-522.24c0-10.24-10.24-20.48-20.48-20.48s-20.48 10.24-20.48 20.48v522.24c0 10.24 10.24 20.48 20.48 20.48 12.8 0 20.48-7.68 20.48-20.48M714.24 826.88v-522.24c0-10.24-10.24-20.48-20.48-20.48s-20.48 10.24-20.48 20.48v522.24c0 10.24 10.24 20.48 20.48 20.48 12.8 0 20.48-7.68 20.48-20.48"  /></svg>         
+ 
+ 
+ 
+ coffee/img/down.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#cccccc" d="M569.303 718.738l322.689-322.761c19.913-19.913 25.809-49.605 15.057-75.622-10.753-25.947-36.079-42.804-64.105-42.804h-645.444c-28.028 0-53.354 16.927-64.105 42.804-3.538 8.603-5.276 17.625-5.276 26.575 0 18.038 7.075 35.798 20.329 49.050l322.761 322.761c13.042 13.042 30.667 20.329 49.050 20.329s36.079-7.355 49.050-20.329z" /></svg>         
+ 
+ 
+ 
+ coffee/img/ic_add.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M512 0c283.927273 0 512 228.072727 512 512s-228.072727 512-512 512S0 795.927273 0 512 228.072727 0 512 0z" fill="#FF9A00" /><path d="M558.545455 465.454545V232.727273h-93.09091v232.727272H232.727273v93.09091h232.727272v232.727272h93.09091V558.545455h232.727272v-93.09091H558.545455z" fill="#FFFFFF" /></svg>         
+ 
+ 
+ 
+ coffee/img/jia.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M511.559467 63.819514c-247.310595 0-447.802886 200.493314-447.802886 447.802886 0 247.281943 200.493314 447.775256 447.802886 447.775256 247.28092 0 447.775256-200.493314 447.775256-447.775256C959.334723 264.312828 758.84141 63.819514 511.559467 63.819514zM719.812511 542.80561 540.077987 542.80561l0 179.678242c0 16.386202-13.261025 29.647227-29.647227 29.647227-16.387225 0-29.647227-13.261025-29.647227-29.647227L480.783533 542.80561 301.076638 542.80561c-16.387225 0-29.647227-13.260002-29.647227-29.647227 0-16.387225 13.260002-29.647227 29.647227-29.647227l179.707918 0L480.784556 303.745932c0-16.387225 13.260002-29.647227 29.647227-29.647227 16.386202 0 29.647227 13.260002 29.647227 29.647227l0 179.765223 179.734524 0c16.388249 0 29.649274 13.260002 29.649274 29.647227C749.461785 529.545608 736.20076 542.80561 719.812511 542.80561z" /></svg>         
+ 
+ 
+ 
+ coffee/img/jian.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M678.143483 534.248723 344.448448 534.248723c-12.786211 0-23.163559-10.378371-23.163559-23.162536 0-12.732999 10.377348-23.060205 23.163559-23.060205l333.696058 0c12.734022 0 23.060205 10.327206 23.060205 23.060205C701.203688 523.870352 690.878528 534.248723 678.143483 534.248723zM511.295454 959.391517c-247.214405 0-448.305329-201.089901-448.305329-448.305329 0-247.164263 201.090924-448.279746 448.305329-448.279746 247.164263 0 448.255187 201.116507 448.255187 448.279746C959.550641 758.301616 758.46074 959.391517 511.295454 959.391517zM511.295454 109.032252c-221.747383 0-402.080541 180.360787-402.080541 402.054959 0 221.696218 180.333158 402.080541 402.080541 402.080541 221.695195 0 402.030399-180.3833 402.030399-402.080541C913.325853 289.39304 732.990648 109.032252 511.295454 109.032252z" /></svg>         
+ 
+ 
+ 
+ coffee/img/svg_add.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M889.74632 489.447355 534.551622 489.447355 534.551622 134.25368c0-12.455683-10.096962-22.551622-22.551622-22.551622-12.455683 0-22.551622 10.095939-22.551622 22.551622l0 355.193675L134.25368 489.447355c-12.455683 0-22.551622 10.096962-22.551622 22.551622 0 12.45466 10.095939 22.551622 22.551622 22.551622l355.193675 0 0 355.193675c0 12.455683 10.096962 22.551622 22.551622 22.551622 12.45466 0 22.551622-10.095939 22.551622-22.551622L534.550599 534.551622l355.193675 0c12.455683 0 22.551622-10.096962 22.551622-22.551622C912.297942 499.544317 902.20098 489.447355 889.74632 489.447355z" /></svg>         
+ 
+ 
+ 
+ coffee/img/time.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M511.700671 127.718847c-211.957911 0-383.778061 171.815157-383.778061 383.76336 0 211.95025 171.821174 383.76336 383.778061 383.76336 211.957911 0 383.780108-171.813111 383.780108-383.76336C895.480779 299.534004 723.658581 127.718847 511.700671 127.718847zM511.700671 860.359013c-192.690312 0-348.890077-156.209738-348.890077-348.875782 0-192.699814 156.199765-348.875782 348.890077-348.875782 192.691336 0 348.8911 156.176992 348.8911 348.875782C860.591771 704.147228 704.392006 860.359013 511.700671 860.359013zM703.591748 511.48323 529.145686 511.48323 529.145686 284.71346c0-9.641591-7.819403-17.443277-17.445016-17.443277-9.624589 0-17.443992 7.801686-17.443992 17.443277l0 244.213048c0 9.625218 7.819403 17.443277 17.443992 17.443277l191.891077 0c9.624589 0 17.445016-7.819083 17.445016-17.443277C721.033694 519.28594 713.216337 511.48323 703.591748 511.48323z" /></svg>         
+ 
+ 
+ 
+ coffee/img/tips.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M512 1000.457818c-269.658579 0-488.458841-218.800261-488.458841-488.458841 0-269.656533 218.800261-488.456794 488.458841-488.456794 269.656533 0 488.456794 218.800261 488.456794 488.456794C1000.457818 781.657556 781.657556 1000.457818 512 1000.457818M512 81.189114C274.27369 81.189114 81.195254 273.972838 81.195254 511.99386c0 238.022045 192.783725 430.80577 430.80577 430.80577 238.021022 0 430.803723-192.783725 430.803723-430.80577C942.804746 274.268574 750.027162 81.189114 512 81.189114M425.363827 424.175769l-61.203944 0c-1.778506-58.84113 16.851806-101.413737 55.879682-128.027885 26.613124-21.290909 59.437717-31.93227 98.761328-31.93227 88.704275 7.095605 136.01172 51.442626 141.329842 133.346007 1.777483 37.255509-18.625196 75.402317-61.204967 114.725928-46.714951 33.403784-67.118654 74.216305-61.499679 122.113175l-58.84113 0c-1.772366-33.709753 1.778506-59.437717 10.648524-77.17059 5.324262-15.97074 23.062252-39.034015 53.221132-69.191872l5.324262-5.318122c37.254485-31.937386 54.108339-61.203944 50.561559-87.817068-5.324262-51.449789-32.81743-78.062913-82.492806-80.129992-62.090127 1.772366-92.25003 38.135552-90.477664 109.401666l0 0 0 0L425.363827 424.174746zM542.750351 690.583305l0 69.187779-66.528206 0 0-69.187779L542.750351 690.583305 542.750351 690.583305zM542.750351 690.583305" /></svg>         
+ 
+ 
+ 
+ coffee/img/yellow_quan.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFD886" /><path d="M512 512m-375.466667 0a375.466667 375.466667 0 1 0 750.933334 0 375.466667 375.466667 0 1 0-750.933334 0Z" fill="#FFBB2E" /><path d="M512 512m-273.066667 0a273.066667 273.066667 0 1 0 546.133334 0 273.066667 273.066667 0 1 0-546.133334 0Z" fill="#FFAB00" /></svg>         
+ 
+ 
+ 
+ coffee/index.js 
+ 
+import React        from 'react'
+import { createStore, applyMiddleware } from 'redux'
+import { render }   from 'react-dom'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+import Routes       from './routes'
+
+import '../../styles/index.scss'
+
+// 定义根组件
+const Root  = () => (
+  <Provider store={ createStore(reducers, applyMiddleware(thunk)) }>
+    <Routes />
+  </Provider>
+)
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ coffee/logo.ico 
+ 
+         h     (                                                     ���0��ږ�ּ��������������������0                        ���
+�ϰ��ğ�������������������������������Κ���
+            ���
+�ί�[�?�l�S���u���y�����������s�����f�L�p�X��������
+        ��蚜���x�a�I}*���m���n�����������v���u�:s���x���������    ���0���ͮ�������l���u���������������~���w���{����������Ը����0��֖��s�O�1���{���t���u��ӷ���������������������r�Z�^�B���z������ּ؅�p�J~*�=u���}���y���������������~���{���v�4o�[�?���q����ب�����w�Z�>�3n���o���o���l�������t���o�����r�Z�3n�l�S���q��Ѵ�������v���j�3n�|�f���x��ή��ѳ����������i�}�g�3n���~���l��ͭ����������ʨ�g�M�v�^�������k��ֻ������i���x�n�U��i��ӷ������ȥأ���������������}�g�w�_���k������̫���j�o�V�������������n�U���Ԗ���0}�g���w�3n�By"����������ͭ��ȥ������Ѵ�4n�3n��Ğ�~�h����0    �Ğ�5o�3n�h�N��ջ������ɧ��׾������̫�R�5�3n�@w���̚        ���
+����4o�3n�W�:�;t������Ը�@w�Q�4�3n�>v��в����
+            ���
+����Q�3�3n�F|'�������n�;t�3n�c�H���Ú���
+                        ���0����~�h�{�e�z�c���sسɦ����0                �  �  �  �  �                          �  �  �  �  �           
+ 
+ 
+ 
+ coffee/reducers/app.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:        'coffee',
+  markPopup:    true,
+  goodsCartarr: [],
+  isScroll:     true,
+  top:          210,
+  tagsClick:    true,
+  tagsIndex:    0,
+  nolocation:   true,
+  contactData:  [],
+  outRange:     false,
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_GOODSLIST' :
+    case 'MARK_POPUP' :
+    case 'GOODS_CARTARR' :
+    case 'KJIN_CONTACTLIST' :
+    case 'KJIN_OPTIMALCONTACT' :
+    case 'CONTACTID' :
+    case 'TITLE_ADDRESS' :
+    case 'SCROLLTOP' :
+    case 'IS_SCROLL' :
+    case 'STYLE_TOP' :
+    case 'TAGSCLICK' :
+    case 'TAGS_INDEX' :
+    case 'FOOD_SCROLL' :
+    case 'FOODS_DOM' :
+    case 'NOLOCATION' :
+    case 'KJIN_OUTRANGE' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default app
+         
+ 
+ 
+ 
+ coffee/reducers/details.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:       'coffee',
+  ChooseGoods: '',
+}
+
+const details = (state = initialState, action) => {
+  switch (action.type) {
+    case 'GOODSDETAILS' :
+    case 'MARK_POPUP' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default details
+         
+ 
+ 
+ 
+ coffee/reducers/index.js 
+ 
+import { combineReducers } from 'redux'
+// 引入reducers
+import app  from './app'
+import details from './details'
+import order from './order'
+
+// 组合reducers
+export default combineReducers({
+  app,
+  details,
+  order,
+})
+         
+ 
+ 
+ 
+ coffee/reducers/order.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:       'coffee',
+  tipsPrice:   0,
+  deliverFees: 0,
+  Promotion:   {},
+  visible:     false,
+  noteText:    '口味，偏好等',
+}
+
+const order = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_GOODSLIST' :
+    case 'MARK_POPUP' :
+    case 'TIPSPRICE' :
+    case 'KJIN_DELIVERTIME' :
+    case 'AVAILABLETIME' :
+    case 'MERCHANT' :
+    case 'GOODS_CARTARR' :
+    case 'ORDER_CONTACT' :
+    case 'DELIVERFEE' :
+    case 'NOTESTEXT' :
+    case 'PROMOTION' :
+    case 'VISIBLE' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default order
+         
+ 
+ 
+ 
+ coffee/routes.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/coffee' component={ require('react-router?name=root!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+      <Route path='details' component={ require('react-router?name=details!./containers/details') } />
+      <Route path='cart' component={ require('react-router?name=cart!./components/cart') } />
+      <Route path='attribute' component={ require('react-router?name=attribute!./components/attribute') } />
+      <Route path='order' component={ require('react-router?name=order!./containers/order') } />
+      <Route path='editcontact' component={ require('react-router?name=editcontact!./components/editcontact') } />
+      <Route path='listadddown' component={ require('react-router?name=listadddown!./components/listadddown') } />
+      <Route path='contactlist' component={ require('react-router?name=contactlist!./components/contactlist') } />
+      <Route path='goodslist' component={ require('react-router?name=goodslist!./components/goodslist') } />
+      <Route path='cartpopup' component={ require('react-router?name=cartpopup!./components/cartpopup') } />
+      <Route path='orderDetails/:id' component={ require('react-router?name=orderDetails!./containers/orderDetails') } />
+    </Route>
+  </Router>
+)
+export default Routes
+         
+ 
+ 
+ 
+ coffee/style/attribute.scss 
+ 
+@import 'common.scss';
+
+.attributeWrap{
+  position:absolute;
+  width: 70%;
+  background:#fff;
+  // height:400px;
+  max-height: 700px;
+  left:15%;
+  top:50%;
+  transform: translateY(-50%);
+  -webkit-transform: translateY(-50%);
+  border-radius: 10px;
+  z-index: 10;
+  .title{
+    width: 100%;
+    padding:0 10%;
+    height:100px;
+    position:relative;
+    span{
+      width: 100%;
+      display:inline-block;
+      line-height:100px;
+      text-align: center;
+      font-size:32px;
+      color:#333;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .close{
+      position:absolute;
+      top:15px;
+      right:15px;
+    }
+  }
+  .attribute{
+    width: 100%;
+    // height:calc(100% - 214px);
+    overflow-x: hidden;
+    overflow-y: scroll;
+    max-height:300px;
+    padding:0 32px;
+    background:#fff;
+    min-height:200px;
+    .item{
+      width: 100%;
+      height:auto;
+      p{
+        width: 100%;
+        height:40px;
+        font-size:28px;
+        color:#999;
+        margin:10px 0 24px;
+      }
+      span{
+        font-size:24px;
+        color:#666;
+        padding:15px 30px;
+        display:inline-block;
+        border-radius:34px;
+        border:1px solid #ccc;
+        margin:0 20px 18px 0;
+      }
+      .markSpan{
+        color:#ffab00;
+        background:rgba(255,171,0,0.05);
+        border-color:#ffab00;
+      }
+    }
+  }
+  .sumChange{
+    width: 100%;
+    padding:0 32px;
+    .sumText{
+      width: 60%;
+      height:80px;
+      line-height:80px;
+      display:inline-block;
+      font-size:28px;
+      color:#999;
+    }
+    .num{
+      width: 40%;
+      display:inline-block;
+      height:80px;
+      float:right;
+      @include displayfec;
+      .Sum{
+        margin:0 10px;
+      }
+    }
+  }
+  .addcart{
+    height:114px;
+    width: 100%;
+    background:#f8f8f8;
+    padding:0 32px;
+    font-size:20px;
+    color:#ff4848;
+    line-height:114px;
+    border-bottom-left-radius:10px;
+    border-bottom-right-radius:10px;
+    .addcart_price{
+      font-size:36px;
+      font-weight: 700;
+    }
+    .addcart_btn{
+      height:80px;
+      background:#ffab00;
+      color:#fff;
+      font-size:38px;
+      float:right;
+      width: 240px;
+      margin-top:17px;
+      line-height:80px;
+      text-align: center;
+      border-radius: 8px;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ coffee/style/cart.scss 
+ 
+@import 'common.scss';
+
+.cartListWrap{
+   width: 100%;
+   max-height:600px;
+   position:absolute;
+   z-index: 10;
+  .cart{
+    width: 60%;
+    height:100%;
+    float: left;
+    padding:12px 12px 12px 32px;
+    background:#fff;
+    .cart_l{
+      width: 76px;
+      height:76px;
+      background:#ccc;
+      border-radius: 74px;
+      border:4px solid #fff;
+      box-shadow: -6px 0 6px #ccc, 6px 0 6px #ccc, 0 -6px 6px #ccc, 0 6px 6px #ccc;
+      display:flex;
+      justify-content: center;align-items: center;
+      float: left;
+      position:relative;
+      .marknum{
+        padding:6px 16px;
+        background:#ff4848;
+        color:#fff;
+        font-size:24px;
+        border-radius: 44px;
+        position:absolute;
+        top:-14px;
+        left:40px;
+        // line-height:40px;
+        text-align: center;
+        font-weight: 700;
+      }
+    }
+    .cart_has{
+      background:#ffab00;
+    }
+    .cart_r{
+      float: left;
+      margin-left: 40px;
+      span{
+        display:inline-block;
+        width: 100%;
+        color:#999;
+      }
+      .cart_price{
+        font-size:34px;
+        color:#ff4848;
+      }
+    }
+  }
+  .Settlement{
+    width: 40%;
+    height:100%;
+    background:#ffab00;
+    line-height:98px;
+    font-size: 38px;
+    color:#fff;
+    float: right;
+    text-align: center;
+  }
+  .Settlement_no{
+    background:#ccc;
+  }
+}
+
+//
+.cartWrap{
+  background:#f8f8f8;
+  position:absolute;
+  bottom:99px;
+  width: 100%;
+  // height:auto;
+  max-height:600px;
+  overflow: hidden;
+  overflow: scroll;
+  overflow-x: hidden;
+  z-index: 10;
+  .list{
+    max-height:500px;
+    overflow-y: scroll;
+  }
+  .cartDeteleWrap{
+    border-left:8px solid #ffab00;
+    padding-left:8px;
+    position:absolute;
+    top:0;
+    span{
+      @include displayfec;
+    }
+    .am-icon{
+      margin-right:10px;
+    }
+    .deteleBtn{
+      display:inline-block;
+      width: 60%;
+      // background:pink;
+      text-align: center;
+    }
+  }
+  .cartList{
+    width: 100%;
+    max-height:500px;
+    overflow: scroll;
+  }
+  .cartItem{
+    width: 100%;
+    padding:12px 0;
+    // background:pink;
+    @include displayfs-bc;
+    div{
+      display:inline-block;
+      height:100%;
+    }
+    .pic{
+      width: 20%;
+      // background:#ddd;
+      img{
+        width: 80px;
+        height:80px;
+        border-radius: 4px;
+      }
+    }
+    .name{
+      width: 40%;
+      // background:yellow;
+      height:auto;
+      p{
+        color:#333;
+        font-size:28px;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      span{
+        color:#999;
+        font-size:24px;
+      }
+    }
+    .price{
+      width: 18%;
+      // background:green;
+      text-align: center;
+      font-size:24px;
+      color:#ff4848;
+      span{
+        font-size:30px;
+      }
+    }
+    .num{
+      width: 22%;
+      // background:red;
+      text-align: ccenter;
+      color:#404040;
+      @include displayfec;
+      .Sum{
+        padding:0 10px;
+      }
+    }
+  }
+}
+// 组件的样式改写
+.myselfam-popup-mask{
+  width: 100%;
+  height:calc(100% - 100px);
+}
+         
+ 
+ 
+ 
+ coffee/style/common.scss 
+ 
+*{margin: 0;padding: 0;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);box-sizing: border-box;}
+
+html{height: 100%;overflow: hidden;}
+
+body{height: 100%;background: #f5f5f6;font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif;-webkit-font-smoothing:antialiased;overflow-y: scroll;}
+
+ul{list-style: none;}
+h2{font-weight: normal;}
+input{border: none;outline: none;}
+input[type="search"]{-webkit-appearance:none;}
+input::-webkit-search-cancel-button {display: none;}
+button{outline: none;border: 0;}
+img{
+    border:none;
+}
+ul , li {
+    list-style: none;
+}
+body{
+  font-size: 24px;
+}
+
+@mixin displayfcc {
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: center;
+  -ms-justify-content: center;
+}
+@mixin displayfec {
+  display:flex;
+  justify-content: flex-end;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: flex-end;
+  -ms-justify-content: flex-end;
+}
+@mixin displayfs-bc {
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: space-between;
+  -ms-justify-content: space-between;
+}
+@mixin displayalign {
+  -webkit-display:box-flex;
+  -webkit-display:flex;
+  -webkit-align-items: center;
+  -ms-display:flex;
+  -ms-align-items:center;
+  display: -webkit-flex;
+}
+         
+ 
+ 
+ 
+ coffee/style/details.scss 
+ 
+@import 'common.scss';
+
+.detailsWrap{
+  width: 100%;
+  height:100%;
+  .detailsMian{
+    width: 100%;
+    height:calc(100% - 100px);
+    background:#fff;
+    overflow: scroll;
+    overflow-x: hidden;
+    img{
+      width: 100%;
+      // height:700px;
+    }
+    .details{
+      width: 100%;
+      height:auto;
+      padding:32px;
+      .title{
+        font-size:32px;
+        color:#333;
+        font-weight: 700;
+        span{
+          display:inline-block;
+        }
+        .attribute{
+          border:1px solid #ffab00;
+          font-size:24px;
+          border-radius:10px;
+          font-weight: 100;
+          color:#ffab00;
+          padding:2px 10px;
+          float:right;
+        }
+      }
+      .price{
+        width: 100%;
+        height:auto;
+        color:#ff4848;
+        margin-top:30px;
+        padding:20px 0 70px;
+        // background:pink;
+        .price_l{
+          font-size:24px;
+        }
+        .price_c{
+          font-size:32px;
+          font-weight: 700;
+        }
+        .price_no{
+          display:inline-block;
+          float:right;
+          padding:15px 30px;
+          font-size:24px;
+          color:#fff;
+          background:#ffab00;
+          border-radius:8px;
+        }
+        .price_r{
+          width: 40%;
+          float:right;
+          @include displayfec;
+          .carthano{
+            display:none;
+          }
+          .carthas{
+            @include displayfec;
+            width: 60%;
+            .Sum{
+              // width: calc(100% - 40px);
+              padding:0 20px;
+              // text-align: center;
+              color:#666;
+              font-size:28px;
+            }
+            .icon{
+              width: 40px;
+              height:40px;
+              .am-icon-md{
+                width: 40px;
+                height:40px;
+              }
+            }
+          }
+        }
+      }
+      .description{
+        font-size:28px;
+        color:#999;
+        line-height:35px;
+      }
+    }
+  }
+  .footerCart{
+    width: 100%;
+    height:98px;
+    border-top:1px solid #e5e5e5;
+    background:#fff;
+  }
+}
+         
+ 
+ 
+ 
+ coffee/style/goodslist.scss 
+ 
+@import "common.scss";
+
+.coffee_kong{
+  // height:210px;
+  height: 100%;
+}
+         
+ 
+ 
+ 
+ coffee/style/index.scss 
+ 
+@import 'common.scss';
+
+.indexWrap{
+  width: 100%;
+  height:100%;
+  background:#f5f5f6;
+  overflow: hidden;
+  .indexLocation{
+    width: 100%;
+    height:90px;
+    font-size:32px;
+    color:#333;
+    line-height:90px;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    background: #f5f5f6;
+    @include displayfcc;
+    .location_c{
+      display:inline-block;
+      margin-right:10px;
+      max-width: 60%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .am-icon-md{
+      width: 30px;
+      height:30px;
+      display:inline-block;
+    }
+  }
+  .indexBanner{
+    width: 100%;
+    height:211px;
+    background-image :url(../img/bg.png);
+    background-size: cover;
+    padding:32px;
+    .banner_l{
+      width: 28%;
+      height:100%;
+      float:left;
+      img{
+        width: 126px;
+        height:126px;
+      }
+    }
+    .banner_r{
+      width: 70%;
+      height:100%;
+      float:left;
+      color:#fff;
+      font-size:20px;
+      .banner_title{
+        font-size:28px;
+        font-weight: 700;
+        padding:10px 0 18px;
+      }
+      .banner_yu{
+        padding-bottom:10px;
+      }
+      .oto{
+        width: 100%;
+        white-space: nowrap;
+        text-overflow:ellipsis;
+        overflow: hidden;
+      }
+    }
+  }
+  .mainWrap{
+    width: 100%;
+    height: calc(100% - 190px);
+    // overflow-x: hidden;
+    // overflow-y: scroll;
+    -webkit-overflow-scrolling:touch;
+    position: relative;
+    z-index: 1;
+  }
+  .indexMainWrap{
+    width: 100%;
+    height:calc(100% - 210px);
+    position: absolute;
+    // top: 211px;
+    // height:100%;
+    transform: translateY(0);
+    overflow: hidden;
+    background:#fff;
+    .mainTitle{
+      width: 24%;
+      height:100%;
+      // overflow:scroll; // better-scroll
+      overflow: hidden;
+      background: #f5f5f6;
+      float:left;
+      -webkit-overflow-scrolling:touch;
+      .tagsitem{
+        width: 100%;
+        border-bottom:1px solid #e5e5e5;
+        padding:28px 10% 28px 20%;
+        font-size:28px;
+      }
+      .tagsmark{
+        background:#fff;
+        border-left:10px solid #ffab00;
+      }
+    }
+    .mainList{
+      width: 76%;
+      height:100%;
+      overflow: hidden;
+      overflow-y: scroll; // better-scroll
+      background: #fff;
+      float:left;
+      // -webkit-overflow-scrolling:touch;
+      .title{
+        width: 100%;
+        padding:10px 32px;
+        background:#f5f5f6;
+        font-size: 28px;
+        color:#666;
+      }
+      .item{
+        // padding:32px 32px 0;
+        padding:32px 0 0 32px;
+        // width: 100%; // 此处是为了改魅族的兼容性
+        .item_pic{
+          width: 30%;
+          // background:pink;
+          float: left;
+          img{
+            width: 114px;
+            height:114px;
+            border-radius: 4px;
+            background:url(../img/xingbake_bg.png) no-repeat;
+            background-size: cover;
+          }
+        }
+        .item_main{
+          width: 70%;
+          padding-right:32px;
+          height:auto;
+          float: left;
+        }
+        .name{
+          font-size:28px;
+          color: #333;
+          font-weight: 700;
+          .name_l{
+            display:inline-block;
+            width: 70%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            // float: left;
+            margin-bottom:18px;
+          }
+          .name_r{
+            width: 25%;
+            display:inline-block;
+            font-size:20px;
+            color:#ffab00;
+            border-radius: 4px;
+            border:1px solid #ffab00;
+            float: right;
+            text-align: center;
+            margin-top:2px;
+            padding:3px 0;
+
+          }
+        }
+        .Introduced{
+          width: 100%;
+          height:auto;
+          overflow : hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          font-size:24px;
+          color:#666;
+          max-height: 60px;
+          line-height:30px;
+        }
+        .price{
+          margin-top:12px;
+          .price_span{
+            display:inline-block;
+            width: 6%;
+            font-size: 24px;
+            color:#ff4848;
+          }
+          .price_l{
+            margin-top:10px;
+          }
+          .price_c{
+            font-size:32px;
+            font-weight: 700;
+            width: 40%;
+          }
+          .price_r{
+            width: 50%;
+            float:right;
+            @include displayfec;
+            .carthano{
+              display:none;
+            }
+            .carthas{
+              @include displayfec;
+              width: 60%;
+              .Sum{
+                // width: calc(100% - 40px);
+                padding:0 20px;
+                // text-align: center;
+                color:#666;
+                font-size:28px;
+              }
+              .icon{
+                width: 40px;
+                height:40px;
+                .am-icon-md{
+                  width: 40px;
+                  height:40px;
+                }
+              }
+            }
+          }
+        }
+        .line{
+          clear: both;
+          border-bottom:1px solid #e5e5e5;
+          width: 100%;
+          padding-top:32px;
+          padding-right:0;
+        }
+      }
+    }
+  }
+  .footerCart{
+    width: 100%;
+    height:98px;
+    border-top:1px solid #e5e5e5;
+    background:#fff;
+  }
+}
+
+// 选择收货地址部分
+.ChooseContact{
+  width: 70%;
+  height:auto;
+  background:#fff;
+  position:absolute;
+  z-index: 10;
+  top:50%;
+  margin-left:15%;
+  transform: translateY(-50%);
+  -webkit-transform: translateY(-50%);
+  border-radius: 10px;
+  .title{
+    width: 100%;
+    padding:32px 15%;
+    text-align: center;
+    font-size:32px;
+    color:#333;
+    position:relative;
+    .close{
+      position:absolute;
+      top:20px;
+      right:20px;
+    }
+  }
+  .contactList{
+    width: 100%;
+    padding:0 32px;
+    height:280px;
+    overflow: hidden;
+    overflow-y: scroll;
+    .item{
+      color:#ffab00;
+      font-size:32px;
+      height:90px;
+      line-height: 90px;
+      text-align: center;
+      border-bottom: 1px solid #e5e5e5;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .no_contact{
+      width: 100%;
+      height:230px;
+      background:#fff;
+      overflow: hidden;
+      img{
+        width: 45%;
+        height:70%;
+        margin-left:28%;
+        margin-top:5%;
+      }
+    }
+    .otherTip{
+      text-align: center;
+      width: 100%;
+      color:#888;
+      font-size: 28px;
+    }
+  }
+  .other{
+    width: 100%;
+    height:90px;
+    color:#999;
+    font-size:32px;
+    line-height:90px;
+    text-align: center;
+    border-top:1px solid #e5e5e5;
+  }
+  .otherOrg{
+    color:#ffab00;
+  }
+}
+
+// 当无可用商家的时候
+.outRangeWrap{
+  width: 100%;
+  height: 100%;
+  .indexLocation{
+    width: 100%;
+    height:90px;
+    font-size:32px;
+    color:#333;
+    line-height:90px;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    background: #fff;
+    @include displayfcc;
+    .location_c{
+      display:inline-block;
+      margin-right:10px;
+      max-width: 60%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .am-icon-md{
+      width: 30px;
+      height:30px;
+      display:inline-block;
+    }
+  }
+  .outRange{
+    width: 100%;
+    height:calc(100% - 90px);
+    img{
+      width: 300px;
+      margin-top:40%;
+      margin-left: calc(50% - 150px);
+    }
+    p{
+      width: 100%;
+      text-align: center;
+      font-size:28px;
+      color:#888;
+      margin-top:40px;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ coffee/style/listadddown.scss 
+ 
+@import 'common.scss';
+
+.num{
+  span{
+    // display:inline-block;
+    // width: 40px;
+    // height:40px;
+    // line-height:40px;
+    // text-align: center;
+    font-size:28px;
+  }
+}
+         
+ 
+ 
+ 
+ coffee/style/order.scss 
+ 
+@import 'common.scss';
+
+.orderWrap{
+  .orderMain{
+    width: 100%;
+    height:calc(100% - 100px);
+    overflow-x: hidden;
+    overflow-y: scroll;
+    .orderTime{
+      .timeIcon{
+        .am-icon{
+          float:left;
+          margin-right:15px;
+        }
+        .am-list-line .am-list-extra{
+          width: 60%;
+          flex-basis:61%;
+          -webkit-flex-basis:61%;
+        }
+      }
+    }
+    .am-list-body{
+      .oto_item{
+        .am-list-line:after{
+          border:none;
+        }
+        .am-list-extra{
+          -webkit-flex-basis: 36%;
+          width: 36%;
+          .goodsshow{
+            text-align: left;
+            .goodsSpan{
+              float:right;
+            }
+          }
+        }
+      }
+    }
+    .tipsWrap{
+      .tipsPrice{
+        margin-left:15px;
+      }
+      .iconWrapper {
+        position: relative;
+        padding: 0 0.62rem;
+        .am-slider-wrapper{
+          padding:0 20px;
+          }
+          .am-slider{
+            margin:4px 0;
+            .am-slider-handle{
+              width: 46px;
+              height:46px;
+              margin-top:-0.18rem;
+              border:8px solid #fbc447;
+              background:#ffab00;
+            }
+            .am-slider-rail{
+              height:8px;
+              background:#f3f3f4;
+            }
+            .am-slider-track{
+              background-color:#ffab00;
+              height:8px;
+            }
+          }
+        }
+        .iconWrapper .am-icon {
+          position: absolute;
+          top: -0.19rem;
+          width: 0.44rem;
+          height: 0.44rem;
+          line-height: 1;
+          font-size: 0.44rem;
+          color: #000;
+          right:0;
+        }
+        .am-list-item .am-list-line .am-list-content{
+          -webkit-box-flex: 0.5;
+          flex:0.5;
+        }
+        .am-list-item .am-list-line .am-list-extra{
+          -webkit-box-flex: 1.6;
+          flex:1.6;
+          height:50px;
+        }
+      }
+    }
+    .noteText{
+      .am-list-line .am-list-extra{
+          width: 36%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+    }
+    .footerPrice{
+      background:#fff;
+      width: 100%;
+      height:99px;
+      border-top:1px solid #f5f5f6;
+        div{
+          height:100%;
+          float:left;
+          line-height:99px;
+          overflow: hidden;
+        }
+      .footerL{
+        width: 60%;
+        padding-left: 32px;
+        color:#ff4848;
+        font-size:28px;
+        .price{
+          font-size:38px;
+          font-weight: 600;
+        }
+        .downprice{
+          color:#999;
+          font-size:24px;
+          margin-left:15px;
+        }
+      }
+      .footerR{
+        width: 40%;
+        background:#ffab00;
+        color:#fff;
+        text-align: center;
+        font-size:38px;
+      }
+    }
+}
+// 备注页面的样式
+.notes{
+  width: 100%;
+  height:auto;
+  .noteHeader .am-list-line .am-list-content{
+    text-align: center;
+    font-size:32px  !important;
+  }
+  .title{
+    font-size:28px;
+    color:#333;
+  }
+  .note{
+    width: 100%;
+    padding:0 32px 32px;
+    background:#fff;
+    textarea{
+      width: 100%;
+      height:200px;
+      background:#f8f8f8;
+      border-radius: 8px;
+      padding:20px;
+      border:1px solid #e5e5e5;
+      font-size:24px;
+      color:#adadad;
+      resize:none;
+    }
+  }
+  .saveBtn{
+    width: 90%;
+    height:90px;
+    background:#ffab00;
+    color:#fff;
+    font-size:38px;
+    text-align: center;
+    line-height:90px;
+    position:absolute;
+    left:5%;
+    border-radius: 6px;
+  }
+}
+// 修改antd组件里面的东西
+.rc-slider-tooltip-inner{
+  height:48px;
+}
+.am-picker-popup-header-left{color: #999 !important;}
+.am-picker-popup-title{color: #333 !important;}
+.am-picker-popup-item{color: #ffab00;}
+.am-list-item .am-list-line .am-list-content{font-size: 28px;}
+.am-list-item .am-list-line .am-list-extra{font-size: 28px;}
+.contact-list .listItem .iconBtn_l{display: none;}
+         
+ 
+ 
+ 
+ coffee/style/orderDetails.scss 
+ 
+
+.menpiaoOrderDetails{
+  .orderDetailsinfo{
+    width: 100%;
+    .main{
+      width: 100%;
+      padding: 0 32px;
+      color:#666;
+      .item{
+        width: 100%;
+        font-size:28px;
+        margin-top:26px;
+        .itemSs{
+          color:#ffab00;
+        }
+      }
+    }
+    .infoBtn{
+      width: 100%;
+      height: 90px;
+      border-top:1px solid #e5e5e5;
+      margin-top:30px;
+      .oto{
+        width: 33.33%;
+        height: 100%;
+        line-height: 90px;
+        float:left;
+        text-align: center;
+        font-size:28px;
+        span:nth-child(1){
+          vertical-align: middle;
+          margin-right:10px;
+        }
+      }
+      .cbtn{
+          border-left:1px solid #e5e5e5;
+          border-right:1px solid #e5e5e5;
+      }
+    }
+    .infowrap{
+      width: 100%;
+      height:auto;
+      padding:16px 0 0px 32px;
+      .infoitem{
+        width: 100%;
+        padding:14px 32px 14px 0;
+        font-size: 28px;
+        color:#333;
+        .infoname{
+          display:inline-block;
+          width: 60%;
+        }
+        .infoto{
+          display:inline-block;
+          width: 40%;
+          span{
+            display: inline-block;
+            width: 50%;
+            text-align: right;
+          }
+          span:nth-child(1){
+            color:#adadad;
+          }
+        }
+      }
+      .infoitem:last-child{
+        border-bottom: 1px solid #e5e5e5;
+        padding-bottom:36px;
+      }
+    }
+  }
+  // 收货地址展示部分
+  .PersonalInfoWrap{
+    .orderContact{
+      width: 30%;
+      display:inline-block;
+      vertical-align: top;
+      padding-top:8px;
+    }
+    .cantactMain{
+      width: 70%;
+      display: inline-block;
+      padding-top:10px;
+      div{
+        margin-bottom: 12px;
+        height:auto;
+        width: 100%;
+        white-space: normal;
+        letter-spacing: 1.5px;
+        span{
+          margin-right:20px;
+        }
+      }
+      div:last-child{
+        line-height:42px;
+      }
+    }
+  }
+}

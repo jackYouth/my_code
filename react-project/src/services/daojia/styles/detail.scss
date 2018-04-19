@@ -1,0 +1,288 @@
+@import "../../../styles/s_common.scss";
+
+.detail {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+
+  .detail-container {
+    overflow: auto;
+  }
+  &>div:nth-of-type(1), &>div:nth-of-type(2) {
+    height: calc(100% - 100px) !important;
+  }
+  .detail-top {
+    padding-bottom: 20px;
+    .good-info {
+      background: $bg-ff;
+      overflow: hidden;
+      margin-bottom: 20px;
+      img {
+        height: 670px;
+        display: block;
+        margin: 0 auto;
+        margin-bottom: 37px;
+      }
+      .good-name {
+        @include s_border_b;
+        .am-list-line {
+          min-height: 99px;
+        }
+        .am-list-content {
+          @include s_fontDemo(32px!important, 32px, $font-33);
+        }
+        .am-list-extra {
+          @include s_fontDemo(26px, 32px, $font-f48);
+          span {
+            font-size: 36px;
+          }
+        }
+      }
+      .spec {
+        .am-list-line {
+          min-height: 90px;
+        }
+      }
+    }
+    .comment {
+      margin-bottom: 20px;
+      .comment-header {
+        @include s_border_b;
+        .good-comment {
+          float: right;
+          width: 200px;
+          text-align: right;
+          @include s_fontDemo(20px, 33px, $font-66);
+          .am-icon {
+            vertical-align: middle;
+            margin-right: 7px;
+          }
+        }
+      }
+    }
+    .brand-info {
+      background: $bg-ff;
+      .brand-name {
+        @include s_border_b;
+        overflow: hidden;
+        padding: 10px 0 10px 23px;
+        dt {
+          float: left;
+          margin-right: 20px;
+          overflow: hidden;
+          @include s_blockDemo(80px, 80px);
+          img {
+            height: 100%;
+            margin: 0 auto;
+          }
+        }
+        dd {
+          float: left;
+          h1 {
+            @include s_fontDemo(28px, 40px, $font-33);
+            font-weight: normal;
+            margin-bottom: 6px;
+          }
+          p {
+            @include s_fontDemo(24px, 33px, $font-66);
+          }
+        }
+      }
+      .brand-number {
+        overflow: hidden;
+        li {
+          float: left;
+          width: 50%;
+          box-sizing: border-box;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          -webkit-box-orient: vertical;
+          -webkit-box-direction: normal;
+              -ms-flex-direction: column;
+                  flex-direction: column;
+          -webkit-box-align: center;
+              -ms-flex-align: center;
+                  align-items: center;
+          -webkit-box-pack: center;
+              -ms-flex-pack: center;
+                  justify-content: center;
+          padding: 7px 0;
+          &:nth-of-type(1) {
+            @include s_border_r;
+          }
+          h1 {
+            @include s_fontDemo(28px, 40px, $font-33);
+            font-weight: normal;
+            text-align: center;
+          }
+          p {
+            @include s_fontDemo(20px, 30px, $font-99);
+            text-align: center;
+          }
+        }
+      }
+    }
+  }
+  .detail-bottom {
+    padding-top: 22px;
+    background: $bg-ff;
+    .server-feature {
+      overflow: hidden;
+      .title {
+        float: left;
+        padding: 0 23px;
+        height: 60px;
+        @include s_fontDemo(28px, 60px, $font-33);
+        border: 1px solid $border-e5;
+        margin-left: 50%;
+        margin-bottom: 13px;
+        -webkit-transform: translateX(-50%);
+                transform: translateX(-50%);
+      }
+      .content {
+        @include s_fontDemo(24px, 32px, $font-33);
+        clear: both;
+        text-align: center;
+        margin-bottom: 18px;
+      }
+    }
+    .service-list {
+      margin-top: 20px;
+      li {
+        margin-bottom: 30px;
+        overflow: hidden;
+        &:nth-of-type(1), &:nth-of-type(3) {
+          .service-content {
+            text-align: center;
+            text-indent: 0px;
+          }
+        }
+        .service-title {
+          overflow: hidden;
+          float: left;
+          margin-left: 50%;
+          margin-bottom: 30px;
+          -webkit-transform: translateX(-50%);
+                  transform: translateX(-50%);
+          white-space: nowrap;
+          p {
+            float: left;
+            &:nth-of-type(1) {
+              position: absolute;
+              z-index: -1;
+              height: 19px;
+              width: 100%;
+              border-bottom: 1px solid #313131;
+            }
+            &:nth-of-type(2) {
+              @include s_fontDemo(28px, 40px, $font-33);
+              background: $bg-ff;
+              white-space: nowrap;
+              padding: 0 20px;
+              margin: 0 60px;
+              position: relative;
+              z-index: 10;
+            }
+          }
+        }
+        .service-content {
+          clear: both;
+          padding: 0 18px 10px;
+          @include s_fontDemo(24px, 40px, $font-66);
+          text-indent: 48px;
+        }
+        .service-img-container {
+          img {
+            @include s_blockDemo(100%, auto);
+          }
+          p {
+            @include s_fontDemo(24px, 32px, $font-33);
+            padding: 20px 20px 0;
+          }
+        }
+        .text {
+          @include s_fontDemo(24px, 40px, $font-66);
+          padding: 0 18px;
+          font-weight: normal;
+          clear: both;
+        }
+      }
+    }
+  }
+  .detail-footer {
+    height: 100px;
+    width: 100%;
+    background: $bg-ff;
+    position: absolute;
+    bottom: 0;
+    z-index: 10;
+    .contact, .place-btn {
+      height: 100px;
+      float: right;
+    }
+    .contact {
+      width: 140px;
+      position: relative;
+      @include s_border_l;
+      .am-icon {
+        @include s_allCenter;
+      }
+    }
+    .place-btn {
+      width: 300px;
+      text-align: center;
+      background: $disable;
+      @include s_fontDemo(36px, 100px, $font-ff);
+      &.active {
+        background: $theme;
+      }
+    }
+  }
+}
+
+.am-popup .contact {  li {
+    height: 114px;
+    text-align: center;
+    @include s_fontDemo(36px, 114px, $font-33);
+    &.contact-first {
+      @include s_border_b;
+    }
+  }
+}
+
+.support-area {
+  background: $bg-ff;
+  @include s_allCenter;
+  z-index: 100;
+  width: 100%;
+  padding-bottom: 60px;
+  .support-area-title {
+    text-align: center;
+    @include s_fontDemo(30px, 92px, $font-33);
+  }
+  table {
+    width: 680px;
+    margin: 0 auto;
+    border-top: 1px solid $border-eb;
+    border-left: 1px solid $border-eb;
+    @include s_fontDemo(22px, 60px, $font-66);
+    border-spacing: 0;
+    thead {
+      color: $font-33;
+    }
+    td {
+      border-right: 1px solid $border-eb;
+      border-bottom: 1px solid $border-eb;
+      text-align: center;
+      &:first-of-type {
+        width: 150px;
+      }
+    }
+  }
+}
+
+/* 公共组件样式*/
+.evaluationContainer {
+  z-index: 10;
+}

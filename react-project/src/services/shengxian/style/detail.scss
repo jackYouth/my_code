@@ -1,0 +1,277 @@
+*{margin: 0;padding: 0}
+.detail{
+  height: 100%;
+  width: 100%;
+  position: relative;
+  .picDatiles{
+    width: 100%;
+    background: #ffffff;
+    >p{
+      height: 0.88rem;
+      line-height: 0.88rem;
+      padding: 0 0.3rem;
+      font-size: 0.28rem;
+      box-sizing: border-box;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    >div{
+      padding: 0.3rem;
+      box-sizing: border-box;
+      img{
+        width: 100%;
+      }
+    }
+  }
+  .deMask{
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+  }
+  .deInfo{
+    background:#ffffff;
+    border-radius: 0.05rem;
+    width: 85%;
+    padding: 0.3rem 0.3rem 0;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    -webkit-transform:translateX(-50%) translateY(-50%);
+    z-index: 2001;
+    h2{
+      font-size: 0.32rem;
+      color:#333333;
+      padding: 0.2rem;
+      text-align: center;
+    }
+    p{
+      font-size: 0.28rem;
+      color:#999999;
+      padding: 0.15rem 0;
+    }
+    .specInfo{
+      border-bottom:1px solid #cccccc;
+      padding: 0.3rem 0 0.4rem;
+      span{
+        font-size: 0.24rem;
+        display: inline-block;
+        border:1px solid #cccccc;
+        border-radius: 0.25rem;
+        padding: 0 0.25rem;
+        height:0.5rem;
+        line-height:0.5rem;
+        margin-right: 0.2rem;
+      }
+      .selectSpec{
+        color: #ffab00;
+        background: rgba(255,171,0,0.05);
+        border: 1px solid #ffab00;
+      }
+    }
+    .specNum{
+      height: 1rem;
+      line-height: 1rem;
+      font-size:0.28rem;
+      color:#999999;
+      .buyBtn{
+        display: inline-block;
+        float: right;
+        height: 0.5rem;
+        margin-top: 0.25rem;
+        .am-icon-md{
+          position: relative;
+          top: 0.02rem;
+          float: right;
+        }
+        span{
+          float: right;
+          display: inline-block;
+          width: 0.5rem;
+          line-height: 0.5rem;
+          font-size:0.28rem;
+          color:#404040;
+          text-align: center;
+        }
+      }
+    }
+    .addSpec{
+      height: 1.1rem;
+      line-height: 1.1rem;
+      font-size: 0.36rem;
+      color: #ff4848;
+      background:#f8f8f8;
+      margin: 0 -0.3rem;
+      padding: 0 0.3rem;
+      border-radius: 0 0 0.05rem 0.05rem;
+      span{
+        display: inline-block;
+        float: right;
+        height: 0.7rem;
+        line-height: 0.7rem;
+        margin-top: 0.2rem;
+        padding: 0 0.36rem;
+        font-size: 0.36rem;
+        color: #ffffff;
+        background: #ffab00;
+        border-radius: 0.05rem;
+      }
+    }
+  }
+  .listitem{
+    width: 100%;
+    padding: 0.22rem 0.24rem;
+    box-sizing: border-box;
+    border-bottom: 0.01rem solid #d8d8d8;
+    background: #ffffff;
+    .pic{
+      display: inline-block;
+      width:1.3rem;
+      height:1.3rem;
+      float: left;
+      img{
+        width:1.3rem;
+        height:1.3rem;
+        border-radius: 0.05rem;
+      }
+    }
+    .info{
+      padding: 0 0 0 0.2rem;
+      box-sizing: border-box;
+      width: calc(100% - 1.3rem);
+      display: inline-block;
+      h1{
+        margin: 0.1rem 0;
+        font-size:0.28rem;
+        color:#333333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow:ellipsis;
+      }
+      >p{
+        color:#999999;
+        margin: 0.1rem 0;
+        font-size:0.24rem;
+      }
+      .bottomPart{
+        >p{
+          font-size:0.24rem;
+          color:#ff4848;
+          height: 0.5rem;
+          line-height: 0.5rem;
+          display: inline-block;
+        }
+        .buyBtn{
+          display: inline-block;
+          float: right;
+          height: 0.5rem;
+          .am-icon-md{
+            position: relative;
+            top: 0.02rem;
+            float: right;
+          }
+          span{
+            float: right;
+            display: inline-block;
+            width: 0.5rem;
+            line-height: 0.5rem;
+            font-size:0.28rem;
+            color:#404040;
+            text-align: center;
+          }
+        }
+      }
+    }
+  }
+}
+.detailWrap{
+  height: calc(100% - 1rem);
+  width: 100%;
+  overflow-y: auto;
+  .detailInfo{
+    padding: 0.3rem;
+    box-sizing: border-box;
+    background: #ffffff;
+    h2{
+      font-size:0.32rem;
+      color:#333333;
+      .specTip{
+        display: inline-block;
+        float: right;
+        padding: 0.03rem 0.05rem;
+        border: 1px solid #ffab00;
+        border-radius: 0.03rem;
+        font-size: 0.18rem;
+        color: #ffab00;
+        text-align: center;
+      }
+    }
+    >div{
+      margin-top: 0.2rem;
+      line-height: 0.5rem;
+      font-size: 0.24rem;
+      color:#ff4848;
+      .addCart{
+        float: right;
+        display: inline-block;
+        background:#ffab00;
+        border-radius:0.04rem;
+        padding: 0 0.13rem;
+        height: 0.5rem;
+        line-height: 0.5rem;
+        font-size:0.24rem;
+        color:#ff4848;
+        color:#ffffff;
+      }
+      .buyBtn{
+        display: inline-block;
+        float: right;
+        height: 0.5rem;
+        .am-icon-md{
+          position: relative;
+          top: 0.02rem;
+          float: right;
+        }
+        span{
+          float: right;
+          display: inline-block;
+          width: 0.5rem;
+          line-height: 0.5rem;
+          font-size:0.28rem;
+          color:#404040;
+          text-align: center;
+        }
+      }
+    }
+  }
+  .otherInfo{
+    border-top: 1px solid #e5e5e5;
+    background: #ffffff;
+    padding: 0.3rem;
+    box-sizing: border-box;
+    font-size:0.24rem;
+    color:#999999;
+    .place{
+      font-size:0.28rem;
+      line-height: 0.45rem;
+      span{
+        color:#333333;
+        margin-left: 0.3rem;
+      }
+    }
+  }
+}
+.mask-container{
+  z-index: 3000;
+}
+.am-modal-mask{
+  z-index: 3000;
+}
+.am-toast.am-toast-mask{
+  z-index: 3000;
+}
+.am-modal-wrap{
+  z-index: 3001;
+}

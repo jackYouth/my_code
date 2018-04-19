@@ -1,0 +1,80 @@
+.select_tabs{
+  position: relative;
+  background: #ffffff;
+  color:#adadad;
+  .select_icon{
+    display: inline-block;
+    position: absolute;
+    top: 0.28rem;
+    right: 0.24rem;
+    width: 0.33rem;
+    height: 0.33rem;
+    z-index: 2;
+    transition: .3s ease;
+    .am-icon-md{
+      width: 0.33rem;
+      height: 0.33rem;
+    }
+  }
+  .select_cro{
+    height: 0.9rem;
+    width: calc( 100% - 0.88rem);
+    overflow: hidden;
+    p{
+      font-size: 0.28rem;
+      position: relative;
+      display: inline-block;
+      height: 0.9rem;
+      line-height: 0.9rem;
+      white-space: nowrap;
+      .select_li{
+        display: inline-block;
+        padding: 0 0.4rem;
+        position: relative;
+      }
+      .select_foucs{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        display: inline-block;
+        transition: .3s ease;
+      }
+    }
+  }
+  .select_shade{
+    z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+    background: #ffffff;
+    p{
+      height: 0.9rem;
+      line-height: 0.9rem;
+      font-size: 0.28rem;
+      width: calc( 100% - 0.92rem);
+      text-indent: 0.24rem;
+    }
+    >div{
+      width: 100%;
+      border-top: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0.15rem 0.24rem;
+      box-sizing: border-box;
+      .select_li{
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 25%;
+        height: 0.75rem;
+        line-height: 0.45rem;
+        padding: 0.15rem 0.1rem;
+        box-sizing: border-box;
+        font-size: 0.28rem;
+      }
+    }
+  }
+}

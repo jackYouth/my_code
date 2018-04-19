@@ -1,0 +1,71 @@
+@import 'mixins';
+@import 'color';
+@for $i from 1 through 100 {
+  %wp#{ $i } {
+    @include w(#{ $i + '%' })
+  }
+}
+
+$positionArray: fixed absolute relative;
+
+@each $p in $positionArray {
+  %pos-#{ $p } {
+    position: $p
+  }
+}
+
+$displayArray: block inline inline-block;
+
+@each $d in $displayArray {
+  %#{ $d } {
+    display: $d
+  }
+}
+
+%blod {
+  font-weight: 700;
+}
+
+%hide {
+  display: none;
+}
+%o-hide {
+  overflow: hidden;
+}
+%x-hide {
+  overflow-x: hidden;
+}
+%y-hide {
+  overflow-y: hidden;
+}
+%v-hide {
+  visibility: hidden;
+}
+%touch-layer {
+  @extend %x-hide;
+  overflow-y:auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+%tag {
+  @extend %pos-relative;
+  @include rem(.20);
+  @include padding(2px 6px);
+  @include radius(5px);
+  border : 1px solid;
+}
+%tag.orange {
+  @extend %blod;
+  @include color($white);
+  @include bgc($brand);
+  @include padding(2px 8px);
+  border: 0;
+}
+
+
+// $warr: 5 10 15 20 25 30 35 40 45 50;
+// @each $w in $warr {
+//   .w#{ $w } {
+//     width: #{ $w }px;
+//   }
+// }

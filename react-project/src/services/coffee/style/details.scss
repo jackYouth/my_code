@@ -1,0 +1,101 @@
+@import 'common.scss';
+
+.detailsWrap{
+  width: 100%;
+  height:100%;
+  .detailsMian{
+    width: 100%;
+    height:calc(100% - 100px);
+    background:#fff;
+    overflow: scroll;
+    overflow-x: hidden;
+    img{
+      width: 100%;
+      // height:700px;
+    }
+    .details{
+      width: 100%;
+      height:auto;
+      padding:32px;
+      .title{
+        font-size:32px;
+        color:#333;
+        font-weight: 700;
+        span{
+          display:inline-block;
+        }
+        .attribute{
+          border:1px solid #ffab00;
+          font-size:24px;
+          border-radius:10px;
+          font-weight: 100;
+          color:#ffab00;
+          padding:2px 10px;
+          float:right;
+        }
+      }
+      .price{
+        width: 100%;
+        height:auto;
+        color:#ff4848;
+        margin-top:30px;
+        padding:20px 0 70px;
+        // background:pink;
+        .price_l{
+          font-size:24px;
+        }
+        .price_c{
+          font-size:32px;
+          font-weight: 700;
+        }
+        .price_no{
+          display:inline-block;
+          float:right;
+          padding:15px 30px;
+          font-size:24px;
+          color:#fff;
+          background:#ffab00;
+          border-radius:8px;
+        }
+        .price_r{
+          width: 40%;
+          float:right;
+          @include displayfec;
+          .carthano{
+            display:none;
+          }
+          .carthas{
+            @include displayfec;
+            width: 60%;
+            .Sum{
+              // width: calc(100% - 40px);
+              padding:0 20px;
+              // text-align: center;
+              color:#666;
+              font-size:28px;
+            }
+            .icon{
+              width: 40px;
+              height:40px;
+              .am-icon-md{
+                width: 40px;
+                height:40px;
+              }
+            }
+          }
+        }
+      }
+      .description{
+        font-size:28px;
+        color:#999;
+        line-height:35px;
+      }
+    }
+  }
+  .footerCart{
+    width: 100%;
+    height:98px;
+    border-top:1px solid #e5e5e5;
+    background:#fff;
+  }
+}

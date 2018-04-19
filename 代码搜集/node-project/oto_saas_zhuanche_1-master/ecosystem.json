@@ -1,0 +1,39 @@
+{
+  "apps": [
+    {
+      "name": "oto_saas_zhuanche_1",
+      "script": "app.js",
+      "watch": true,
+      "out_file": "/var/app_logs/oto_saas_zhuanche_1/out.log",
+      "error_file": "/var/app_logs/oto_saas_zhuanche_1/err.log",
+      "merge_logs": true,
+      "log_date_format": "YYYY-MM-DD HH:mm"
+    }
+  ],
+  "deploy": {
+    "dev": {
+      "user": "root",
+      "host": "139.198.1.168",
+      "port": "22122",
+      "ref": "origin/feature",
+      "repo": "git@github.com:kpboluome/oto_saas_zhuanche_1.git",
+      "path": "/usr/src/app/oto_saas_zhuanche_1",
+      "post-deploy": "npm install && pm2 startOrRestart ecosystem.json --env dev",
+      "env": {
+        "NODE_ENV": "dev"
+      }
+    },
+    "pro": {
+      "user": "root",
+      "host": "139.198.1.168",
+      "port": "16022",
+      "ref": "origin/master",
+      "repo": "git@github.com:kpboluome/oto_saas_zhuanche_1.git",
+      "path": "/usr/src/app/oto_saas_zhuanche_1",
+      "post-deploy": "npm install && pm2 startOrRestart ecosystem.json --env pro",
+      "env": {
+        "NODE_ENV": "pro"
+      }
+    }
+  }
+}

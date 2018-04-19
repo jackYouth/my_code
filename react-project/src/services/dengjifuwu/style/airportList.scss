@@ -1,0 +1,95 @@
+$grey777: rgb(170,170,170);
+$grey333: rgb(136,136,136);
+$black666: rgb(69,69,69);
+$yellow570: rgb(255,170,0);
+$yellow550: rgb(255,154,0);
+$black: rgb(0,0,0);
+
+@mixin s_middle {
+    position: fixed;
+    top: 55%;
+    transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    /* IE 9 */
+    -moz-transform: translateY(-50%);
+    /* Firefox */
+    -webkit-transform: translateY(-50%);
+    /* Safari 和 Chrome */
+    -o-transform: translateY(-50%);
+}
+@mixin s_fontDemo ($clr,$size,$l) {
+    color: $clr;
+    font-size: $size;
+    line-height: $l;
+}
+
+.airportList-container{
+  .list-main-container{
+    // position: relative;z-index: 20;
+    .list-main-box{
+      height: calc(100% - 190px);overflow-y: scroll;-webkit-overflow-scrolling: touch;
+      .air-ontainer{
+        .airKey{
+          width: 90%;padding: 30px;box-sizing: border-box;font-size: 28px;color: #999;background-color: #fff;
+        }
+        .airBox{
+          width: 90%;padding: 30px;box-sizing: border-box;background-color: #fff;border-bottom: 1px solid #e5e5e5;
+          font-size: 32px;
+        }
+      }
+    }
+  }
+}
+
+.local, .history{
+  padding: 0 30px;
+  span{
+    width: 100%;padding: 30px 0;box-sizing: border-box;font-size: 28px;color: #999;display: inline-block;
+  }
+  p{
+    display: inline-block;box-sizing: border-box;width: 300px;height: 80px;border: 1px solid #ccc;
+    background-color: #fff;text-align: center;line-height: 80px;margin-right: 40px;overflow: hidden;
+    text-overflow: ellipsis;white-space: nowrap;margin-bottom: 30px;
+  }
+}
+
+.internationalAir{
+  .empty-container{height: calc(100% - 190px);background-color: #f3f3f4;}
+}
+
+.letter-box ul {
+  @include s_middle;
+  // width: 10%;
+  right: 0rem;
+  z-index: 90;
+  list-style: none;
+  li {
+    span {
+      display: block;
+      text-align: center;
+      @include s_fontDemo( $black, .25rem, .35rem );
+      text-decoration: none;
+    }
+  }
+}
+.letter-box {
+  height: 100%;background-color: #fff;position: absolute;width: 10%;right: 0;top: 0;
+}
+
+.itemBox{
+  border-bottom: 1px solid #f5f5f6;background-color: #fff;
+  padding: 0 30px;height: 88px;line-height: 88px;
+  p{font-size: 0.28rem;color: #333;}
+}
+
+*{
+  padding: 0;margin: 0;
+}
+li{
+  list-style: none;
+}
+
+
+.searchBar{
+  position: relative;z-index: 99;
+}

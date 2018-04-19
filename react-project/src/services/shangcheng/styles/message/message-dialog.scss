@@ -1,0 +1,66 @@
+@import "../common.scss";
+
+// 对话title模块
+.wkit-theme-custom .wkit-title {
+  background: #fff !important;
+  color: $font-33 !important;
+  font-size: 72px;
+}
+
+// 对话内容模块
+.wkit-clear{
+  background-color: $bg-f3;
+}
+.wkit-msg-content {
+  @include s_border_t;
+  background: $bg-f3 !important;
+}
+.wkit-msg-wrap {
+  padding-top: .3rem;
+  padding-bottom: .3rem;
+}
+.wkit-msg-wrap .wkit-msg-inner .wkit-msg-item {
+  background: $bg-ff;
+}
+.wkit-msg-wrap.wkit-r .wkit-arr {
+  border-color: $bg-ff transparent transparent !important;
+}
+.wkit-msg-wrap.wkit-s .wkit-msg-item {
+  color: $font-ff !important;
+  line-height: 64px;
+}
+.wkit-msg-time {
+  @include s_fontDemo(48px, 88px, $font-ad);
+  span {
+    display: none;
+  }
+}
+
+// 输入框模块
+.wkit-input-content {
+  background: $bg-ff !important;
+}
+
+// 输入框模块 - button
+.wkit-theme-custom .wkit-input-wrap button {
+  background: $theme !important;
+  color: $font-ff !important;
+}
+
+// 商户的icon
+#business-icon {
+  @include s_blockDemo(160px, 160px);
+  position: absolute;
+  left: 60px;
+  bottom: 260px;
+  z-index: 10;
+  background:rgba(0,0,0,0.70);
+  border-radius:100%;
+  img {
+    padding-top: 15%;
+    height: 70%;
+    margin: 0 auto;
+    display: block;
+  }
+
+}

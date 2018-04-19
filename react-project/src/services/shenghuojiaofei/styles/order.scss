@@ -1,0 +1,50 @@
+@import '../../../styles/s_common.scss';
+
+.my-order-container {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  .my-order-middle {
+    height: 100%;
+    overflow: auto;
+    .my-order {
+      padding-bottom: 112px;
+      .bill-price {
+        .am-list-content {
+          font-size: 28px;
+          color: $font-33;
+        }
+      }
+      .order-info-list {
+        background:#ffffff;
+        padding: 24px 30px 11px;
+        @include s_border_t;
+        margin-bottom: 20px;
+        li {
+          overflow: hidden;
+          margin-bottom: 13px;
+          span {
+            @include s_fontDemo(24px, 33px, $font-66);
+            &:nth-of-type(1) {
+              float: left;
+            }
+            &:nth-of-type(2) {
+              float: right;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+//  改变默认样式
+.my-order .am-list-body{border-top: 0 solid #e5e5e5!important; }
+//  红包选择
+.my-order .am-list-body:after{
+  border-bottom: none;
+ }
+.am-list-item .am-list-line .am-list-extra span{
+  color: #f66;
+ }

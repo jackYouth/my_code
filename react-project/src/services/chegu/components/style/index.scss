@@ -1,0 +1,35 @@
+*{margin: 0;padding: 0;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);}
+a{color: #000}
+html{font-size: 16px;height: 100%;overflow: hidden;}
+body{height: 100%;background: #f5f5f6;font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif;-webkit-font-smoothing:antialiased;overflow-y: scroll;}
+ul{list-style: none;}
+h2{font-weight: normal;}
+input{border: none;outline: none;}
+input[type="search"]{-webkit-appearance:none;}
+input::-webkit-search-cancel-button {display: none;}
+button{outline: none;border: 0;}
+
+body .am-list-item .am-list-line .am-list-extra, .am-list-item .am-list-line .am-list-content{font-size: 0.3rem!important;}
+// .am-picker-popup-header-cancel-button, .am-picker-popup-item .am-picker-popup-header-left, .am-picker-popup-item{color: #999;}
+// .am-picker-popup-header-ok-button{color: #ff9a00;}
+.am-picker-popup-item{color: #ff9a00;}
+
+.fRight{float: right;}
+
+.formList{
+  li{border-bottom: 1px solid #f5f5f6; }
+  .distance{
+    height: 90px;line-height: 90px;padding: 0 32px;background-color: #fff;font-size: 0.3rem;
+    .fRight{
+      text-align: right;
+      input{text-align: center;width: 30%;color: #666;font-size: 30px;}
+      span{color: #ff9a00;}
+    }
+  }
+}
+.btnBox{
+  width: 100%;height: 100px;text-align: center;margin-top: 40px;
+  button{background-color: #e5e5e5;}
+  .btn{width: 90%;height: 100%;border-radius: 6px;text-align: center;margin: 0 auto;color: #fff;}
+  .canUse{background-color: #ff9a00;}
+}

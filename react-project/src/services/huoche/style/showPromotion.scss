@@ -1,0 +1,61 @@
+@import "common.scss";
+
+.showPromotionWrap{
+  width: 100%;
+  height:auto;
+  .oto{
+    span{
+      vertical-align: top;
+      margin-left:15px;
+    }
+    .text_oto{
+      color:#ff4848;
+    }
+    .text_s{
+      width: 40px;
+      height:40px;
+    }
+    .text_ss{
+      width: 40px;
+      height:40px;
+    }
+  }
+  .payPrice{
+    .hidden{
+      display:none
+    }
+    .show{
+      line-height: 40px;
+      span{
+        margin-right:10px;
+        color:#333;
+        font-size:28px;
+        vertical-align: top;
+      }
+      span:nth-child(2){
+        font-weight: 700;
+      }
+    }
+  }
+  .oto{
+    .iconoto{
+      display: inline-block;
+      vertical-align: middle;
+      border-radius: .06rem;
+      width: .36rem;
+      height: .36rem;
+      font-size: .26rem;
+      color: #fff;
+      line-height: .36rem;
+      text-align: center;
+      margin-right: .12rem;
+      margin-left:0;
+    }
+    .iconspanh{
+      background: #ff4848;
+    }
+    .iconspanj{
+      background:#ff6e19;
+    }
+  }
+}

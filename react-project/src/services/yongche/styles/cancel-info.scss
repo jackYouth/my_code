@@ -1,0 +1,113 @@
+@import "../../../styles/s_common.scss";
+
+.cancel-info {
+  padding: 30px;
+  .cancel-info-header {
+    background: $bg-ff;
+    padding: 0 30px;
+    margin-bottom: 50px;
+    border-radius: 4px;
+    .order-number {
+      padding-top: 20px;
+      border-bottom: 1px dashed $border-e5;
+      overflow: hidden;
+      padding-bottom: 20px;
+      position: relative;
+      .left {
+        float: left;
+        p {
+          &:first-of-type {
+            span {
+              @include s_fontDemo(28px, 40px, $font-33);
+              margin-right: 25px;
+            }
+          }
+          &:last-of-type {
+            @include s_fontDemo(24px, 28px, $font-99);
+          }
+        }
+      }
+      .right {
+        color: $font-f48;
+        @include s_middle;
+        right: 0;
+        &.active {
+          color: $theme;
+        }
+      }
+    }
+    .cancel-info-bottom {
+      margin-bottom: 25px;
+      .top {
+        // height: 60px;
+        border-bottom: 1px dashed $border-e5;
+        @include s_fontDemo(24px, 40px, $font-66);
+        margin-bottom: 30px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        overflow: hidden;
+        .price {
+          float: left;
+          font-size: 28px;
+          color: $font-33;
+          span {
+            color: $font-f48;
+          }
+        }
+        .time {
+          float: right;
+        }
+        .discount {
+          clear: both;
+        }
+      }
+      .am-icon {
+        display: block;
+        margin: 0 auto;
+        width: 110px;
+        height: 110px;
+      }
+      .order-status {
+        text-align: center;
+        padding-bottom: 15px;
+        @include s_fontDemo(28px, 58px, $font-66);
+      }
+    }
+    .common-item {
+      height: 80px;
+      border-bottom: 1px dashed $border-e5;
+      .am-icon {
+        float: left;
+        margin-right: 30px;
+        margin-top: 25px;
+      }
+      span {
+        @include s_fontDemo(28px, 80px, $font-66);
+        &:first-of-type {
+          float: left;
+
+        }
+        &:last-of-type {
+          float: right;
+        }
+      }
+    }
+  }
+  .cancel-info-footer {
+    .footer-item {
+      @include s_blockDemo(48%, 80px);
+      @include s_fontDemo(38px, 80px, $font-66);
+      text-align: center;
+      border-radius: 4px;
+    }
+    .left {
+      float: left;
+      background: $bg-ff;
+    }
+    .right {
+      float: right;
+      background: $theme;
+      color: $font-ff;
+    }
+  }
+}

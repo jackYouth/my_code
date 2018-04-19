@@ -1,0 +1,130 @@
+*{margin: 0;padding: 0}
+.detail{
+  .detailmain{
+    background: #f5f5f6;
+    overflow: auto;
+    height: calc(100% - 1rem);
+  }
+  .buyBtn{
+    display: inline-block;
+    width: 100%;
+    height: 1rem;
+    line-height: 1rem;
+    background: #ffab00;
+    color: #ffffff;
+    font-size: 0.32rem;
+    text-align: center;
+  }
+  .focusPic{
+    height: 2.2rem;
+    position: relative;
+    .focusPicbg{
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      opacity: .2;
+      position: absolute;
+    }
+    img{
+      width: 1.8rem;
+      height: 2.5rem;
+      border-radius: 0.05rem;
+      position: absolute;
+      top: 0.5rem;
+      left: 0.3rem;
+    }
+    p{
+      color: #ffffff;
+      font-size: 0.36rem;
+      padding-right: 0.3rem;
+      width: calc(100% - 2.4rem);
+      box-sizing: border-box;
+      position: absolute;
+      top: 0.5rem;
+      right: 0;
+    }
+  }
+  .statusShow{
+    height: 1.1rem;
+    box-sizing: border-box;
+    padding-left: 2.3rem;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-align-items: center;
+    align-items: center;
+    >span{
+      border:1px solid #4990e2;
+      border-radius: 0.03rem;
+      padding: 0.03rem 0.05rem;
+      font-size: 0.24rem;
+      color: #4990e2;
+    }
+    p{
+      font-size: 0.24rem;
+      color: #666666;
+      margin-left: 0.3rem;
+      span{
+        font-size: 0.36rem;
+        color: #ff6666;
+      }
+    }
+  }
+  .detinfo{
+    box-sizing: border-box;
+    padding: 0 0.3rem;
+    height: 1rem;
+    font-size: 0.28rem;
+    color: 333333;
+    background: #fff;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    .flexinfo{
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+    }
+    img{
+      width: 0.48rem;
+      height: 0.48rem;
+    }
+    p{
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      .rodtip{
+        display: inline-block;
+        border-radius: 0.05rem;
+        margin-right: 0.1rem;
+        width: 0.1rem;
+        height: 0.3rem;
+        background: #ffab00;
+      }
+    }
+    .am-icon-md{
+      -webkit-flex: none;
+      flex: none;
+    }
+  }
+  .descinfo{
+    background: #ffffff;
+    font-size: 0.24rem;
+    line-height: 1.5;
+    padding: 0.3rem;
+  }
+}
+
+.zhuyi{
+  font-size: 0.28rem;
+  color: #666666;
+  line-height: 1.5;
+  p{
+    margin: 0.3rem;
+  }
+}

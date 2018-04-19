@@ -1,0 +1,44 @@
+@import "./common.scss";
+
+.app-container {
+  height: 100%;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  .app {
+    -webkit-box-flex: 1;
+        -ms-flex: 1;
+            flex: 1;
+    overflow: auto;
+  }
+  .menus {
+    @include s_border_t;
+    height: 97px;
+    width: 100%;
+    background: $bg-ff;
+    .am-flexbox-item {
+      position: relative;
+      .am-icon {
+        display: block;
+        margin: 0 auto;
+        @include s_blockDemo(55px, 55px);
+      }
+      span {
+        display: block;
+        text-align: center;
+        @include s_fontDemo(24px, 32px, $font-99);
+        &.sc-badge-icon {
+          line-height: 26px;
+          right: 47%;
+        }
+      }
+      &.active span {
+        color: $theme;
+      }
+    }
+  }
+}

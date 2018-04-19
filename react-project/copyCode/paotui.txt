@@ -1,0 +1,2922 @@
+         
+ 
+ 
+ 
+ paotui/actions/index.js 
+ 
+import { setStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { get } from 'business'
+
+export const getGoodsMessage = () => dispatch => {
+  const handleClose = Loading()
+  const goodsListUrl = '/paotui/quickItem'
+  // const { latitude, longitude } = point
+  const sendData = {}
+  get(goodsListUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      // console.log('quickItem', data)
+      dispatch({
+        type:      'KJIN_GOODSLIST',
+        quickItem: data,
+      })
+      setStore('paotuiData', data, 'session')
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+         
+ 
+ 
+ 
+ paotui/actions/order.js 
+ 
+import { Toast } from 'antd-mobile'
+import { getStore, setStore, removeStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { afterOrdering, get, send } from 'business'
+
+// 配送费的请求
+export const deliverFee = (serviceDate, contact) => dispatch => {
+  const handleClose = Loading()
+  const deliverFeeUrl = '/paotui/queryDeliverFee'
+  const merchant = getStore('paotui_merchant', 'session')
+  const time = serviceDate ? serviceDate.join(' ') : ''
+  // console.log('deliverFee--serviceDate', time, merchant)
+  let senderLatitude = ''
+  let senderAddress = ''
+  let senderLongitude = ''
+  if (merchant) {
+    senderAddress = merchant.address
+    senderLatitude = merchant.lat
+    senderLongitude = merchant.lng
+  }
+  let address = ''
+  let latitude = ''
+  let longitude  = ''
+  if (contact && time) { //  && time ---->  预备修改处
+    address = contact.address
+    latitude = contact.latitude
+    longitude = contact.longitude
+    // 有收货地址才去请求
+    const sendData = {
+      type:              '3',
+      coordtype:         '4',
+      deliverTime:       time,
+      receiverAddress:   address,
+      receiverLatitude:  latitude,
+      receiverLongitude: longitude,
+      senderAddress,
+      senderLatitude,
+      senderLongitude,
+      mapType:           'gaode',
+    }
+    send(deliverFeeUrl, sendData).then(reply => {
+      const { code, data, message } = reply
+      if (code === 0) {
+        // console.log('deliverFees', data)
+        dispatch({
+          type:        'DELIVERFEE',
+          deliverFees: data.deliverFee,
+        })
+        setStore('paotui_deliverFees', data.deliverFee, 'session')
+      } else {
+        console.log('数据请求失败', message)
+        Toast.info(message, 2, null, false)
+        dispatch({ type: 'DELIVERFEE', deliverFees: 0 })
+        setStore('paotui_deliverFees', 0, 'session')
+      }
+      handleClose()
+    })
+  } else {
+    console.log('请选择收货地址')
+    handleClose()
+  }
+}
+
+// 配送时间请求
+export const orderDeliverTime = contact => dispatch => {
+  const handleClose = Loading()
+  const goodsListUrl = '/paotui/queryValidDeliverTime'
+  const sendData = { type: 3 }
+  get(goodsListUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      console.log('orderDeliverTime', data, contact)
+      dispatch({
+        type:          'KJIN_DELIVERTIME',
+        orderTimeDate: data,
+        serviceDate:   [data[0].deliverDate, data[0].deliverTime[0]],
+      })
+      setStore('paotui_serviceDate', [data[0].deliverDate, data[0].deliverTime[0]], 'session')
+      // deliverFee(([data[0].deliverDate, data[0].deliverTime[0]]), contact)
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+const changeContact = (contact, point, dispatch) => {
+  const address = getStore('currentPosition', 'session').street + getStore('currentPosition', 'session').streetNumber
+  console.log('changeContact--', address)
+  const serviceDate = getStore('paotui_serviceDate', 'session')
+  const dingPoint = {
+    ...point,
+    address,
+  }
+  dispatch({
+    type: 'CONTACT',
+    contact,
+    // userPoint: point,
+  })
+  if (contact) {
+    setStore('paotui_contact', contact, 'session')
+    dispatch(deliverFee(serviceDate, contact))
+  } else {
+    // deliverFee(serviceDate, dingPoint, dispatch)
+    console.log('定位地址', dingPoint)
+  }
+}
+// 获取根据当前定位在用户收货地址中选择最优的收货地址
+export const getOptimalContact = point => dispatch => {
+  const OptimalContactUrl = '/user/v1/contact'
+  const { latitude, longitude } = point
+  const userId = getStore('customerUserId', 'session')
+  const sendData = {
+    userId,
+    longitude,
+    latitude,
+    mapType: 'gaode',
+  }
+  get(OptimalContactUrl, sendData).then(reply => {
+    const { code, data } = reply
+    if (code === 0) {
+      // console.log('OptimalContactUrl---', data)
+      if (data) { // 有最优地址的时候
+        const choosePoint = { latitude: data.latitude, longitude: data.longitude }
+        if (data.distance > 3) {
+          changeContact('', point, dispatch)
+        } else {
+          changeContact(data, choosePoint, dispatch)
+        }
+      } else { // 没有返回地址的时候
+        changeContact('', point, dispatch)
+      }
+    } else { // 当请求最优地址失败，进行自动定位
+      changeContact('', point, dispatch)
+    }
+  })
+}
+
+
+// 正常下单
+const orderFn = (orderUrl, sendData) => {
+  const handleClose = Loading()
+  send(orderUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      handleClose()
+      // console.log(afterOrdering(data))
+      afterOrdering(data)
+      removeStore('paotui_textarea', 'session')
+      removeStore('paotui_imgSrc', 'session')
+      removeStore('paotui_merchant', 'session')
+      removeStore('paotui_contact', 'session')
+      removeStore('paotui_merchant_self', 'session')
+    } else {
+      Toast.info('下单失败 !', 2, null, false)
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+// 创建订单
+export const handleGoOrder = (tipsPrice, contact, merchant, serviceDate, Promotion, deliverFees) => {
+  // const handleClose = Loading()
+  const orderUrl = '/paotui/order'
+  const customerUserId = getStore('customerUserId', 'session')
+  const userPhone = getStore('userPhone', 'session')
+  const { contactId, name, phone } = contact
+  const { coupon, activities } = Promotion
+  const orderItem = []
+  const time = serviceDate[1] === '尽快送' ? (serviceDate).join(' ') : (serviceDate).join('')
+  const textareaStr = getStore('paotui_textarea', 'session')
+  const files = getStore('paotui_imgSrc', 'session')
+  const sphotoUrl = getStore('paotui_photoUrl', 'session')
+  let merchantSelf = getStore('paotui_merchant_self', 'session')
+  let photoUrl = ''
+  if (files && sphotoUrl) {
+    photoUrl = files.length > 0 ? sphotoUrl : ''
+  }
+  const obj = {
+    photoUrl,
+    productName: textareaStr,
+  }
+  orderItem.push(obj)
+  if (!merchantSelf) {
+    merchantSelf = ''
+  }
+  const senderAddress = merchant ? `${ merchant.address + merchantSelf }` : ''
+  const senderLatitude = merchant ? merchant.lat : ''
+  const senderLongitude = merchant ? merchant.lng : ''
+  const sendData = {
+    customerUserId,
+    userPhone,
+    contactId,
+    senderAddress,
+    senderLatitude,
+    senderLongitude,
+    orderItem,
+    receiverName:  name,
+    receiverPhone: phone,
+    type:          3,
+    coordtype:     4,
+    deliverFee:    deliverFees,
+    deliverTime:   time,
+    tipFee:        tipsPrice,
+    couponId:      coupon ? coupon.id : '',
+    activityId:    activities ? activities.id : '',
+    mapType:       'gaode',
+  }
+  orderFn(orderUrl, sendData)
+}
+         
+ 
+ 
+ 
+ paotui/components/Carousel.js 
+ 
+import React from 'react'
+import { browserHistory } from 'react-router'
+import { Carousel } from 'antd-mobile'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+
+import '../style/Carousel.scss'
+// import back from '../img/back.svg'
+// import deleteIcon from '../img/delete.svg'
+
+class CarouselCom extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+    this.handleFireImg = this.handleFireImg.bind(this)
+  }
+  handleFireImg() {
+    Mask.closeAll()
+  }
+  handleOk() {
+    Mask.closeAll()
+  }
+  handleChooseTips(o) {
+    const { displayTag } = o
+    setStore('paotui_displayTag', displayTag, 'session')
+    // const textarea = document.querySelector('.text').value
+    // setStore('paotui_textarea', textarea, 'session')
+    setStore('paotui_productName', [], 'session')
+    browserHistory.push('/paotui/order')
+  }
+  render() {
+    console.log(this.state)
+    const { quickItem } = this.state
+    const dataarr = []
+    const len2 = Math.ceil(quickItem.length / 12)
+    for (let k = 0; k < len2; k++) {
+      const arr = []
+      for (let i = (k * 12); i < ((k + 1) * 12); i++) {
+        if (quickItem[i]) {
+          arr.push(quickItem[i])
+        }
+      }
+      dataarr.push(arr)
+    }
+    return (
+      <div className='carouselWrap'>
+        <Carousel
+          className='my-carousel'
+          autoplay={ false }
+          infinite={ false }
+          selectedIndex={ 0 }
+          swipeSpeed={ 35 }
+        >
+          {
+            dataarr.map(el => (
+              <div className='itemlist' key={ el }>
+                {
+                  el.map(o => (
+                    <div className='item' key={ o.displayTag } onClick={ () => this.handleChooseTips(o) }>
+                      <img src={ o.iconUrl } alt='' />
+                      <span>{ o.displayTag }</span>
+                    </div>
+                  ))
+                }
+              </div>
+            ))
+          }
+        </Carousel>
+      </div>
+    )
+  }
+}
+
+export default CarouselCom
+
+// const ItemList = ({ data }) => {
+//   console.log(data)
+//   return (
+//     <div className='carouselWrap'>
+//       {
+//         data.map(el => (
+//           <ul className='item' key={ `${ Math.round() }` }>
+//             {
+//               el.map(o => (
+//                 <li key={ `${ Math.round() }` }>
+//                   <img src={ o.iconUrl } alt='' />
+//                   <span>{ o.displayTag }</span>
+//                 </li>
+//               ))
+//             }
+//           </ul>
+//         ))
+//       }
+//     </div>
+//   )
+// }
+         
+ 
+ 
+ 
+ paotui/components/app.js 
+ 
+import React from 'react'
+import { Icon, List } from 'antd-mobile'
+import { Mask, SlidePage } from '@boluome/oto_saas_web_app_component'
+// import { vconsole } from 'vconsole' // <vconsole />
+import TextareaCom from './textarea.js'
+import CarouselCom from './Carousel.js'
+import UserTips from './usertips.js'
+
+import '../style/index.scss'
+import my from '../img/my.svg'
+import logo from '../img/logo.png'
+
+const Item = List.Item
+const App = props => {
+  const { quickItem, goOrder, textareaStr, files = [],
+    handleGoOrderList, changeText, CUSTOMER, // GoOrderDetails,
+  } = props
+  // console.log('appc---', props)
+  const handleUserTip = () => {
+    Mask(
+      <SlidePage target='right' type='root' >
+        <UserTips />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  //  onClick={ () => GoOrderDetails() }
+  if (quickItem) {
+    return (
+      <div className='paotuiWrap'>
+        <div className='header'>
+          <div />
+          <div className='title'>
+            <img src={ logo } alt='' />
+            <span>邻趣</span>
+          </div>
+          {
+            CUSTOMER ? (
+              <div className='title_icon' onClick={ () => handleGoOrderList() }><Icon type={ my } /></div>) :
+              (<div className='title_icon' />)
+          }
+        </div>
+        <TextareaCom textareaStr={ textareaStr } files={ files } changeText={ changeText } />
+        <Item className='tipsWrap' extra={ <span className='tips' onClick={ () => handleUserTip() }>使用说明</span> }>例如：阿莫西林1盒及打火机1个</Item>
+        <CarouselCom quickItem={ quickItem } />
+        <div className='nextBtn' onClick={ () => goOrder() }>下一步</div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+export default App
+         
+ 
+ 
+ 
+ paotui/components/cannotorder.js 
+ 
+import React from 'react'
+// import { browserHistory } from 'react-router'
+import { List, InputItem, NoticeBar } from 'antd-mobile'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { send } from '@boluome/common-lib'
+
+import '../style/orderDetails.scss'
+import cha from '../img/x.png'
+
+const { customer = {} } = window.OTO_SAAS
+const { bridge = {}, isSpecialPhoneCall = false } = customer
+const { specialPhoneCall } = bridge
+
+class CancelOrder extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+      ...props.orderDetailInfo,
+      changecon: '',
+      mark:      false,
+    }
+    console.log('CancelOrder-props--', props, ...props.orderDetailInfo)
+  }
+  // 获取取消码
+  handleCannotOrderFn() {
+    const { changecon } = this.state
+    if (changecon) {
+      this.handleOK()
+    } else {
+      this.setState({
+        mark: true,
+      })
+    }
+  }
+  // 提交验证码
+  handleOK() {
+    const handleClose = Loading()
+    const cannotorderUrl = '/paotui/cancelOrderByCode'
+    const { id, changecon, handleContainerClose, propsFn, channel, orderType, partnerId } = this.state
+    const sendData = {
+      id,
+      code: changecon,
+    }
+    send(cannotorderUrl, sendData).then(reply => {
+      const { code, data, message } = reply
+      if (code === 0) {
+        handleClose()
+        this.setState({
+          mark: false,
+        })
+        if (propsFn) propsFn(id, channel, orderType, partnerId)
+        handleContainerClose()
+        window.location.reload()
+        console.log('handleOK---', data, propsFn)
+      } else {
+        this.setState({
+          mark: true,
+        })
+        console.log('数据请求失败', message)
+      }
+      handleClose()
+    })
+  }
+  // 输入框内容
+  handleOnChange(v) {
+    this.setState({
+      changecon: v,
+    })
+  }
+  render() {
+    // 取消订单的弹窗
+    const { deliveryManMobile, handleContainerClose, mark } = this.state
+    return (
+      <div className='cannotOrder'>
+        <div className='canNtitle'>
+          <span onClick={ () => handleContainerClose() }><img src={ cha } alt='' /></span>
+          <span>取消订单</span>
+          {
+            isSpecialPhoneCall ? (<span onClick={ () => { if (isSpecialPhoneCall && specialPhoneCall && typeof specialPhoneCall === 'function') { specialPhoneCall(deliveryManMobile) } } }>联系小哥</span>) : (<a href={ `tel:${ deliveryManMobile }` }><span>联系小哥</span></a>)
+          }
+        </div>
+        {
+          !mark ? ('') : (<NoticeBar className='tipspriceNotice' mode='link'>请输入正确的取消码</NoticeBar>)
+        }
+        <div className='canNmain'>
+          <List>
+            <InputItem
+              placeholder='请输入4位取消码'
+              maxLength={ 4 }
+              type='text'
+              onChange={ v => this.handleOnChange(v) }
+            />
+          </List>
+          <div className='yesBtn' onClick={ () => this.handleCannotOrderFn() }>确定</div>
+          <p>小哥接单后，取消订单需要输入取消码，请向小哥索要</p>
+        </div>
+      </div>
+    )
+  }
+}
+
+export default CancelOrder
+         
+ 
+ 
+ 
+ paotui/components/changeimg.js 
+ 
+import React from 'react'
+import { ImagePicker, Icon } from 'antd-mobile'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+// import { send } from 'business'
+
+import '../style/textarea.scss'
+import close from '../img/close.svg'
+import deleteIcon from '../img/delete.svg'
+
+class ChangeImg extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+    console.log('ChangeImg', props)
+    this.handleFireImg = this.handleFireImg.bind(this)
+    this.handleImgshow = this.handleImgshow.bind(this)
+    this.handleResectImg = this.handleResectImg.bind(this)
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  handleImgshow(v, o, i) {
+    console.log('ll', v, o, i)
+    this.setState({
+      files: [v[v.length - 1]],
+    })
+  }
+  handleCloseMask() {
+    Mask.closeAll()
+  }
+  handleFireImg() {
+    const { onChange } = this.props
+    onChange([])
+    Mask.closeAll()
+    this.setState({
+      files: [],
+    })
+    setStore('paotui_photoUrl', '', 'session')
+  }
+  handleOk(files) {
+    const { onChange } = this.props
+    console.log('handleOk---', files)
+    onChange(files)
+    this.setState({
+      files,
+    })
+    setStore('paotui_imgSrc', files, 'session')
+    Mask.closeAll()
+  }
+  // 以下这段代码  我也不知道有什么用
+  handleResectImg(i, o) {
+    console.log(i, o)
+    this.setState({
+      imgSrc: o,
+    })
+    const { onChange } = this.props
+    onChange(o)
+    Mask.closeAll()
+  }
+  render() {
+    const { files } = this.state
+    const imgSrc = files.length > 0 ? files[0].url : ''
+    return (
+      <div className='imgItem'>
+        <div className='backBtn'>
+          <Icon className='oto_s1' onClick={ () => { this.handleCloseMask() } } type={ close } />
+          <Icon className='oto_s2' onClick={ () => { this.handleFireImg() } } type={ deleteIcon } />
+        </div>
+        <div className='imgMain'>
+          <img src={ imgSrc } alt='' />
+        </div>
+        <div className='btnWrap'>
+          <span className='oto_s1'>
+            重新选择
+            <ImagePicker
+              files={ files }
+              onChange={ this.handleImgshow }
+              onImageClick={ (index, fs) => this.handleResectImg(index, fs) }
+            />
+          </span>
+          <span className='oto_s2' onClick={ () => { this.handleOk(files) } }>确定</span>
+        </div>
+      </div>
+    )
+  }
+}
+
+export default ChangeImg
+         
+ 
+ 
+ 
+ paotui/components/order.js 
+ 
+import React from 'react'
+import { List, WhiteSpace, Picker, InputItem } from 'antd-mobile'
+import { Mask, SlidePage, NewPromotion, AddressSearchGaode, Contact } from '@boluome/oto_saas_web_app_component'
+import { getStore } from '@boluome/common-lib'
+
+import TextareaCom from './textarea.js'
+import UserTips from './usertips.js'
+import Tipsprice from './tipsprice.js'
+import Tel from './tel.js'
+import '../style/order.scss'
+import shouIcon from '../img/shou.png'
+import contactIcon from '../img/contact.png'
+// import tel from '../img/tel.svg'
+// import people from '../img/people.svg'
+
+const Item = List.Item
+const Brief = Item.Brief
+
+const Order = props => {
+  const {
+    serviceDate, orderTimeDate, displayTag, handleChangeTime, handleClick,
+    handleChangeAddr, handleChangeContact, contact, shoppingAddr,
+    deliverFees, textareaStr, handleProductName, handleUnits, files = [],
+    handlePromotion, handletipsPrice, tipsPrice, Promotion, handleSaveBtn,
+    handleAddMerchant, handleChangePhone, handleChangeName, focused,
+    changeText,
+  } = props
+  console.log('order-props---', textareaStr, files, contact)
+  // console.log('tipsPrice + deliverFees', Number(tipsPrice + deliverFees), tipsPrice, deliverFees)
+  const datas = getStore('paotuiData', 'session')
+  const PromotionPrice = Number(tipsPrice + deliverFees)
+  const handleUserTip = () => {
+    Mask(
+      <SlidePage target='right' type='root' >
+        <UserTips />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  const handleShoppingAddr = () => {
+    Mask(
+      <SlidePage target='right' type='root' showClose={ false } >
+        <AddressSearchGaode onSuccess={ handleChangeAddr } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  const handleContact = () => {
+    // console.log('handleContact----', textareaStr, '-----', displayTag)
+    Mask(
+      <SlidePage target='right' type='root' showClose={ false } >
+        <Contact handleChange={ handleChangeContact } hideDefaultBtn={ 0 } source='paotui' />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  const seasons = orderTimeDate.map(({ deliverDate, deliverTime }) => ({ label: deliverDate, value: deliverDate, children: deliverTime.map(key => ({ label: key, value: key })) }))
+  return (
+    <div className='paotuiOrderWrap'>
+      <div className='orderMain'>
+        <WhiteSpace size='lg' />
+        <TextareaCom textareaStr={ textareaStr } files={ files } focused={ focused } changeText={ changeText } />
+        <Item className='tipsWrap' extra={ <span className='tips' onClick={ () => handleUserTip() }>使用说明</span> }>例如：阿莫西林1盒及打火机1个</Item>
+        {
+          displayTag ? (<GoodsShowCom data={ datas } displayTag={ displayTag } handleProductName={ handleProductName } handleUnits={ handleUnits } />) : ('')
+        }
+        <WhiteSpace size='lg' />
+        <List>
+          {
+            shoppingAddr ? (<Item
+              className='address'
+              align='top'
+              thumb={ shouIcon }
+              multipleLine
+              extra={ <span className='deleteAddress' onClick={ () => handleChangeAddr('') } /> }
+            >
+              <span onClick={ () => handleShoppingAddr() }>{ shoppingAddr.title }</span>
+              <Brief>
+                <InputItem
+                  className='addressInt'
+                  type='text'
+                  placeholder='详细地址...'
+                  onChange={ v => handleAddMerchant(v) }
+                />
+              </Brief>
+            </Item>) : (<Item
+              thumb={ shouIcon }
+              arrow='horizontal'
+              onClick={ () => { handleShoppingAddr() } }
+            >购买地址 (选填)</Item>)
+          }
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          {
+            contact ? (<Item arrow='horizontal'
+              align='top'
+              thumb={ contactIcon }
+              multipleLine
+              extra={ <span className='goContactList' onClick={ () => handleContact() } /> }
+            >
+              <span onClick={ () => handleContact() }>{ contact.detail }</span>
+              <Tel contact={ contact } handleChangePhone={ handleChangePhone } handleChangeName={ handleChangeName } />
+            </Item>) : (<Item arrow='horizontal'
+              align='top'
+              thumb={ contactIcon }
+              multipleLine
+              onClick={ () => handleContact() }
+            >
+              请添加收货地址
+            </Item>)
+          }
+        </List>
+        <WhiteSpace size='lg' />
+        <List className='orderTime' onClick={ () => handleClick(contact) }>
+          <Picker
+            data={ seasons }
+            title='选择日期'
+            extra={ serviceDate ? (`${ serviceDate[0] } ${ serviceDate[1] }`) : '请选择上门服务时间' }
+            cols={ 2 }
+            onChange={ v => handleChangeTime(v) }
+          >
+            <Item arrow='horizontal' className='timeIcon'><span>送达时间</span></Item>
+          </Picker>
+        </List>
+        <WhiteSpace size='lg' />
+        <Item extra={ `${ deliverFees <= 0 ? ('') : (`¥${ deliverFees }`) }` }>配送费</Item>
+        <Tipsprice onChange={ handletipsPrice } />
+        <WhiteSpace size='lg' />
+        <NewPromotion orderType='paotui' amount={ PromotionPrice } count={ 1 } channel='linqu' handleChange={ reply => handlePromotion(reply) } />
+        <WhiteSpace size='lg' />
+        <div className='tipsText'>注：配送费是您购买小邻哥的时间、选购及运输成本所付出的费用。不包含商品费用，商品费用需根据商家小票另外支付</div>
+        <WhiteSpace size='lg' />
+      </div>
+      <div className='orderFooter'>
+        {
+          PromotionPrice > 0 ?
+          (
+            <div className='price'>
+              {
+                Promotion && Promotion.discount > 0 ? (<span className='sl'>已优惠¥ { Promotion.discount }</span>) : ('')
+              }
+              <span className={ `sr ${ Promotion && Promotion.discount > 0 ? ('sr_myfirstR') : 'sr_myfirst' }` }>实付：¥<i>{ `${ Promotion && Promotion.discount > 0 ? (PromotionPrice - Promotion.discount).toFixed(2) : PromotionPrice.toFixed(2) }` }</i></span>
+            </div>
+          ) : ('')
+        }
+        {
+          PromotionPrice > 0 ? (<div className='orderBtn' onClick={ () => handleSaveBtn(tipsPrice, contact, shoppingAddr, serviceDate, Promotion, deliverFees) }>立即下单</div>) :
+          (<div className='orderBtn noUseBtn'>立即下单</div>)
+        }
+
+      </div>
+    </div>
+  )
+}
+
+export default Order
+
+// const Tel = ({ contact, handleChangePhone, handleChangeName }) => {
+//   const { name, phone } = contact
+//   return (
+//     <div className='tel'>
+//       <InputItem
+//         className='peopleInt'
+//         placeholder='收货人...'
+//         defaultValue={ name }
+//         onChange={ v => handleChangeName(v, contact) }
+//       ><Icon type={ people } /></InputItem>
+//       <InputItem
+//         className='telInt'
+//         type='phone'
+//         maxLength={ 11 }
+//         placeholder='手机号...'
+//         defaultValue={ phone }
+//         onChange={ v => handleChangePhone(v, contact) }
+//       ><Icon type={ tel } /></InputItem>
+//     </div>
+//   )
+// }
+//
+
+const GoodsShowCom = ({ data = [], displayTag, handleUnits, handleProductName }) => {
+  // console.log('displayTag,', displayTag)
+  const e = data.filter(o => { return o.displayTag === displayTag })[0]
+  // const { productNames } = e
+  const { units, productNames } = e
+  // console.log('111', e)
+  return (
+    <div className='goods'>
+      <div className='title'>下方商品可以直接点击</div>
+      <ul className='goodslist'>
+        {
+          productNames.map(o => (
+            <li key={ `${ o.productName }` } onClick={ () => handleProductName(o) }>{ o.productName }</li>
+          ))
+        }
+        {
+          units.map(item => (
+            <li key={ `${ item }` } onClick={ () => handleUnits(item) }>{ item }</li>
+          ))
+        }
+      </ul>
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ paotui/components/orderDetails.js 
+ 
+import React from 'react'
+import { afterOrdering, login } from 'business'
+import { List, WhiteSpace } from 'antd-mobile'
+import { moment } from '@boluome/common-lib'
+import { OrderDetail, OrderPreferential } from '@boluome/oto_saas_web_app_component'
+
+import CancelOrder from './cannotorder'
+import '../style/orderDetails.scss'
+import tou from '../img/tou.jpg'
+import phoneIcon from '../img/tel.png'
+
+
+const { customer = {} } = window.OTO_SAAS
+const { bridge = {}, isSpecialPhoneCall = false } = customer
+const { specialPhoneCall } = bridge
+
+const Item = List.Item
+const Brief = Item.Brief
+const orderDetails = props => {
+  console.log('od---', props)
+  const { params } = props
+  console.log(params)
+  const orderId = params ? params.id : ''
+  // const handleCannotCode = (orderDetailInfo, propsFn) => {
+  //   Mask(<CancelOrder { ...orderDetailInfo } propsFn={ propsFn } />, { mask: true, style: { position: 'absolute' } })
+  // }
+  return (
+    <div className='orderDetailsWrap'>
+      <OrderDetail
+        content={ <OrderComponent /> }
+        login={ login }
+        id={ orderId }
+        orderType='paotui'
+        goPay={ () => afterOrdering({ id: orderId }) }
+        CancelOrder={ <CancelOrder /> }
+      />
+    </div>
+  )
+}
+
+export default orderDetails
+
+// 订单详情页面的主要内容
+const OrderComponent = ({ orderDetailInfo }) => {
+  // console.log('test---', orderDetailInfo)
+  const { tipFee = 0, createdAt, id,
+    platformActivity = {}, coupon = {}, realPayPrice = 0,
+    receiverName, receiverPhone, receiverAddress, deliverTime, receiverSex, deliverFee = 0,
+    senderAddress, name, deliveryManName, deliveryManMobile,
+  } = orderDetailInfo
+  const { price, title } = platformActivity
+  const proCouponObj = {
+    topTitle:              '小费',
+    platformActivityPrice: price,
+    couponPrice:           coupon.price,
+    realPayPrice:          realPayPrice.toFixed(2),
+    sumPrice:              tipFee.toFixed(2),
+    atitle:                title,
+    ctitle:                coupon.title,
+  }
+
+  return (
+    <div className='paotuiOrderDetails'>
+      <WhiteSpace size='md' />
+      {
+        deliveryManName && deliveryManMobile ? (<Peopleinfo deliveryManName={ deliveryManName } deliveryManMobile={ deliveryManMobile } />) : ('')
+      }
+      <WhiteSpace size='lg' />
+      <ShoppingShow senderAddress={ senderAddress } name={ name } />
+      <List><Item extra={ `¥ ${ deliverFee.toFixed(2) }` }>配送费</Item></List>
+      {
+        realPayPrice ? (<OrderPreferential propsObj={ proCouponObj } />) : ''
+      }
+      <PersonalInfo receiverName={ receiverName } receiverPhone={ receiverPhone } receiverAddress={ receiverAddress } deliverTime={ deliverTime } receiverSex={ receiverSex } />
+      <WhiteSpace size='lg' />
+      <OrderTimeCom id={ id } createdAt={ createdAt } />
+    </div>
+  )
+}
+
+// 配送员信息展示部分
+// <Item extra={ <div className='peopleIcon'><span><img src={ phoneIcon } alt='' /></span><span>联系小哥</span></div> } align='middle' thumb={ <img className='imgIcon' src={ tou } alt='' /> } multipleLine>
+//   配送员 <Brief>{ `${ deliveryManName }` }</Brief>
+// </Item>
+const Peopleinfo = ({ deliveryManName = 'XXX', deliveryManMobile }) => {
+  return (
+    <div className='orderDetailsPeople'>
+      <List>
+        <Item extra={
+          isSpecialPhoneCall ?
+            <div className='peopleIcon' style={{ height: '100%', verticalAlign: 'middle', float: 'right', lineHeight: '.8rem' }} onClick={ () => {
+              if (isSpecialPhoneCall && specialPhoneCall && typeof specialPhoneCall === 'function') {
+                specialPhoneCall(deliveryManMobile)
+              } else {
+                console.log('定制电话方法', isSpecialPhoneCall, specialPhoneCall)
+              }
+            } }
+            >
+              <img src={ phoneIcon } style={{ width: '.5rem', verticalAlign: 'middle', marginRight: '.2rem' }} alt='' />
+              <span style={{ verticalAlign: 'middle', color: '#ffab00' }}>联系小哥</span>
+            </div>
+          :
+            <div className='peopleIcon'>
+              <a href={ `tel:${ deliveryManMobile }` } style={{ verticalAlign: 'middle', float: 'right', lineHeight: '.8rem' }}>
+                <img src={ phoneIcon } style={{ width: '.5rem', verticalAlign: 'middle', marginRight: '.2rem' }} alt='' />
+                <span style={{ verticalAlign: 'middle', color: '#ffab00' }}>联系小哥</span>
+              </a>
+            </div>
+        } align='middle'
+          thumb={ <img className='imgIcon' src={ tou } alt='' /> }
+          multipleLine
+        >
+          配送员 <Brief>{ `${ deliveryManName }` }</Brief>
+        </Item>
+
+      </List>
+    </div>
+  )
+}
+
+// 购买商品信息展示
+const ShoppingShow = ({ senderAddress, name }) => {
+  return (
+    <List>
+      <Item multipleLine>所购商品 <Brief><div className='briefDiv'>{ name }</div></Brief></Item>
+      {
+        senderAddress ? (<Item>购买地 <Brief><div className='briefDiv'>{ senderAddress }</div></Brief></Item>) : ''
+      }
+    </List>
+  )
+}
+
+// 收货地址，送达时间展示
+const PersonalInfo = ({ receiverName, receiverPhone, receiverAddress, deliverTime, receiverSex }) => {
+  let six = '女士'
+  if (receiverSex === 0) {
+    six = '先生'
+  }
+  return (
+    <div className='PersonalInfoWrap'>
+      <List>
+        <Item extra={ `${ deliverTime }` }>送达时间</Item>
+        <Item>
+          <div className='orderContact'>收货地址</div>
+          <div className='cantactMain'>
+            <div className='oto'><span>{ receiverName }</span><span>{ six }</span><span>{ receiverPhone }</span></div>
+            <div className='oto'>{ `${ receiverAddress } ` }</div>
+          </div>
+        </Item>
+      </List>
+    </div>
+  )
+}
+
+// 订单编号和下单时间
+const OrderTimeCom = ({ id, createdAt }) => {
+  return (
+    <List>
+      <Item extra={ id }>订单编号</Item>
+      <Item extra={ `${ moment('YYYY-MM-DD HH:mm:ss')(createdAt) }` }>下单时间</Item>
+    </List>
+  )
+}
+         
+ 
+ 
+ 
+ paotui/components/root.js 
+ 
+import React from 'react'
+import customize from 'customize'
+
+export default customize(
+  ({ children }) => (
+    <div>{ children }</div>
+  )
+)
+         
+ 
+ 
+ 
+ paotui/components/tel.js 
+ 
+import React from 'react'
+import { InputItem, Icon } from 'antd-mobile'
+// import { Mask } from '@boluome/oto_saas_web_app_component'
+
+import telpic from '../img/tel.svg'
+import people from '../img/people.svg'
+
+class Tel extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+  }
+  componentWillReceiveProps(nextProps) {
+    // console.log('tel---', nextProps)
+    this.setState({
+      ...nextProps,
+    })
+  }
+  render() {
+    const { contact, handleChangePhone, handleChangeName } = this.state
+    // console.log(contact)
+    const { name, phone } = contact
+    return (
+      <div className='tel'>
+        <InputItem
+          className='peopleInt'
+          placeholder='收货人...'
+          defaultValue={ name }
+          value={ name }
+          onChange={ v => handleChangeName(v, contact) }
+        ><Icon type={ people } /></InputItem>
+        <InputItem
+          className='telInt'
+          type='phone'
+          maxLength={ 11 }
+          placeholder='手机号...'
+          defaultValue={ phone }
+          value={ phone }
+          onChange={ v => handleChangePhone(v, contact) }
+        ><Icon type={ telpic } /></InputItem>
+      </div>
+    )
+  }
+}
+
+export default Tel
+         
+ 
+ 
+ 
+ paotui/components/textarea.js 
+ 
+import React from 'react'
+import { ImagePicker, TextareaItem, Toast } from 'antd-mobile'
+import { Mask, Loading } from '@boluome/oto_saas_web_app_component'
+import { setStore, getStore } from '@boluome/common-lib'
+// import { send } from 'business'
+// import { Buffer } from 'buffer'
+import ChangeImg from './changeimg.js'
+import '../style/textarea.scss'
+// import back from '../img/back.svg'
+// import deleteIcon from '../img/delete.svg'
+
+class TextareaCom extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+    // this.handleFireImg = this.handleFireImg.bind(this)
+    this.handleChooseImg = this.handleChooseImg.bind(this)
+    this.onChangeImg = this.onChangeImg.bind(this)
+    this.handleChange = this.handleChange.bind(this)
+    this.ImgHandle = this.ImgHandle.bind(this)
+    this.ImgUpload = this.ImgUpload.bind(this)
+    this.CreateCanvas = this.CreateCanvas.bind(this)
+    this.canvertToBinary = this.canvertToBinary.bind(this)
+  }
+  componentWillReceiveProps(nextProps) {
+    // console.log('this.props.textareaStr333', nextProps)
+    this.setState({
+      ...nextProps,
+    })
+  }
+  componentDidUpdate() {
+    // console.log('start')
+    // const elW = document.querySelector('.am-textarea-control')
+    // elW.scrollTop = elW.scrollHeight
+  }
+  // 图片处理
+  ImgHandle(file) {
+    console.log('ImgHandle---', file)
+    const fileType = file.type
+    const fileReader = new FileReader()
+    fileReader.readAsDataURL(file)
+    fileReader.onload = event => {
+      const result = event.target.result  // 返回的dataURL
+      const img = new Image()
+      img.src = result
+      const max = 1024 * 1024 // Math.pow(1024, 2)
+      if (file.size / max < 8) {
+        img.onload = () => {
+          const base64 = this.CreateCanvas(img, fileType)
+          // const a = Buffer.from(base64, 'base64').toString('binary')
+          // console.log(a)
+          const a = this.canvertToBinary(base64)
+          this.ImgUpload(a)
+        }
+      } else {
+        Toast.info('图片不能超过8MB !', 2, null, false)
+        this.setState({
+          files: [],
+        })
+        setStore('paotui_imgSrc', [], 'session')
+      }
+    }
+  }
+  CreateCanvas(img, fileType) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const quality = 0.5  // 默认图片质量为0.7
+    const width = img.width * 0.2
+    const height = img.height * 0.2
+
+    canvas.width = width
+    canvas.height = height
+
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, 0, 0, width, height)
+
+  // 压缩--quality值越小，所绘制出的图像越模糊
+    const base64data = canvas.toDataURL(fileType, quality)
+    return base64data
+  }
+  // 对base64 进行处理
+  canvertToBinary(dataURI) {
+    const byteString = window.atob(dataURI.split(',')[1])
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i)
+    }
+    const bb = new window.Blob([ab], { type: 'image/png' })
+    // console.log('bb----', bb, '-----', byteString)
+    return bb
+  }
+  ImgUpload(imgUrl) {
+    console.log('ImgUpload--', imgUrl)
+    const userid = getStore('customerUserId', 'session')
+    const token = getStore('accessToken', 'session')
+    const appcode = getStore('customerCode', 'session')
+    console.log(userid, token, appcode)
+    const handleClose = Loading()
+    const getUrl = 'https://upload.otosaas.com/new'
+    const headers = {
+      appcode,
+      userid,
+      token,
+      // 'Content-Type': 'image/jpeg',   // FormData 不能用image
+    }
+    // const datas = new FormData()
+    // datas.append('file', imgUrl)
+    // fetch(getUrl, { body: datas, method: 'post', headers })
+    fetch(getUrl, { body: imgUrl, method: 'post', headers })
+    .then(response => response.json())
+    .then(json => {
+      const { code, data } = json
+      console.log('json----', json)
+      if (code === 0) {
+        Toast.info('上传成功 !', 2, null, false)
+        const photoUrl = `https://f2.otosaas.com/${ data.md5 }`
+        setStore('paotui_photoUrl', photoUrl, 'session')
+      } else {
+        Toast.info('图片上传失败 !', 2, null, false)
+        this.setState({
+          files: [],
+        })
+        setStore('paotui_imgSrc', [], 'session')
+      }
+      const { changeText } = this.props
+      changeText()
+      handleClose()
+    })
+    .catch(error => {
+      console.log('request failed: ', error)
+      handleClose()
+    })
+  }
+  handleImgshow(v) {
+    // console.log('handleImgshow我点击了', v)
+    this.setState({
+      files: v,
+    })
+    this.ImgHandle(v[0].file)
+    setStore('paotui_imgSrc', v, 'session')
+  }
+  onChangeImg(ref) {
+    this.setState({
+      files: ref,
+    })
+    setStore('paotui_imgSrc', ref, 'session')
+    if (ref.length !== 0) {
+      console.log('aaaa-', ref)
+      this.ImgHandle(ref[0].file)
+    }
+  }
+  handleChooseImg(index, fs, files) {
+    const { changeText } = this.props
+    const maskStyle = {
+      opacity: 0.7,
+    }
+    changeText()
+    Mask(
+      <ChangeImg
+        imgSrc={ fs }
+        files={ files }
+        onChange={ this.onChangeImg }
+      />
+      , { maskStyle, maskClosable: false })
+  }
+  handleChange(e) {
+    const { changeText } = this.props
+    const elW = document.querySelector('.am-textarea-control')
+    elW.scrollTop = elW.scrollHeight
+    this.setState({
+      textareaStr: e,
+    })
+    setStore('paotui_textarea', e, 'session')
+    changeText()
+  }
+  render() {
+    const { files = [], textareaStr = '', focused } = this.state
+    return (
+      <div className='textareaWrap'>
+        <div className='main'>
+          <TextareaItem
+            className='text'
+            cols placeholder='输入商品名和数量'
+            rows={ 2 }
+            defaultValue={ textareaStr }
+            value={ textareaStr }
+            onChange={ this.handleChange }
+            focused={ focused }
+            onFocus={ () => {
+              this.setState({
+                focused: true,
+              })
+            } }
+            onBlur={ () => {
+              this.setState({
+                focused: false,
+              })
+            } }
+          />
+          <div className='photo_icon'>
+            <ImagePicker
+              files={ files }
+              onChange={ v => this.handleImgshow(v) }
+              onImageClick={ (index, fs) => this.handleChooseImg(index, fs[0].url, files) }
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+}
+
+export default TextareaCom
+// <div className='photo_icon'>
+//   <input id='rId' type='file' onChange={ e => this.handleImgshow(e.target.files) } />
+//   <label htmlFor='rId' onClick={ (index, fs) => this.handleChooseImg(index, fs[0].url) }>ss</label>
+// </div>
+
+// // 图片处理
+// ImgHandle(imgUrl) {
+//   console.log('ImgHandle---', imgUrl)
+//   const img = new Image()
+//   img.src = imgUrl[0].url
+//   img.onload = () => {
+//     // 默认按比例压缩
+//     const w = img.width
+//     const h = img.height
+//     // const scale = w / h
+//     const quality = 0.7  // 默认图片质量为0.7
+//     // 生成canvas
+//     const canvas = document.createElement('canvas')
+//     const ctx = canvas.getContext('2d')
+//     // 创建属性节点
+//     const anw = document.createAttribute('width')
+//     anw.nodeValue = w
+//     const anh = document.createAttribute('height')
+//     anh.nodeValue = h
+//     canvas.setAttributeNode(anw)
+//     canvas.setAttributeNode(anh)
+//     ctx.drawImage(img, 0, 0, w, h)
+//     // quality值越小，所绘制出的图像越模糊
+//     const base64 = canvas.toDataURL('image/jpeg', quality)
+//     // 回调函数返回base64的值
+//     return base64
+//   }
+// }
+
+// const ChangeImg = ({ imgSrc, handleCloseMask, handleFireImg, handleOk, files, handleImgshow, handleResectImg }) => {
+//   return (
+//     <div className='imgItem'>
+//       <div className='backBtn'>
+//         <Icon className='oto_s1' onClick={ () => { handleCloseMask() } } type={ back } />
+//         <Icon className='oto_s2' onClick={ () => { handleFireImg() } } type={ deleteIcon } />
+//       </div>
+//       <div className='imgMain'>
+//         <img src={ imgSrc } alt='' />
+//       </div>
+//       <div className='btnWrap'>
+//         <span className='oto_s1'>
+//           重新选择
+//           <ImagePicker
+//             files={ files }
+//             onChange={ v => handleImgshow(v) }
+//             selectable={ files.length < 2 }
+//             onImageClick={ (index, fs) => handleResectImg(index, fs[0].url) }
+//           />
+//         </span>
+//         <span className='oto_s2' onClick={ () => { handleOk() } }>确定</span>
+//       </div>
+//     </div>
+//   )
+// }
+         
+ 
+ 
+ 
+ paotui/components/tipsprice.js 
+ 
+import React from 'react'
+import { Slider, createTooltip, List, Popup } from 'antd-mobile'
+import WriteText from './writetext.js'
+
+import '../style/tipsprice.scss'
+
+const SliderWithTooltip = createTooltip(Slider)
+const Item = List.Item
+class Tipsprice extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      val: 0,
+    }
+    // console.log('ContactList-----', props)
+    this.handleChangeTips = this.handleChangeTips.bind(this)
+    this.handleWriteTips = this.handleWriteTips.bind(this)
+  }
+  componentWillUnmount() {
+    // Mask.closeAll()
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  // 当选择了收货地址之后的事件
+  handleChangeTips(v) {
+    const { onChange } = this.props
+    const vl = Number(v)
+    onChange(vl)
+    this.setState({
+      tipsPrices: vl,
+    })
+  }
+  handleWriteTips() {
+    Popup.show(<WriteText onChange={ this.handleChangeTips } />, {
+      animationType: 'slide-up',
+      // maskProps:     { className: 'am-popup-mask myselfam-popup-mask' },
+      onMaskClose:   this.onMaskClose,
+    })
+  }
+  render() {
+    const { tipsPrices = 0 } = this.state
+    return (
+      <div className='tipsPrice'>
+        <List>
+          <Item extra={
+            <div className='iconWrapper'>
+              <SliderWithTooltip min={ 0 } max={ tipsPrices > 20 ? tipsPrices : 20 } defaultValue={ tipsPrices > 20 ? 20 : tipsPrices } value={ tipsPrices } onChange={ this.handleChangeTips } />
+            </div>
+          }
+          >
+            小费 <span className='tipsPriceSpan'>{ tipsPrices }元</span>
+            <span className='moreSpan' onClick={ () => this.handleWriteTips() }>更多</span>
+          </Item>
+          <Item className='tipsTextPrice'>支付小费后配送员会更及时接单，得到更优质的服务</Item>
+        </List>
+      </div>
+    )
+  }
+}
+export default Tipsprice
+         
+ 
+ 
+ 
+ paotui/components/usertips.js 
+ 
+import React from 'react'
+import { WhiteSpace } from 'antd-mobile'
+// import { Mask } from '@boluome/oto_saas_web_app_component'
+
+class UserTips extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+    }
+  }
+  render() {
+    return (
+      <div className='userInfo'>
+        <h4>1、随意购是什么？（随意买)</h4>
+        <WhiteSpace />
+        <p>随意购是一个您可以通过购买邻趣小邻哥的时间和配送能力来帮助您购买任何物品的平台。您可以使用随意购买任何东西，不论是您不知道哪里有卖的物品、没有时间购买的物品，还是您不便亲自配送的物品、急需的物品，统统都可以买。例 如：烟酒、姨妈巾、感冒药、路边小吃、早餐、情趣用品、隐形眼镜、生鲜、扑克牌等。只要在线下有卖的东西，您都可以购买。</p>
+        <WhiteSpace size='lg' />
+        <h4>2、随意购可以同时购买两样或多样商品吗？</h4>
+        <WhiteSpace />
+        <p>可以。例如：一包七星蓝莓爆珠和1个打火机；一个扫把和一个拖把。</p>
+        <WhiteSpace size='lg' />
+        <h4>3、随意购可以替他人购买商品吗？</h4>
+        <WhiteSpace />
+        <p>可以。只要更改一下收货人地址、姓名、手机号码即可。</p>
+        <WhiteSpace size='lg' />
+        <h4>4、随意购的服务时间？（随时买)</h4>
+        <WhiteSpace />
+        <p>24小时服务，全年无休。</p>
+        <WhiteSpace size='lg' />
+        <h4>5、随意购可以预约吗？</h4>
+        <WhiteSpace />
+        <p>可以，随意购支持当日订单和预约第二天订单。</p>
+        <WhiteSpace size='lg' />
+        <h4>6、不知道在哪里买怎么办？（随地买)</h4>
+        <WhiteSpace />
+        <p>(1) 知道购买地点可直接填写您希望小邻哥去的详细购买地点。</p>
+        <p>(2) 不知道购买地址可以直接不填。如果您不知道商品的地址或者您不在乎哪里购买，您可以选择不填购买地址。机智的小邻哥会帮你找到合适的地方购买哟。</p>
+        <WhiteSpace size='lg' />
+        <h4>7、随意购可以购买异地的东西？</h4>
+        <WhiteSpace />
+        <p>不可以。随意购仅提供同城内的服务，目前仅支持上海、北
+        京、广州、杭州四个城市，不支持跨城服务。</p>
+        <WhiteSpace size='lg' />
+        <h4>8、随意购服务费如何计算？</h4>
+        <WhiteSpace />
+        <p className='tit'>选择指定地址购买：</p>
+        <p className='tit'>0-2公里：12元</p>
+        <p className='tit'>2公里以上：每增加1公里增加2元，不满1公里按1公里计算</p>
+        <p className='indent'>不知道或无所谓哪里购买：</p>
+        <p className='indent'>默认16元（购买香烟默认12元）</p>
+        <p className='indent'>跨江订单增加6元配送费。</p>
+        <p className='tit'>夜间配送费：</p>
+        <p className='indent'>21点-24点配送费上调1.2倍</p>
+        <p className='indent'>0点-6点配送费上调1.4倍</p>
+      </div>
+    )
+  }
+}
+
+export default UserTips
+         
+ 
+ 
+ 
+ paotui/components/writetext.js 
+ 
+import React from 'react'
+import { List, Popup, InputItem, NoticeBar } from 'antd-mobile'
+
+import '../style/tipsprice.scss'
+
+class WriteText extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      ...props,
+      mark: true,
+    }
+    // console.log('ContactList-----', props)
+    this.Okbtn = this.Okbtn.bind(this)
+    this.handleTipsPrice = this.handleTipsPrice.bind(this)
+  }
+  componentWillUnmount() {
+    // Mask.closeAll()
+  }
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      ...nextProps,
+    })
+  }
+  // 当选择了收货地址之后的事件
+  handleChangeTips() {
+    console.log('contact')
+  }
+  onClose() {
+    Popup.hide()
+  }
+  Okbtn() {
+    const { val } = this.state
+    const { onChange } = this.props
+    if (val > 0 && val <= 100) {
+      this.setState({
+        mark: true,
+      })
+      onChange(val)
+      Popup.hide()
+    } else {
+      this.setState({
+        mark: false,
+      })
+    }
+  }
+  handleTipsPrice(val) {
+    if (val > 0 && val <= 100) {
+      this.setState({
+        val,
+        mark: true,
+      })
+    } else {
+      this.setState({
+        val,
+        mark: false,
+      })
+    }
+  }
+  render() {
+    const { mark } = this.state
+    return (
+      <div className='tipspriceMain'>
+        <div className='header'>
+          <span className='close' onClick={ () => this.onClose() }>取消</span>
+          <span className='tips'>小费</span>
+        </div>
+        {
+          mark ? ('') : (<NoticeBar className='tipspriceNotice' mode='link'>输入的小费范围要在1-100 之间</NoticeBar>)
+        }
+        <div className='content'>
+          <List>
+            <InputItem
+              placeholder='金额元 (元) 可输入1 - 100'
+              maxLength={ 3 }
+              type='phone'
+              onChange={ v => this.handleTipsPrice(v) }
+            />
+          </List>
+          <div className='btn' onClick={ () => this.Okbtn() }>确定</div>
+        </div>
+      </div>
+    )
+  }
+}
+export default WriteText
+         
+ 
+ 
+ 
+ paotui/containers/app.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+// import { Toast } from 'antd-mobile'
+import { getStore, setStore, stringifyQuery } from '@boluome/common-lib'
+import { merge, compose, ifElse, equals, type, length, both, gt, __ } from 'ramda'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+import { getLocationGaode, login } from 'business' // login,
+import App         from '../components/app'
+import { getGoodsMessage } from '../actions/index'
+
+const mapStateToProps = state => {
+  const { app } = state
+  const { quickItem, textareaStr, files, CUSTOMER } = app
+  // console.log('app---', app)
+  return {
+    quickItem,
+    textareaStr,
+    files,
+    CUSTOMER,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goOrder: () => {
+      // const textarea = document.querySelector('.text').value
+      // setStore('paotui_textarea', textarea, 'session')
+      setStore('paotui_productName', [], 'session')
+      // dispatch({ type: 'TEATAREA', textareaStr: textarea })
+      browserHistory.push('/paotui/order')
+    },
+    handleGoOrderList: () => {
+      const customerUserId = getStore('customerUserId', 'session')
+      const query          = compose(stringifyQuery, merge({ customerUserId }))(ifElse(both(compose(equals('String'), type), compose(gt(__, 0), length)))) // , always({ orderTypes }), always({}))(orderTypes)
+      window.location.href = `/paotui/list${ query }`
+    },
+    // 返回的填入状态里面
+    changeText: () => {
+      const text = getStore('paotui_textarea', 'session')
+      const file = getStore('paotui_imgSrc', 'session')
+      dispatch({ type: 'TEATAREA', textareaStr: text })
+      dispatch({ type: 'IMGSRC_FILES', files: file })
+    },
+    // 测试进入订单详情的入口
+    GoOrderDetails: () => {
+      browserHistory.push('/paotui/orderDetails')
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    login(err => {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log('我是用户绑定')
+      }
+    })
+    getLocationGaode(err => {
+      if (err) {
+        console.log('err', err)
+      } else {
+        console.log('success')
+      }
+    })
+    dispatch(getGoodsMessage())
+    const textareaStr = getStore('paotui_textarea', 'session')
+    if (textareaStr) {
+      dispatch({ type: 'TEATAREA', textareaStr })
+    } else {
+      dispatch({ type: 'TEATAREA', textareaStr: '' })
+      setStore('paotui_textarea', '', 'session')
+    }
+    // 这里是判断哪些客户不需要用户中心
+    console.log(window.OTO_SAAS)
+    const CUSTOMER = (window.OTO_SAAS).customer.showUserCenter
+    dispatch({ type: 'SAAS_CUSTOMER', CUSTOMER })
+  },
+  componentDidMount: () => {
+    const files = getStore('paotui_imgSrc', 'session')
+    if (files) {
+      dispatch({ type: 'IMGSRC_FILES', files })
+    } else {
+      // 创建 files
+      dispatch({ type: 'IMGSRC_FILES', files: [] })
+      setStore('paotui_imgSrc', [], 'session')
+    }
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+         
+ 
+ 
+ 
+ paotui/containers/order.js 
+ 
+import { connect } from 'react-redux'
+import { Toast } from 'antd-mobile'
+import { wrap, Mask }    from '@boluome/oto_saas_web_app_component'
+import { getStore, setStore } from '@boluome/common-lib'
+import Order         from '../components/order'
+import { orderDeliverTime, getOptimalContact, deliverFee, handleGoOrder } from '../actions/order'
+
+const mapStateToProps = state => {
+  const { order } = state
+  const { orderTimeDate,
+    serviceDate, contact, shoppingAddr, displayTag,
+    deliverFees, textareaStr, files, tipsPrice, Promotion,
+    focused,
+  } = order
+  // console.log('order--', state, order)
+  return {
+    orderTimeDate,
+    serviceDate,
+    contact,
+    shoppingAddr,
+    displayTag,
+    deliverFees,
+    textareaStr,
+    files,
+    tipsPrice,
+    Promotion,
+    focused,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    // 处理删除 或者添加购买地址
+    handleChangeAddr: v => {
+      console.log(v)
+      const serviceDate = getStore('paotui_serviceDate', 'session')
+      const contact = getStore('paotui_contact', 'session')
+      let merchant = ''
+      if (v) {
+        merchant = {
+          title:   v.name,
+          address: v.name + v.address,
+          lat:     v.location.lat,
+          lng:     v.location.lng,
+        }
+        setStore('paotui_merchant', merchant, 'session')
+      } else {
+        setStore('paotui_merchant', '', 'session')
+      }
+      dispatch({ type: 'SHOPPING_ADDR', shoppingAddr: merchant })
+      dispatch(deliverFee(serviceDate, contact))
+    },
+    handleChangeContact: contact => {
+      console.log('handleChangeContact---', contact)
+      const serviceDate = getStore('paotui_serviceDate', 'session')
+      setStore('paotui_contact', contact, 'session')
+      dispatch({ type: 'CONTACT', contact })
+      dispatch(deliverFee(serviceDate, contact))
+    },
+    handleChangeTime: time => {
+      const contact = getStore('paotui_contact', 'session')
+      dispatch({
+        type:        'KJIN_DELIVERTIME',
+        serviceDate: time,
+      })
+      setStore('paotui_serviceDate', time, 'session')
+      if (contact) {
+        dispatch(deliverFee(time, contact))
+      }
+    },
+    // 处理untis
+    handleUnits: untis => {
+      const textareaDom = document.querySelector('textarea')
+      textareaDom.scrollTop = (textareaDom.scrollHeight + textareaDom.clientHeight)
+      // console.log(textareaDom.scrollTop, textareaDom.scrollHeight, textareaDom.clientHeight)
+      let textarea = getStore('paotui_textarea', 'session')
+      if (!textarea) {
+        textarea = ''
+      }
+      const untisStr = `${ textarea + untis } ,`
+      setStore('paotui_textarea', untisStr, 'session')
+      dispatch({ type: 'TEATAREAOrder', textareaStr: untisStr })
+    },
+    // 处理productname
+    handleProductName: item => {
+      let textarea = getStore('paotui_textarea', 'session')
+      if (!textarea) {
+        textarea = ''
+      }
+      const productName = getStore('paotui_productName', 'session')
+      let arr = []
+      if (productName.length === 0) {
+        setStore('paotui_productName', [item.productName], 'session')
+        dispatch({ type: 'TEATAREAOrder', textareaStr: item.productName })
+      } else {
+        arr = productName.filter(o => { return o === item.productName })
+      }
+      if (arr.length > 0) {
+        console.log('已经有了')
+      } else {
+        productName.push(item.productName)
+        setStore('paotui_productName', productName, 'session')
+        textarea = `${ textarea + item.productName }  `
+      }
+      setStore('paotui_textarea', textarea, 'session')
+      dispatch({ type: 'TEATAREAOrder', textareaStr: textarea })
+      const textareaDom = document.querySelector('textarea')
+      textareaDom.scrollTop = (textareaDom.scrollHeight + textareaDom.clientHeight)
+    },
+    handleChangeName: (v, contact) => {
+      contact.name = v
+      dispatch({ type: 'CONTACT', contact })
+    },
+    handleChangePhone: (ref, contact) => {
+      // console.log('handleChangePhone---', ref)
+      contact.phone = ref.replace(/\s/g, '')
+      dispatch({ type: 'CONTACT', contact })
+    },
+    handleAddMerchant: v => {
+      // const merchant = getStore('paotui_merchant', 'session')
+      // merchant.address += v
+      // console.log('handleAddMerchant', merchant.address)
+      // setStore('paotui_merchant', merchant, 'session')
+      setStore('paotui_merchant_self', v, 'session')
+    },
+    // 返回的填入状态里面
+    changeText: () => {
+      const text = getStore('paotui_textarea', 'session')
+      const file = getStore('paotui_imgSrc', 'session')
+      dispatch({ type: 'TEATAREAOrder', textareaStr: text })
+      dispatch({ type: 'IMGSRC_FILES', files: file })
+    },
+    handletipsPrice: price => {
+      dispatch({ type: 'TIPSPRICE', tipsPrice: price })
+    },
+    handlePromotion: reply => {
+      // console.log(reply)
+      dispatch({ type: 'PROMOTION', Promotion: reply })
+    },
+    handleSaveBtn: (tipsPrice, contact, merchant, serviceDate, Promotion, deliverFees) => {
+      if (contact) {
+        const textareaStr = getStore('paotui_textarea', 'session')
+        const files = getStore('paotui_imgSrc', 'session')
+        console.log(files)
+        const { name, phone } = contact
+        const tel = phone.replace(/\s/g, '')
+        if (!textareaStr) {
+          Toast.info('请填写或选择你要的物品', 2)
+          return
+        }
+        if (!name) {
+          Toast.info('请填写姓名', 2)
+          return
+        }
+        if (!(/^(((13[0-9]{1})|(15[0-9]{1})|(18[0-9]{1})|(17[0-9]{1}))+\d{8})$/.test(tel))) {
+          Toast.info('请填写正确手机', 2)
+          return
+        }
+        contact.phone = tel
+        dispatch(handleGoOrder(tipsPrice, contact, merchant, serviceDate, Promotion, deliverFees))
+      } else {
+        Toast.info('请选择收货地址', 2)
+      }
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    document.title = '随意购-什么都能买'
+    dispatch(orderDeliverTime())
+  },
+  componentDidMount: () => {
+    const contact = getStore('paotui_contact', 'session')
+    const displayTag = getStore('paotui_displayTag', 'session')
+    const shoppingAddr = getStore('paotui_merchant', 'session')
+    const files = getStore('paotui_imgSrc', 'session')
+    const textareaStr = getStore('paotui_textarea', 'session')
+    dispatch({ type: 'SHOPPING_ADDR', shoppingAddr })
+    // 如果是选择收货地址在这里处理事件
+    if (contact) {
+      dispatch({
+        type:           'KJIN_OPTIMALCONTACT',
+        OptimalContact: contact,
+      })
+      dispatch(orderDeliverTime(contact))
+      const serviceDate = getStore('paotui_serviceDate', 'session')
+      dispatch(deliverFee(serviceDate, contact))
+      dispatch({ type: 'CONTACT', contact })
+    } else {
+      const latOrlng = getStore('geopoint', 'session')
+      dispatch(getOptimalContact(latOrlng))
+      dispatch({ type: 'CONTACT', contact: '' })
+    }
+    dispatch({ type: 'DISPLAYTAG', displayTag })
+    if (textareaStr) {
+      dispatch({ type: 'TEATAREAOrder', textareaStr })
+    } else {
+      dispatch({ type: 'TEATAREAOrder', textareaStr: '' })
+    }
+    if (files) {
+      dispatch({ type: 'IMGSRC_FILES', files })
+    }
+  },
+  componentWillUnmount: () => {
+    Mask.closeAll()
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Order)
+)
+         
+ 
+ 
+ 
+ paotui/containers/orderDetails.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+// import { getStore, setStore } from '@boluome/common-lib'
+import orderDetails         from '../components/orderDetails'
+
+const mapStateToProps = state => {
+  console.log(state.orderDetails)
+  return {
+    ...state.orderDetails,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goBackIndex: () => {
+      browserHistory.push('/coffee')
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    console.log(dispatch)
+  },
+  componentDidMount: () => console.log('root mounted', dispatch),
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(orderDetails)
+)
+         
+ 
+ 
+ 
+ paotui/img/back.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffffff" d="M116.142695 523.523451l824.799122 0c16.768919 0 30.361495-13.591553 30.361495-30.361495 0-16.767895-13.592576-30.360472-30.361495-30.360472L116.142695 462.801485c-16.767895 0-30.360472 13.592576-30.360472 30.360472C85.782224 509.930875 99.3748 523.523451 116.142695 523.523451M487.012398 825.264727 157.035034 495.287363 487.012398 165.30693c11.856026-11.857049 11.856026-31.079856 0-42.935881-11.856026-11.857049-31.079856-11.857049-42.936905 0L92.629165 473.819422c-11.857049 11.857049-11.857049 31.079856 0 42.936905l351.446327 351.445304c11.857049 11.855002 31.080879 11.855002 42.936905 0C498.87047 856.345606 498.87047 837.120752 487.012398 825.264727z" /></svg>         
+ 
+ 
+ 
+ paotui/img/close.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffffff" d="M511.999 1024C229.717 1024 0 794.283 0 512S229.717 0 511.999 0s512 229.717 512 512c0.074 282.283-229.644 512-512 512z m0-984.648C251.374 39.352 39.351 251.375 39.351 512c0 260.552 212.024 472.65 472.649 472.65S984.649 772.625 984.649 512 772.624 39.352 511.999 39.352zM347.08 709.949l-32.964-32.963 362.918-362.918 32.964 32.963L347.08 709.949zM709.935 676.957l-32.964 32.964-362.918-362.918 32.964-32.964 362.918 362.918z" /></svg>         
+ 
+ 
+ 
+ paotui/img/delete.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffffff" d="M322.8792 544.784684l0.367367-0.347924L322.8792 544.784684zM825.752332 309.656549c0-16.942881 13.751189-30.695093 30.711466-30.695093 16.9613 0 30.713512 13.752212 30.713512 30.695093l0 542.714536c0 28.492938-11.653411 54.409191-30.397311 73.147974-0.668219 0.651846-1.338485 1.2689-2.00875 1.851161-18.653849 17.664312-43.724851 28.560476-71.154573 28.560476L240.898047 955.930695c-28.506241 0-54.406121-11.652388-73.164347-30.411637-18.7439-18.739806-30.397311-44.639686-30.397311-73.147974L137.33639 309.656549c0-16.942881 13.752212-30.695093 30.712489-30.695093 16.963347 0 30.712489 13.752212 30.712489 30.695093l0 542.714536c0 11.54801 4.76042 22.091134 12.396331 29.743418 7.632841 7.632841 18.176988 12.393261 29.740348 12.393261l542.717605 0c11.033287 0 21.065781-4.231371 28.523637-11.124362 0.38988-0.442068 0.810459-0.865717 1.215688-1.2689 7.635911-7.653307 12.396331-18.178011 12.396331-29.743418L825.751309 309.656549 825.752332 309.656549zM481.553059 331.74666l0 457.418894c0 16.960277 13.751189 30.695093 30.696116 30.695093 16.95823 0 30.693046-13.734816 30.693046-30.695093L542.942221 331.74666c0-16.960277-13.734816-30.712489-30.693046-30.712489C495.305271 301.034171 481.553059 314.786383 481.553059 331.74666L481.553059 331.74666zM317.801555 331.74666l0 457.418894c0 16.960277 13.752212 30.695093 30.695093 30.695093 16.960277 0 30.695093-13.734816 30.695093-30.695093L379.19174 331.74666c0-16.960277-13.734816-30.712489-30.695093-30.712489C331.55479 301.034171 317.801555 314.786383 317.801555 331.74666L317.801555 331.74666zM645.30354 331.74666l0 457.418894c0 16.960277 13.752212 30.695093 30.712489 30.695093 16.943904 0 30.695093-13.734816 30.695093-30.695093L706.711122 331.74666c0-16.960277-13.751189-30.712489-30.695093-30.712489C659.056776 301.034171 645.30354 314.786383 645.30354 331.74666L645.30354 331.74666zM93.401762 208.721719c-16.960277 0-30.711466-13.751189-30.711466-30.695093 0-16.9613 13.751189-30.713512 30.711466-30.713512l245.363244 0 67.895343-68.862367c5.994528-6.099928 13.928221-9.151427 21.825075-9.151427l0-0.088004 167.525458 0c9.323343 0 17.666358 4.143367 23.306822 10.701736l67.24145 67.400063 244.550739 0c16.960277 0 30.712489 13.751189 30.712489 30.713512 0 16.943904-13.751189 30.695093-30.712489 30.695093L673.934624 208.721719l0-0.089028c-7.861038 0-15.725146-3.01466-21.719674-9.025561l-68.828598-68.988234L441.214329 130.618896 374.891807 197.895139c-5.641487 6.630001-14.034645 10.82658-23.414269 10.82658L93.401762 208.721719z" /></svg>         
+ 
+ 
+ 
+ paotui/img/my.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M512 0C229.236364 0 0 229.236364 0 512s229.236364 512 512 512 512-229.236364 512-512S794.763636 0 512 0z m0 48.756364c255.837091 0 463.243636 207.406545 463.243636 463.243636 0 106.519273-35.979636 204.613818-96.418909 282.88a391.237818 391.237818 0 0 0-210.967272-225.954909A219.415273 219.415273 0 0 0 512 195.048727a219.415273 219.415273 0 0 0-155.857455 373.876364 391.237818 391.237818 0 0 0-210.967272 225.954909A461.172364 461.172364 0 0 1 48.756364 512C48.756364 256.162909 256.162909 48.756364 512 48.756364zM336.453818 414.487273a175.546182 175.546182 0 1 1 351.092364 0 175.546182 175.546182 0 0 1-351.092364 0zM512 975.243636a461.800727 461.800727 0 0 1-329.355636-137.541818A341.643636 341.643636 0 0 1 401.221818 603.927273 218.391273 218.391273 0 0 0 512 633.949091c40.401455 0 78.266182-10.938182 110.778182-30.021818a341.690182 341.690182 0 0 1 218.577454 233.821091A461.777455 461.777455 0 0 1 512 975.243636z"  /></svg>         
+ 
+ 
+ 
+ paotui/img/people.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M852.412 735.493l-180.797-70.459s-34.481-13.386-47.875-26.55c-8.609-8.463-7.987-28.427-0.368-53.928 7.618-25.502 100.303-129.139 100.303-223.281C723.675 215.883 628.09 98 510.191 98 392.3 98 296.724 215.883 296.724 361.283c0 90.169 82.592 197.664 92.783 217.202 10.199 19.538 7.716 49.316-0.336 58.336-12.092 13.549-56.271 27.132-56.271 27.132l-162.988 72.638C131.835 750.272 102 786.185 102 826.703v53.234c0 44.22 35.914 37.263 80.052 37.263h658.219c44.147 0 80.061 6.958 80.061-37.263v-53.234c0-40.526-29.835-77.537-67.92-91.21m0 0" /></svg>         
+ 
+ 
+ 
+ paotui/img/photo.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M508.532527 359.673709c-98.680487 0-178.99058 79.849606-178.99058 178.004113 0 98.155531 80.310094 178.036859 178.99058 178.036859 98.679463 0 178.960905-79.881328 178.960905-178.036859C687.493431 439.522292 607.21199 359.673709 508.532527 359.673709M508.532527 660.766209c-68.293409 0-123.827213-55.226812-123.827213-123.088386 0-67.859527 55.533804-123.056664 123.827213-123.056664 68.26271 0 123.82619 55.196113 123.82619 123.056664C632.358717 605.539396 576.795237 660.766209 508.532527 660.766209M782.475689 323.955206c-22.960944 0-41.668005 18.691711-41.668005 41.697681 0 22.975271 18.707061 41.681308 41.668005 41.681308 22.989597 0 41.695634-18.706037 41.695634-41.681308C824.171324 342.646917 805.465287 323.955206 782.475689 323.955206M935.517271 756.826008l-0.708128 0c-0.215918 0.584308-0.584308 1.140986-0.89437 1.663896l0-4.807493L933.914774 304.816311c0-28.67611-23.452131-52.005444-52.266387-52.005444l-156.432819 0-1.940189 0-0.89437-1.725294-20.463054-40.679491c-2.341325-5.208629-23.267936-49.710169-51.7752-49.710169L372.28647 160.695912c-29.153994 0-50.633191 47.213301-51.52756 49.232285l-20.709671 41.157375-0.89437 1.725294-1.940189 0-156.463518 0c-28.813233 0-52.267411 23.329335-52.267411 52.005444l0 506.464937c0 28.692482 23.454178 52.021817 52.267411 52.021817l740.898247 0c28.814256 0 52.266387-23.329335 52.266387-52.021817l0-52.236712C934.43973 758.304685 935.054737 757.627257 935.517271 756.826008M875.670232 788.260951c0 9.400091-7.704472 17.072841-17.197684 17.072841L163.909605 805.333792c-9.460466 0-17.195637-7.67275-17.195637-17.072841L146.713968 323.955206c0-9.41544 7.735172-17.043165 17.195637-17.043165l160.054299 0 9.091052-7.79657 35.224246-54.717206c4.100388-7.073092 17.968234-25.703405 31.836079-25.703405l222.230384 0c16.70138 0 31.988552 25.919323 32.171724 26.164916l35.195593 54.764278 7.858992 5.993504 160.993694-0.568958c9.490142 0 17.195637 7.656377 17.195637 17.072841l0 424.25661c0 0.153496-0.091074 0.277316-0.091074 0.431835L875.670232 788.260951zM872.802928 755.99406 872.864326 755.99406 872.864326 755.624646Z" /></svg>         
+ 
+ 
+ 
+ paotui/img/tel.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M456.53 526.439c-71.475-71.43-139.791-154.183-107.033-186.896 46.792-46.838 87.583-75.671 4.65-178.913-82.936-103.239-138.256-23.959-183.65 21.434-52.298 52.344-2.752 247.454 190.101 440.349 192.856 192.809 388.009 242.443 440.349 190.059 45.394-45.351 124.628-100.625 21.437-183.603-103.195-82.983-132.074-42.19-178.914 4.645C610.712 666.138 528.002 597.868 456.53 526.439L456.53 526.439 456.53 526.439z" /></svg>         
+ 
+ 
+ 
+ paotui/index.js 
+ 
+import React        from 'react'
+import { createStore, applyMiddleware } from 'redux'
+import { render }   from 'react-dom'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+import Routes       from './routes'
+
+import '../../styles/index.scss'
+
+// 定义根组件
+const Root  = () => (
+  <Provider store={ createStore(reducers, applyMiddleware(thunk)) }>
+    <Routes />
+  </Provider>
+)
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ paotui/reducers/app.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:       'paotui',
+  textareaStr: '',
+  files:       [],
+  CUSTOMER:    true,
+  chooseTime:  {},
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_GOODSLIST' :
+    case 'TEATAREA' :
+    case 'IMGSRC_FILES' :
+    case 'SAAS_CUSTOMER' :
+    case 'CALENDAR_TIME' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default app
+         
+ 
+ 
+ 
+ paotui/reducers/index.js 
+ 
+import { combineReducers } from 'redux'
+// 引入reducers
+import app  from './app'
+import order from './order'
+// 组合reducers
+export default combineReducers({
+  app, order,
+})
+         
+ 
+ 
+ 
+ paotui/reducers/order.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:         'paotui',
+  orderTimeDate: [],
+  deliverFees:   0,
+  tipsPrice:     0,
+  serviceDate:   '',
+  contact:       '',
+  shoppingAddr:  '',
+  Promotion:     {},
+  textareaStr:   '',
+  focused:       false,
+  files:         [],
+}
+
+const order = (state = initialState, action) => {
+  switch (action.type) {
+    case 'DATA' :
+    case 'KJIN_DELIVERTIME' :
+    case 'CONTACT' :
+    case 'SHOPPING_ADDR' :
+    case 'DISPLAYTAG' :
+    case 'KJIN_OPTIMALCONTACT' :
+    case 'DELIVERFEE' :
+    case 'TEATAREAOrder' :
+    case 'IMGSRC_FILES' :
+    case 'TIPSPRICE' :
+    case 'PROMOTION' :
+    case 'FOCUSED' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default order
+         
+ 
+ 
+ 
+ paotui/routes.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/paotui' component={ require('react-router?name=root!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+      <Route path='textarea' component={ require('react-router?name=textarea!./components/textarea') } />
+      <Route path='Carousel' component={ require('react-router?name=Carousel!./components/Carousel') } />
+      <Route path='usertips' component={ require('react-router?name=usertips!./components/usertips') } />
+      <Route path='order' component={ require('react-router?name=order!./containers/order') } />
+      <Route path='tipsprice' component={ require('react-router?name=tipsprice!./components/tipsprice') } />
+      <Route path='writetext' component={ require('react-router?name=writetext!./components/writetext') } />
+      <Route path='changeimg' component={ require('react-router?name=changeimg!./components/changeimg') } />
+      <Route path='tel' component={ require('react-router?name=tel!./components/tel') } />
+      <Route path='orderDetails/id' component={ require('react-router?name=orderDetails!./containers/orderDetails') } />
+      <Route path='cannotorder' component={ require('react-router?name=cannotorder!./components/cannotorder') } />
+    </Route>
+  </Router>
+)
+export default Routes
+         
+ 
+ 
+ 
+ paotui/style/Carousel.scss 
+ 
+@import "common.scss";
+
+.carouselWrap{
+  width: 100%;
+  height:auto;
+  .itemlist{
+    width: 100%;
+    height:636px;
+    background:#fff;
+    padding:20px 0;
+    // @include displayfs-bc;
+    .item{
+      width: 25%;
+      // height:180px;
+      height:30%;
+      float:left;
+      text-align: center;
+      position:relative;
+      img{
+        display:inline-block;
+        margin:10% 25% 10% 25%;
+      }
+      span{
+          position:absolute;
+          bottom:0;
+          width: 100%;
+          height:80px;
+          line-height:80px;
+          display:block;
+          text-align: center;
+          font-size:24px;
+      }
+    }
+  }
+  .slider-decorator-0{
+    bottom:30px !important;
+  }
+}
+         
+ 
+ 
+ 
+ paotui/style/common.scss 
+ 
+*{margin: 0;padding: 0;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);box-sizing: border-box;}
+
+html{height: 100%;overflow: hidden;}
+
+body{height: 100%;background: #f5f5f6;font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif;-webkit-font-smoothing:antialiased;overflow-y: scroll;}
+
+ul{list-style: none;}
+h2{font-weight: normal;}
+input{border: none;outline: none;}
+input[type="search"]{-webkit-appearance:none;}
+input::-webkit-search-cancel-button {display: none;}
+button{outline: none;border: 0;}
+img{
+    border:none;
+}
+ul , li {
+    list-style: none;
+}
+body{
+  font-size: 24px;
+}
+// flex-wrap
+@mixin displayfcc {
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: center;
+  -ms-justify-content: center;
+}
+@mixin displayfv {
+  display:flex;
+  // justify-content: center;
+  // align-items: center;
+  @include displayalign;
+  -webkit-justify-content: center;
+  -ms-justify-content: center;
+  -webkit-align-self: center;
+}
+@mixin displayfec {
+  display:flex;
+  justify-content: flex-end;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: flex-end;
+  -ms-justify-content: flex-end;
+}
+@mixin displayfs-bc {
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  @include displayalign;
+  -webkit-justify-content: space-between;
+  -ms-justify-content: space-between;
+}
+@mixin displayalign {
+  -webkit-display:box-flex;
+  -webkit-display:flex;
+  -webkit-align-items: center;
+  -ms-display:flex;
+  -ms-align-items:center;
+  display: -webkit-flex;
+}
+         
+ 
+ 
+ 
+ paotui/style/index.scss 
+ 
+@import "common.scss";
+
+.paotuiWrap{
+  width: 100%;
+  height:100%;
+  background:#f5f5f6;
+  overflow: hidden;
+  overflow-y: scroll;
+  .header{
+    height:104px;
+    width: 100%;
+    padding:0 32px;
+    // background:pink;
+    @include displayfs-bc;
+    .title{
+      font-size:28px;
+      color:#404040;
+      font-weight: 600;
+      border:1px solid #e3e3e4;
+      width: 168px;
+      height:60px;
+      border-radius: 100px;
+      background:#fff;
+      @include displayfcc;
+      img{
+        width: 32px;
+        height:32px;
+        margin-right:16px;
+      }
+    }
+    .title_icon{
+      float: right;
+    }
+  }
+  .tipsWrap{
+    background:#f5f5f6;
+    font-size:24px;
+    color:#999;
+    .tips{
+      color:#ffab00;
+    }
+  }
+  .nextBtn{
+    width: calc(100% - 64px);
+    margin:40px 32px;
+    height:80px;
+    line-height: 80px;
+    text-align: center;
+    color:#fff;
+    background:#ffab00;
+    border-radius: 4px;
+    font-size:38px;
+  }
+}
+.userInfo{
+  width: 100%;
+  height:100%;
+  padding:32px;
+  overflow: hidden;
+  overflow-y: scroll;
+  background:#fff;
+  h4{font-size: 30px;color: rgb(64,64,64);}
+  p{font-size: 26px;color: rgb(128,128,128);text-indent: 2em;line-height: 1.5;}
+  .tit{text-indent: 0;}
+  .indent{text-indent: 5.5em;}
+}
+         
+ 
+ 
+ 
+ paotui/style/order.scss 
+ 
+@import "common.scss";
+
+.paotuiOrderWrap{
+  width: 100%;
+  height:100%;
+  // overflow: hidden;
+  .orderMain{
+    width: 100%;
+    height:calc(100% - 100px);
+    overflow-x: hidden;
+    overflow-y: scroll;
+    .tipsWrap{
+      background:#f5f5f6;
+      font-size:24px;
+      color:#999;
+      .tips{
+        color:#ffab00;
+      }
+    }
+    .goods{
+      width: 100%;
+      height:auto;
+      background:#fff;
+      padding:32px 22px 14px 32px;
+      .title{
+        color:#333;
+        font-size:28px;
+        margin-bottom:32px;
+      }
+      .goodslist{
+        width: 100%;
+        li{
+          min-width: calc(25% - 10px);
+          height:58px;
+          border:1px solid #999;
+          border-radius: 8px;
+          display:inline-block;
+          line-height:58px;
+          text-align: center;
+          color:#666;
+          font-size:24px;
+          margin:0 10px 18px 0;
+          padding:0 15px;
+        }
+      }
+    }
+    .tipsText{
+      width: 100%;
+      padding:0 32px;
+      font-size: 24px;
+      color:#999;
+      line-height:34px;
+    }
+    .tel{
+      width: 100%;
+      display:flex;
+      .am-input-item{
+        display:flex;
+        padding:0;
+        height:60px;
+        min-height:60px;
+        .am-input-label-5{
+          width: 20%;
+        }
+        .am-input-control{
+          width: 80%;
+          input{
+            font-size: 28px;
+          }
+        }
+      }
+      .am-input-item:after{
+        display:none;
+      }
+      .peopleInt{
+        width: 40%;
+      }
+      .telInt{
+        width: 60%;
+        .am-input-label-5{
+          margin:0;
+          width: 16%;
+        }
+      }
+    }
+    .address{
+      .am-list-brief{
+        margin-top:10px;
+      }
+      .addressInt{
+        padding:0;
+        height:40px;
+        min-height:40px;
+        input{
+          font-size: 26px;
+          color:#999;
+        }
+      }
+    }
+    // 对小按键的处理
+    .goContactList{
+      width: 30px;
+      height: 30px;
+      // background: red;
+      position: absolute;
+      right: 32px;
+    }
+    // 删除小按钮
+    .deleteAddress{
+      width: 38px;
+      height:38px;
+      position: absolute;
+      right: 32px;
+      top:calc(50% - 19px);
+      background:url('../img/deleteBtn.png') no-repeat;
+      background-size: cover;
+    }
+  }
+  .orderFooter{
+    width: 100%;
+    height:100px;
+    background:#fff;
+    div{
+      float: left;
+    }
+    .price{
+      width: 65%;
+      height:100%;
+      padding:0 32px;
+      line-height: 100px;
+      position:relative;
+      span{
+        display: inline-block;
+      }
+      .sl{
+        font-size:28px;
+        color:#999;
+        float: left;
+      }
+      .sr{
+        font-size: 28px;
+        color:#ff4848;
+        float: right;
+        i{
+          font-style: normal;
+          font-size:38px;
+          font-weight: 500;
+        }
+      }
+      .sr_myfirst{
+        // animation: myfirst 5s;
+        width: 60%;
+        transition: .5s;
+        margin-right: 100%;
+        transform: translateX(100%);
+      }
+      .sr_myfirstR{
+        width: auto;
+        transition: .5s;
+        margin-right: 0;
+      }
+      @keyframes myfirst
+      {
+        from {float:right;}
+        to {float: left;}
+      }
+    }
+    .orderBtn{
+      width: 35%;
+      height:100%;
+      background:#ffab00;
+      color:#fff;
+      text-align: center;
+      font-size: 36px;
+      line-height:100px;
+      font-weight: 500;
+    }
+    .noUseBtn{
+      background:#e5e5e5;
+      float: right;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ paotui/style/orderDetails.scss 
+ 
+
+.paotuiOrderDetails{
+  .briefDiv{
+    width: 100%;
+    height:auto;
+    white-space:normal;
+  }
+  .imgIcon{
+    width: 88px;
+    height:88px;
+  }
+  .peopleIcon{
+    color:#ffab00;
+    span{
+      // margin-left:15px;
+    }
+  }
+  // 收货地址展示部分
+  .PersonalInfoWrap{
+    .orderContact{
+      width: 30%;
+      display:inline-block;
+      vertical-align: top;
+      padding-top:8px;
+    }
+    .cantactMain{
+      width: 70%;
+      display: inline-block;
+      padding-top:10px;
+      div{
+        margin-bottom: 12px;
+        height:auto;
+        width: 100%;
+        white-space: normal;
+        letter-spacing: 1.5px;
+        text-align: right;
+        span{
+          margin-left:20px;
+        }
+      }
+      div:last-child{
+        line-height:42px;
+      }
+    }
+  }
+
+}
+
+// 取消订单弹窗部分
+.cannotOrder{
+  width: 100%;
+  height:52%;
+  background:#fff;
+  position:absolute;
+  z-index: 10;
+  bottom:0;
+  .canNtitle{
+    width: 100%;
+    padding:30px;
+    border-bottom:1px solid #e5e5e5;
+    display: flex;
+    display: -webkit-flex;
+    align-items: center;
+    -webkit-align-items: center;
+    justify-content: space-between;
+    -webkit-justify-content: space-between;
+    span{
+      img{
+        width: 30px;
+        height:30px;
+      }
+    }
+    span:nth-child(2){
+      font-size:34px;
+      color:#333;
+    }
+    span:nth-child(3){
+      font-size:28px;
+      color:#ffab00;
+    }
+    a{
+      span{
+        font-size:28px;
+        color:#ffab00;
+      }
+    }
+  }
+  .canNmain{
+    width: 100%;
+    padding:25px 32px;
+    .yesBtn{
+      width: 100%;
+      height:80px;
+      background:#ffab00;
+      color: #fff;
+      font-size:38px;
+      line-height: 80px;
+      text-align: center;
+      border-radius: 8px;
+      margin-top:25px;
+    }
+    p{
+      margin-top:25px;
+      color:#999;
+      font-size:24px;
+    }
+    .am-list-body{
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+    }
+    .am-list-body:after{
+      border:0;
+    }
+    .am-input-item{
+      background:#f8f8f8 !important;
+      border-radius: 12px;
+      input{
+        font-size:28px;
+      }
+    }
+  }
+  .tipspriceNotice{
+    .am-notice-bar-icon{
+      display: none;
+    }
+    .am-notice-bar-operation{
+      display: none;
+    }
+    .am-notice-bar-marquee{
+      padding-left:32px;
+      color:#ff4848;
+      font-size:24px;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ paotui/style/textarea.scss 
+ 
+@import "common.scss";
+
+.textareaWrap{
+  width: 100%;
+  padding:0 32px;
+  .main{
+    width: 100%;
+    background:#fff;
+    border-radius: 10px;
+    // padding:32px;
+    .text{
+      width: 80%;
+      height:140px;
+      display:inline-block;
+      resize: none;
+      font-size: 32px;
+      border:none;
+      overflow-y: scroll;
+    }
+    .photo_icon{
+      display: inline-block;
+      // background:red;
+      width: 20%;
+      height:80px;
+      float: right;
+      margin-top:30px;
+      .am-image-picker{
+        width: 80px;
+        height:80px;
+        margin-left:calc(50% - 30px);
+        .am-image-picker-list{
+          width: 80px;
+          height:80px;
+          padding:0;
+          .am-wingblank-md{
+            width: 100% !important;
+            height:100%;
+            margin:0;
+            .am-flexbox{
+              width: 100% !important;
+              height:100%;
+              .am-flexbox-item{
+                width: 100% !important;
+                height:100%;
+                min-width:80px;
+              }
+              .am-image-picker-item-remove{
+                display:none;
+              }
+            }
+          }
+          .am-image-picker-upload-btn{
+            background:url(../img/photo.png) no-repeat;
+            background-size: 60px 60px;
+            background-position:(10px 10px);
+            border:none;
+          }
+          .am-image-picker-upload-btn:after{
+            opacity: 0;
+          }
+          .am-image-picker-upload-btn:before{
+            opacity: 0;
+          }
+        }
+      }
+    }
+  }
+}
+// 展示图片处理
+.imgItem{
+  width: 100%;
+  height:100%;
+  z-index: 10;
+  position: relative;
+  // background:rgba(0,0,0,0.9);
+  .backBtn{
+    width: 100%;
+    height:90px;
+    padding:32px 32px;
+    .oto_s1{
+      float: left;
+    }
+    .oto_s2{
+      float: right;
+    }
+  }
+  .imgMain{
+    width: 100%;
+    height:calc(100% - 180px);
+    overflow: hidden;
+    position:relative;
+    img{
+      width: 100%;
+      // max-height:100%;
+      position:absolute;
+      // margin-top:50%;
+      top:50%;
+      transform: translateY(-50%);
+      -webkit-transform:  translateY(-50%);
+    }
+  }
+  .btnWrap{
+    width: 100%;
+    height:90px;
+    padding:2px 32px;
+    font-size:28px;
+    .oto_s1{
+      float: left;
+      color:#ffab00;
+      padding:20px 40px 20px 0;
+      .am-image-picker{
+        position:absolute;
+        bottom:32px;
+      }
+      .am-image-picker-list{
+        padding:0;
+        margin:0;
+      }
+      .am-image-picker-list .am-image-picker-upload-btn{
+        width: 200px;
+        height:60px;
+        opacity: 0;
+      }
+      .am-image-picker-item-content{
+        display: none;
+      }
+      .am-image-picker-item-remove{
+        display:none;
+      }
+      .am-image-picker-upload-btn:after{
+        opacity: 0;
+      }
+      .am-image-picker-upload-btn:before{
+        opacity: 0;
+      }
+    }
+    .oto_s2{
+      float: right;
+      color:#fff;
+      padding:20px 0 20px 40px;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ paotui/style/tipsprice.scss 
+ 
+@import "common.scss";
+
+.tipsPrice{
+  .iconWrapper {
+    position: relative;
+    padding:0 40px 0 10px;
+    margin-right:10%;
+    .am-slider-wrapper{
+      padding:0 20px;
+      }
+      .am-slider{
+        margin:4px 20px 4px 0;
+        .am-slider-handle{
+          width: 46px;
+          height:46px;
+          margin-top:-0.18rem;
+          border:8px solid #fbc447;
+          background:#ffab00;
+        }
+        .am-slider-rail{
+          height:8px;
+          background:#f3f3f4;
+          // width: 85%;
+        }
+        .am-slider-track{
+          background-color:#ffab00;
+          height:8px;
+        }
+      }
+    }
+  //   .iconWrapper .am-icon {
+  //     position: absolute;
+  //     top: -0.19rem;
+  //     width: 0.44rem;
+  //     height: 0.44rem;
+  //     line-height: 1;
+  //     font-size: 0.44rem;
+  //     color: #000;
+  //     right:0;
+  //   }
+    .moreSpan{
+      position: absolute;
+      right:32px;
+      top:22;
+      display:inline-block;
+      padding:5px 22px;
+      background:#ffab00;
+      color:#fff;
+      font-size:24px;
+      border-radius: 6px;
+    }
+    .tipsPriceSpan{
+      margin-left:15%;
+      color:#ff4848;
+    }
+    .am-list-item .am-list-line .am-list-content{
+      -webkit-box-flex: 0.5;
+      flex:0.5;
+    }
+    .am-list-item .am-list-line .am-list-extra{
+      -webkit-box-flex: 1.5;
+      flex:1.5;
+      height:70px;
+      padding:26px 0;
+    }
+    .am-list-body div:not(:last-child) .am-list-line:after{
+      border: 0;
+    }
+    .am-list{
+      .tipsTextPrice{
+        .am-list-line .am-list-content{
+          -webkit-box-flex: 1;
+          flex: 1;
+          color:#999 !important;
+          font-size:26px !important;
+        }
+      }
+    }
+  }
+.tipspriceMain{
+  width:100%;
+  height:700px;
+  .header{
+    padding:0 32px;
+    border-bottom:1px solid #e5e5f5;
+    width: 100%;
+    height:88px;
+    line-height: 88px;
+    .close{
+      color: #999;
+      font-size: 28px;
+    }
+    .tips{
+      color:#333;
+      font-size:36px;
+      margin-left:36%;
+    }
+  }
+  .content{
+    padding:32px;
+    border-radius: 12px;
+    height:auto;
+    .am-list-body{
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+    }
+    .am-list-body:after{
+      border:0;
+    }
+    .am-input-item{
+      background:#f8f8f8 !important;
+      border-radius: 12px;
+      input{
+        font-size:28px;
+      }
+    }
+    .btn{
+      margin-top:32px;
+      background:#ffab00;
+      color:#fff;
+      font-size: 38px;
+    }
+  }
+  .tipspriceNotice{
+    .am-notice-bar-icon{
+      display: none;
+    }
+    .am-notice-bar-operation{
+      display: none;
+    }
+    .am-notice-bar-marquee{
+      padding-left:32px;
+    }
+  }
+}
+  .rc-slider-tooltip-inner{
+    height:50px;
+  }

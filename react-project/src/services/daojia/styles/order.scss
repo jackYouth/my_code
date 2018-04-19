@@ -1,0 +1,83 @@
+@import "../../../styles/s_common.scss";
+
+.order {
+  height: 100%;
+  position: relative;
+  .order-top {
+    height: calc(100% - 100px);
+    overflow: auto;
+    .am-list-item.time .am-list-line .am-list-extra {
+      @include s_fontDemo(24px, auto, $font-33);
+    }
+    .time {
+      margin-bottom: 25px;
+    }
+    .user-tips.am-list-item {
+      height: 80px;
+      .am-input-label.am-input-label-5 {
+        @include s_fontDemo(28px, 80px, $font-33);
+        width: auto;
+        padding: 0;
+      }
+      .am-input-control input {
+        @include s_fontDemo(24px, auto, $font-33);
+        padding: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    /* 改变默认样式*/
+    .am-list-item.am-input-item:after {
+      border-bottom: none;
+    }
+  }
+
+  .personality-picker {
+    @include s_border_b;
+  }
+  .personality-popup {
+    @include s_border_b;
+    .am-list-extra {
+      width: 250px !important;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+  }
+  .personality-popup-item {
+    .header {
+      @include s_fontDemo(32px, 90px, $font-33);
+      text-align: center;
+      position: relative;
+      @include s_border_b;
+      p {
+        @include s_middle;
+        color: $theme;
+        right: 25px;
+      }
+    }
+    ul {
+      padding-left: 30px;
+      li {
+        height: 79px;
+        @include s_border_b;
+        @include s_fontDemo(28px, 79px, $font-33);
+        position: relative;
+        .am-icon {
+          @include s_middle;
+          right: 30px;
+        }
+        span {
+          display: inline-block;
+          @include s_middle;
+          right: 30px;
+          width: 40px;
+          height: 40px;
+          border: 1px solid #ccc;
+          border-radius: 100%;
+        }
+      }
+    }
+  }
+}

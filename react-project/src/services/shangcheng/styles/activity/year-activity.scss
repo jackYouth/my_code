@@ -1,0 +1,138 @@
+@import "../common.scss";
+
+.year-activity {
+  background: #FFF6E3 url(../../img/activity/bg.png) repeat-y left top;
+  background-size: 100% auto;
+  // padding-top: 88px;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  .banner {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 10px;
+    z-index: 0;
+    .scroll-contaienr {
+      width: 100%;
+      overflow: auto;
+      position: relative;
+      z-index: 2;
+      p {
+        display: flex;
+      }
+      img {
+        width: 100%;
+      }
+    }
+    &>img {
+      @include s_allCenter;
+      z-index: 1;
+      transition: 1.5s;
+      opacity: 0;
+      &.active {
+        opacity: 1;
+      }
+    }
+  }
+  .sub-titles {
+    height: 88px;
+    overflow: auto;
+    position: fixed;
+    top: 0;
+    z-index: 2;
+    width: 100%;
+    background: url(../../img/activity/title.png) repeat-x left top;
+    background-size: auto 88px;
+    box-shadow:0 2px 9px 0 rgba(144,131,104,0.48);
+    opacity: 0;
+    transition: .3s;
+    margin-top: -88px;
+    white-space: nowrap;
+    &.active {
+      opacity: 1;
+      margin-top: 0px;
+    }
+    li {
+      padding-left: 30px;
+      padding-right: 30px;
+      @include s_fontDemo(28px, 88px, #fff);
+      display: inline-block;;
+      &.active {
+        color: #fffdb6;
+      }
+      .am-icon {
+        margin-right: 8px;
+        margin-top: 22px;
+        float: left;
+      }
+    }
+  }
+  .year-activity-item {
+    .sub-title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-bottom: 10px;
+      img {
+        width: 50px;
+      }
+      p {
+        @include s_fontDemo(38px, 80px, #ff4242);
+        margin: 0 6px;
+        width: auto;
+      }
+    }
+    .year-commodity-item {
+      margin-bottom: 10px;
+      overflow: hidden;
+      li {
+        width: 50%;
+        box-sizing: border-box;
+        float: left;
+        .img-container {
+          background: $bg-ff;
+        }
+        &.year-commodity-item-left {
+          padding-right: 5px;
+        }
+        &.year-commodity-item-right {
+          padding-left: 5px;
+        }
+        .img-container {
+          padding-top: 100%;
+          @include sc_img_container(100%, auto);
+        }
+        .commodity-describe {
+          padding: 16px 20px 8px;
+          background: #e75048;
+          .commodity-name {
+            @include s_fontDemo(28px, 35px, #fff);
+            margin-bottom: 16px;
+            height: 70px;
+          }
+          del {
+            @include s_fontDemo(20px, 20px, #333);
+            height: 20px;
+          }
+          .sell-price {
+            @include s_fontDemo(28px, 48px, #fffdb6);
+            span:nth-of-type(1) {
+              @include s_fontDemo(22px, 48px, #fffdb6);
+            }
+            span:nth-of-type(2) {
+              @include s_fontDemo(48px, 48px, #fffdb6);
+            }
+          }
+        }
+      }
+    }
+  }
+  .footer-bg {
+    height: 50px;
+    margin-top: 30px;
+    background: url(../../img/activity/footer.png) repeat-x left top;
+    background-size: 100% auto;
+  }
+}

@@ -1,0 +1,31 @@
+@import "../../../styles/s_common.scss";
+
+
+.estimate-price-component {
+  padding: 11% 100px;
+  .price-rules {
+    overflow: hidden;
+    p {
+      @include s_center;
+      span {
+        float: left;
+        @include s_fontDemo(28px, 46px, $font-66);
+        height: 36px;
+        text-align: center;
+        margin-right: 5px;
+      }
+      .am-icon {
+        float: left;
+      }
+    }
+  }
+  .detail {
+    height: 45%;
+    border-bottom: 1px solid #8f8f8f;
+    margin-bottom: 12%;
+  }
+  .close-icon {
+    display: block;
+    margin: 0 auto 14%;
+  }
+}

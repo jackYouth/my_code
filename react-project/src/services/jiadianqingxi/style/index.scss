@@ -1,0 +1,136 @@
+@import 'self_common';
+
+#root{
+   width:$w;
+   height:$h;
+   .listMain{
+      width: $w;
+      height: $h;
+      .headerWrap{
+        width: $w;
+        height:88px;
+        background:#fff;
+        border-bottom:2px solid rgb(227,227,228);
+        @extend .pos-fixed;
+        .header_l{
+           width: 15%;
+           height:$h;
+           float:left;
+           @extend .none;
+        }
+        .header_c{
+           width: 70%;
+           height:$h;
+           float:left;
+           font-size:30px;
+           color:#666;
+           text-indent: 32px;
+           line-height: 88px;
+           .jiaoPic{
+             width: 20px;
+             height:auto;
+             margin-left:16px;
+           }
+        }
+        .header_r{
+           width: 15%;
+           height:$h;
+           float:right;
+           padding:21px 32px 0 0;
+           .myPic{
+             width: 44px;
+             height:auto;
+             float:right;
+           }
+        }
+      }
+      .contentWrap{
+          @extend .pos-absolute;
+          top:90px;
+          bottom:0;
+          background:#fff;
+          padding:0 32px;
+          overflow: auto;
+          z-index: 2;
+          .listItem{
+             width: 100%;
+            //  height:280px;
+             height:auto;
+             float:left;
+             padding:32px 0;
+             border-bottom:1px solid rgb(231,231,231);
+          }
+          .itemPic{
+             width: 35%;
+             height:auto;
+             float:left;
+             margin-right: 5%;
+             img{
+                width: $w;
+                height:auto;
+             }
+          }
+          .item{
+             width: 60%;
+             float:left;
+             .title{
+                width: $w;
+                height:auto;
+                @extend .inline-block;
+                margin-bottom:14px;
+                margin-top:16px;
+                font-size:28px;
+                color:rgb(17,17,17);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+             }
+             .theme{
+               width: $w;
+               height:auto;
+               @extend .inline-block;
+               font-size:24px;
+               color:rgb(153,153,153);
+               line-height:0.35rem;
+             }
+             .price{
+                 width: 50%;
+                 height:auto;
+                 @extend .inline-block;
+                 color:#ff4848;
+                 margin: 13px 0px 0 0;
+                 font-size:32px;
+             }
+             .channel{
+               width: 40%;
+               height:auto;
+               @extend .inline-block;
+               color:rgb(153,153,153);
+               margin: 16px 10px 0 0;
+               font-size:22px;
+             }
+          }
+      }
+      .kongWrap{
+        width: $w;
+        height:$h;
+        background:#f5f5f6;
+        @extend .pos-fixed;
+        top:90px;
+        bottom:0;
+        z-index: 50;
+        img{
+           width: 360px;
+           height:360px;
+           @include s_allCenter(80%);
+        }
+        .tips{
+          width: 360px;
+          height:auto;
+          @include s_allCenter(-95%);
+          text-align: center;
+          color:rgb(136,136,136);
+        }
+      }
+   }
+}

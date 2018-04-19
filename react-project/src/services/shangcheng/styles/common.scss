@@ -1,0 +1,234 @@
+@import "../../../styles/s_common.scss";
+
+// vconsole样式
+#__vconsole .vc-switch {
+  padding: 20px;
+}
+#__vconsole.vc-toggle .vc-panel {
+  font-size: 20px;
+}
+
+.sc-icon-container {
+  float: left;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  .am-icon {
+    display: block;
+    margin: 0 auto;
+  }
+  span {
+    width: 100%;
+    text-align: center;
+    display: block;
+  }
+}
+
+.sc-title {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  padding-top: 30px;
+  padding-bottom: 30px;
+  .am-icon {
+    margin-right: 10px;
+  }
+  span {
+    &:nth-of-type(1) {
+      @include s_blockDemo(30px, 1px);
+      background: $font-33;
+      margin-right: 20px;
+    }
+    &:nth-of-type(2) {
+      @include s_fontDemo(28px, 28px, $font-33);
+    }
+    &:nth-of-type(3) {
+      @include s_blockDemo(30px, 1px);
+      background: $font-33;
+      margin-left: 20px;
+    }
+  }
+}
+
+.load-complete {
+  @include s_fontDemo(28px, 68px, $font-99);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.sc-4-commodity {
+  display: inline-block;
+  width: 25%;
+  img {
+    @include s_blockDemo(180px, 180px);
+    margin-bottom: 15px;
+  }
+  p {
+    &:nth-of-type(1) {
+      @include s_fontDemo(24px, 24px, $font-33);
+      margin-bottom: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &:nth-of-type(2) {
+      @include s_fontDemo(28px, 28px, $font-f48);
+    }
+  }
+}
+
+.sc-ad {
+  height: 160px;
+  background: #fff;
+  padding: 0px 30px 30px;
+  position: relative;
+  margin-bottom: 20px;
+  .ad-carousel {
+    .slider-list {
+      height: 160px !important;
+      .slider-slide {
+        height: 100%;
+        img {
+          height: 100%;
+        }
+      }
+    }
+  }
+  &>p {
+    @include s_blockDemo(40px, 22px);
+    @include s_fontDemo(12px, 22px, $font-ff);
+    background:rgba(0,0,0,0.70);
+    text-align: center;
+    position: absolute;
+    left: 30px;
+    bottom: 30px;
+  }
+}
+/* 活动指示器*/
+.slider-decorator-0 {
+  bottom: 10px !important;
+  .am-carousel-wrap-dot>span {
+    @include s_blockDemo(20px, 4px);
+    border-radius: 0;
+    background: rgba(255, 255, 255, .3);
+  }
+  .am-carousel-wrap-dot-active>span {
+    background: #fff;
+  }
+}
+
+.enlarge {
+  -webkit-animation: enlarge .3s;
+          animation: enlarge .3s;
+}
+
+/* user-tips*/
+.am-input-item.sc-user-tips {
+  height: 90px;
+  .am-input-label-5, .am-input-control input {
+    font-size: 28px !important;
+    color: $font-33 !important;
+  }
+  .am-input-control input {
+    text-align: right;
+  }
+}
+
+/*installer.failurerequests*/
+.am-list-line {
+  height: 90px;
+  height: 90px;
+  @include s_border_b;
+}
+
+/* place-button*/
+.place-button {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  @include s_fontDemo(34px, 100px, $theme);
+  text-align: center;
+  background: $bg-ff;
+}
+
+/* badge-icon*/
+.sc-badge-icon {
+  display: block;
+  text-align: center;
+  position: absolute;
+  @include s_blockDemo(auto, 26px);
+  @include s_fontDemo(24px, 26px, $font-ff !important);
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+  border-radius: 13px;
+  background: $font-f48;
+  top: -3px;
+  right: 50%;
+  -webkit-transform: translateX(35px);
+          transform: translateX(35px);
+}
+
+@-webkit-keyframes enlarge {
+  0% {
+    -webkit-transform: scale(1);
+            transform: scale(1);
+  }
+  50% {
+    -webkit-transform: scale(1.5);
+            transform: scale(1.5);
+  }
+  100% {
+    -webkit-transform: scale(1);
+            transform: scale(1);
+  }
+}
+
+@keyframes enlarge {
+  0% {
+    -webkit-transform: scale(1);
+            transform: scale(1);
+  }
+  50% {
+    -webkit-transform: scale(1.5);
+            transform: scale(1.5);
+  }
+  100% {
+    -webkit-transform: scale(1);
+            transform: scale(1);
+  }
+}
+
+/* 不现实底部menus样式设置：*/
+/* @mixin sc_hideMenus {*/
+/*   position: absolute;*/
+/*   width: 100%;*/
+/*   height: 100%;*/
+/*   overflow: hidden;*/
+/*   z-index: 1;*/
+/*   background: $bg-f3;*/
+/* }*/
+
+/* img的容器*/
+@mixin sc_img_container($w, $h) {
+  @include s_blockDemo($w, $h);
+  position: relative;
+  overflow: hidden;
+  img {
+    height: 100%;
+    @include s_allCenter;
+  }
+}
+
+/* padding & bg*/
+@mixin s_defaultList {
+  padding-left: 30px;
+  padding-right: 30px;
+  background: $bg-ff;
+  overflow: hidden;
+}

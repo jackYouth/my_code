@@ -1,0 +1,47 @@
+@import "../../../styles/s_common.scss";
+
+.am-list-item.am-input-item:after {
+  border-bottom: 0;
+}
+
+.am-modal.am-modal-transparent .am-modal-content .am-modal-body {
+  padding: 0 98px 36px !important;
+  div {
+    padding: 0;
+    @include s_fontDemo(32px, 44px, $font-33);
+  }
+}
+
+.am-modal-button-group-h .am-modal-button {
+  @include s_fontDemo(34px !important, auto, $font-00 !important);
+}
+
+
+.am-modal-header {
+  padding: 10px 90px 0;
+  .am-modal-title {
+    @include s_fontDemo(32px, 44px, $font-00);
+  }
+}
+
+.am-modal-button-group-v .am-modal-button {
+  font-size: 34px;
+  color: $font-00;
+}
+
+
+.searchBar {
+  .leftCom {
+    float: left;
+    margin-right: 10px;
+    width: calc(20% - 10px) !important;
+    padding-top: 23px;
+    p {
+      height: 54px !important;
+      line-height: 54px !important;
+    }
+  }
+  .searchMain {
+    border: none;
+  }
+}

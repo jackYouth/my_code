@@ -1,0 +1,106 @@
+@import 'self_common';
+
+
+.detailsWrap{
+   width: $w;
+   height: $h;
+   .detailsMain{
+      width: $w;
+      @extend .pos-absolute;
+      top:0;
+      bottom:112px;
+      overflow: auto;
+      .detailsPic{
+         width: $w;
+         height:auto;
+         background:#fff;
+         .details_img{
+            width: $w;
+            height:552px;
+            img{
+               width: $w;
+               height:$h;
+            }
+         }
+         .details_price{
+            width: $w;
+            height:auto;
+            margin-bottom:32px;
+            .title{
+               width: $w;
+               text-align: center;
+               padding:26px 0;
+               font-size:32px;
+               color:rgb(38,38,38);
+            }
+            .price{
+               width: $w;
+               text-align: center;
+               padding-bottom:26px;
+               color:#ffab00;
+               span{
+                 font-size:44px;
+               }
+            }
+
+         }
+      }
+      .otm{
+          padding:32px 32px;
+          background:#fff;
+          margin-bottom:32px;
+          .iconTitle{
+             width: $w;
+             height:44px;
+             line-height: 44px;
+             margin-bottom:20px;
+          }
+          .icon{
+            width: 32px;
+            height:auto;
+            max-height:32px;
+            margin-right:20px;
+            margin-top:6px;
+            @extend .inline-block;
+            float:left;
+          }
+          span{
+              @extend .inline-block;
+              float:left;
+              color:rgb(38,38,38);
+              font-size:30px;
+          }
+          .detailsPrice{
+             color:rgb(170,170,170);
+             font-size:24px;
+             p{
+                line-height:44px;
+             }
+             img{
+                width: $w;
+                height:auto;
+             }
+          }
+      }
+   }
+   .orderBtnWrap{
+      @extend .pos-fixed;
+      bottom:0;
+      left:0;
+      background:#fff;
+      width: $w;
+      height:112px;
+      .orderBtn{
+         width: 60%;
+         height:90px;
+         background:#ffab00;
+         border-radius: 8px;
+         margin-left:20%;
+         margin-top:11px;
+         color:#fff;
+         font-size:36px;
+         text-align: center;
+         line-height:90px;
+      }
+   }
+}

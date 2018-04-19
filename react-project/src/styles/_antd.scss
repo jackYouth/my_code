@@ -1,0 +1,17 @@
+.am-list-item .am-list-line .am-list-extra,
+.am-list-item .am-list-line .am-list-content {
+  @include rem(.28);
+}
+.am-list-item .am-list-line .am-list-content {
+  @include color($black !important);
+}
+.am-list-body {
+  border-color: $line !important;
+}
+.am-modal-body {
+  @include h(auto !important)
+}
+
+.am-modal-mask {
+  @include o(.4 !important);
+}

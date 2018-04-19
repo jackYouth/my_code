@@ -1,0 +1,5018 @@
+         
+ 
+ 
+ 
+ daojia/actions/app.js 
+ 
+import { get, getStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+
+// 获取所有行业小类
+export const getCategories = () => dispatch => {
+  const closeLoading = Loading()
+  const industryCode = getStore('industryCode', 'session')
+  get('/daojia/v1/industry/category', { industryCode }).then(({ code, data, message }) => {
+    if (code === 0) {
+      data.unshift({ industryCategoryId: '0', industryCategoryName: '全部服务' })
+      dispatch({ type: 'GET_CATEGORIES', categories: data })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+
+// 获取当前服务对应的时间
+export const getSeverBusiness = () => dispatch => {
+  const closeLoading = Loading()
+  let paras = {
+    industryCategoryId: 0,
+  }
+  const industryCode = getStore('industryCode', 'session')
+  const selectedCity = getStore('selectedCity', 'session')
+  const { longitude, latitude, city, county } = selectedCity
+  paras = merge(paras)({ longitude, latitude, city, county, industryCode })
+  get('/daojia/v1/category/brands', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      dispatch({ type: 'GET_SERVER_BUSINESS', serverBusiness: data })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+// 获取当前服务对应的时间
+export const getSeverTimes = () => dispatch => {
+  const closeLoading = Loading()
+  let paras = {
+    industryCategoryId: 0,
+  }
+  const industryCode = getStore('industryCode', 'session')
+  const selectedCity = getStore('selectedCity', 'session')
+  const { longitude, latitude, city, county } = selectedCity
+  paras = merge(paras)({ longitude, latitude, city, county, industryCode })
+  get('/daojia/v1/category/service/time', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      dispatch({ type: 'GET_SERVER_TIMES', serverTimes: data })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+// demo
+// export const demo = () => dispatch => {
+//   const closeLoading = Loading()
+//   let paras = {
+//     industryCategoryId: 0,
+//   }
+//   const industryCode = getStore('industryCode', 'session')
+//   const selectedCity = getStore('selectedCity', 'session')
+//   const { longitude, latitude, city, county } = selectedCity
+//   paras = merge(paras)({ longitude, latitude, city, county, industryCode })
+//   get('/daojia/v1/category/service/time', paras).then(({ code, data, message }) => {
+//     if (code === 0) {
+//       dispatch({ type: 'DEMO', demo: data })
+//       console.log('demo', data)
+//     } else {
+//       Toast.fail(message, 1)
+//     }
+//     closeLoading()
+//   })
+// }
+         
+ 
+ 
+ 
+ daojia/actions/business.js 
+ 
+import { get, parseQuery, getStore, setStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+
+export const getBusinessData = () => dispatch => {
+  const closeLoading = Loading()
+  const brandId = parseQuery(location.search).brandId
+  let paras = {
+    brandId,
+    limit:  1,
+    offset: 10,
+  }
+  const selectedCity = getStore('selectedCity', 'session')
+  const { longitude, latitude, city, county } = selectedCity
+  paras = merge(paras)({ longitude, latitude, city, county })
+  get('/daojia/v1/brand/message', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      setStore('channel', data.brandCode, 'session')
+      const businessData = data
+      businessData.industryCategoryBoList.unshift({ industryCategoryId: 0, industryCategoryName: '全部服务' })
+      dispatch({ type: 'SET_BUSINESS_DATA', businessData })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+export const getBrandGoods = currentIndustryCategoryId => dispatch => {
+  const closeLoading = Loading()
+  const brandId = parseQuery(location.search).brandId
+  let paras = {
+    brandId,
+    limit:              1,
+    offset:             10,
+    industryCategoryId: currentIndustryCategoryId,
+  }
+  const selectedCity = getStore('selectedCity', 'session')
+  const { longitude, latitude, city, county } = selectedCity
+  paras = merge(paras)({ longitude, latitude, city, county })
+  get('/daojia/v1/brand/services', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      const currentServiceVoList = data.serviceVoList
+      dispatch({ type: 'SET_CURRENT_SERVICE', currentServiceVoList })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+         
+ 
+ 
+ 
+ daojia/actions/demo.js 
+ 
+import { get, parseSearch } from '@boluome/common-lib'
+import { Toast } from 'antd-mobile'
+
+export const getBusinessData = () => {
+  get('/daojia/v1/brand/message').then(({ code, data, message }) => {
+    if (code === 0) {
+      console.log(data)
+    } else {
+      Toast.fail(message, 1)
+    }
+  })
+}
+         
+ 
+ 
+ 
+ daojia/actions/detail.js 
+ 
+import { get, getStore, setStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+
+export const getGoodDetails = serviceId => dispatch => {
+  const closeLoading = Loading()
+  const industryCode = getStore('industryCode', 'session')
+  get('/daojia/v1/service/details', { industryCode, serviceId }).then(({ code, data, message }) => {
+    if (code === 0) {
+      setStore('channel', data.brand.brandCode, 'session')
+      dispatch({ type: 'SET_GOOD_DETAILS', goodDetails: data })
+      // 清除已有的规格
+      dispatch({ type: 'SET_CUREENT_SPECIFICATION', currentSpec: '' })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+export const getAllReserveTimes = serviceId => dispatch => {
+  const closeLoading = Loading()
+  get('/daojia/v1/service/time', { serviceId }).then(({ code, data, message }) => {
+    if (code === 0) {
+      dispatch({ type: 'SET_RESERVER_TIMES', allTimes: data })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+         
+ 
+ 
+ 
+ daojia/actions/order.js 
+ 
+import { get, send, getStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+import { afterOrdering } from 'business'
+
+export const checkAddressAvail = paras => dispatch => {
+  const closeLoading = Loading()
+  const userId = getStore('customerUserId', 'session')
+  paras.userId = userId
+  if (!paras.mapType) {
+    paras.mapType = 'baidu'
+  }
+  send('/daojia/v1/order/address', paras).then(({ code, message }) => {
+    if (code === 0) {
+      const addressAvail = true
+      dispatch({ type: 'SET_ADDRESS_AVAIL', addressAvail })
+    } else {
+      dispatch({ type: 'SET_ADDRESS_AVAIL', addressAvail: false })
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+export const getBestAddress = () => dispatch => {
+  const closeLoading = Loading()
+  const userId = getStore('customerUserId', 'session')
+  const selectedCity = getStore('selectedCity', 'session')
+  const { longitude, latitude } = selectedCity
+  const paras = { userId, longitude, latitude }
+  const industryCode = getStore('industryCode', 'session')
+  const goodDetails = getStore(`selectGood_${ industryCode }`, 'session').goodDetails
+  const { serviceId } = goodDetails
+  paras.mapType = 'gaode'
+  get('/user/v1/contact', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      if (data) {
+        dispatch({ type: 'SET_CURRENT_ADDRESS', contact: data })
+        const checkParas = {
+          serviceId,
+          contactId: data.contactId,
+        }
+        dispatch(checkAddressAvail(checkParas))
+      }
+    } else if (code === 1001) {
+      dispatch({ type: 'SET_CURRENT_ADDRESS', contact: '' })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+export const placeOrder = paras => () => {
+  const closeLoading = Loading()
+  const orderType = getStore('industryCode', 'session')
+  const userId = getStore('customerUserId', 'session')
+  const userPhone = getStore('userPhone', 'session')
+  const channel = getStore('channel', 'session')
+  paras = merge(paras)({ orderType, userId, userPhone, channel })
+  send('/daojia/v1/order', paras).then(({ code, data, message }) => {
+    if (code === 0) {
+      afterOrdering(data)
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+
+export const getPersonality = () => dispatch => {
+  const closeLoading = Loading()
+  const industryCode = getStore('industryCode', 'session')
+  const goodDetails = getStore(`selectGood_${ industryCode }`, 'session').goodDetails
+  const { serviceId } = goodDetails
+  get('/daojia/v1/service/personality', { serviceId }).then(({ code, data, message }) => {
+    if (code === 0) {
+      dispatch({ type: 'SET_PERSONALITY', personality: data })
+    } else {
+      Toast.fail(message, 1)
+    }
+    closeLoading()
+  })
+}
+         
+ 
+ 
+ 
+ daojia/components/app-components/select-business.js 
+ 
+import React from 'react'
+import { Grid } from 'antd-mobile'
+
+const SelectBusiness = ({ serverBusiness, handleGridClick, handleContainerClose }) => {
+  const data = serverBusiness.map(item => ({
+    icon: item.bigLogoImg,
+    text: item.brandName,
+    id:   item.brandId,
+  }))
+  data.unshift({ icon: require('../../img/all.png'), text: '全部', id: '' })
+  const handleClick = res => {
+    handleGridClick(res)
+    handleContainerClose()
+  }
+  return <Grid data={ data } onClick={ handleClick } />
+}
+
+export default SelectBusiness
+         
+ 
+ 
+ 
+ daojia/components/app-components/select-sort.js 
+ 
+import React from 'react'
+import { Icon } from 'antd-mobile'
+
+export default class SelectSort extends React.Component {
+  constructor(props) {
+    super(props)
+    const { currentSort } = props
+    this.state = { currentSort }
+  }
+  handleClick(currentSort) {
+    const { handleSortItemClick, handleContainerClose } = this.props
+    this.setState({ currentSort })
+    handleSortItemClick(currentSort)
+    handleContainerClose()
+  }
+  render() {
+    const { serverSorts } = this.props
+    const { currentSort } = this.state
+    return (
+      <ul className='dj-select-sort'>
+        {
+          serverSorts.map(item => (
+            <li className={ currentSort.id === item.id ? 'active' : '' } key={ item.id } onClick={ () => this.handleClick(item) }>
+              <span>{ item.name }</span>
+              {
+                currentSort.id === item.id && <Icon type={ require('svg/daojia/selected.svg') } size='md' />
+              }
+            </li>
+          ))
+        }
+      </ul>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/app-components/select-times.js 
+ 
+import React from 'react'
+import { Icon } from 'antd-mobile'
+
+export default class SelectTimes extends React.Component {
+  constructor(props) {
+    super(props)
+    const { currentDateIndex, currentTimeIndex } = props
+    this.state = {
+      currentDateIndex,
+      currentTimeIndex,
+    }
+  }
+  handleTimeClick(currentTimeIndex) {
+    const { serverTimes, handleTimeItemClick, handleContainerClose } = this.props
+    const { currentDateIndex } = this.state
+    const date = serverTimes[currentDateIndex].shortDate
+    const serviceTime = serverTimes[currentDateIndex].timePointVos[currentTimeIndex].timePoint
+    handleTimeItemClick({ date, serviceTime, currentDateIndex, currentTimeIndex })
+    handleContainerClose()
+    this.setState({ currentTimeIndex })
+  }
+  handleDateClick(currentDateIndex) {
+    this.setState({ currentDateIndex, currentTimeIndex: 0 })
+  }
+  render() {
+    const { serverTimes } = this.props
+    const { currentDateIndex, currentTimeIndex } = this.state
+    const times = serverTimes[currentDateIndex].timePointVos
+    return (
+      <div className='dj-select-times'>
+        <ul className='dates'>
+          {
+            serverTimes.map((item, index) => (
+              <li className={ index === currentDateIndex ? 'active' : '' } key={ item.shortDate } onClick={ () => {
+                if (index !== currentDateIndex) {
+                  this.handleDateClick(index)
+                }
+              }
+              }
+              >
+                { item.date }
+                {
+                  item.tag &&
+                  <span>{ item.tag }</span>
+                }
+              </li>))
+          }
+        </ul>
+        <ul className='times'>
+          {
+            times &&
+            times.map((item, index) => (
+              <li className={ index === currentTimeIndex ? 'active' : '' } key={ item.timePoint } onClick={ () => {
+                this.handleTimeClick(index)
+              }
+              }
+              >
+                <p>
+                  { item.timePoint }
+                  {
+                    item.serviceTag &&
+                    <span>{ item.serviceTag }</span>
+                  }
+                </p>
+                {
+                  index === currentTimeIndex && <Icon type={ require('svg/daojia/selected.svg') } size='md' />
+                }
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/app.js 
+ 
+import React from 'react'
+import { send, getStore, setStore } from '@boluome/common-lib'
+import { UserCenter, Mask, SlidePage, AddressSearchGaode, Listview, Loading } from '@boluome/oto_saas_web_app_component'
+import { List, Icon, Toast } from 'antd-mobile'
+import { merge, equals } from 'ramda'
+
+import SelectBusiness from './app-components/select-business'
+import SelectTimes from './app-components/select-times'
+import SelectSort from './app-components/select-sort'
+import GoodItem from './common-component/good-item'
+import NoOneComponent from './common-component/no-one-component'
+import '../styles/app.scss'
+
+const LItem = List.Item
+
+if (location.origin.indexOf('blm.test') >= 0) {
+  const VConsole = require('vconsole')
+  // new VConsole()
+  console.log('vconsole', VConsole.test)
+}
+
+export default class App extends React.Component {
+  constructor(props) {
+    super(props)
+    const { currentCategoryIndex, selectedCity } = props
+    this.state = {
+      currentCategoryIndex,
+      selectedCity,                                                              // 表示当前选中的行业小类
+      goodsParas:           { industryCategoryId: currentCategoryIndex },            // 表示当前请求goods时传的参数
+      businessActive:       false,                                                   // 表示当前商家选择按钮是否是选中状态
+      timesActive:          false,                                                   // 表示当前时间选择按钮是否是选中状态
+      sortActive:           false,                                                   // 表示当前排序选择按钮是否是选中状态
+      currentDateIndex:     0,                                                       // 表示当前选中的日期在列表中的索引
+      currentTimeIndex:     0,                                                       // 表示当前选中的分钟在列表中的索引
+      currentSort:          { name: '推荐排序', id: 'default' },                      // 表示当前选中的是哪一种排序方式，默认为default
+      offset:               0,                                                       // 表示默认的当前商品数，offset
+      currentBusinnessName: '选择商家',
+    }
+    this.handleSelectCity = this.handleSelectCity.bind(this)
+    this.handleGridClick = this.handleGridClick.bind(this)
+    this.handleTimeItemClick = this.handleTimeItemClick.bind(this)
+    this.handleSortItemClick = this.handleSortItemClick.bind(this)
+    this.handleFetchDataMid = this.handleFetchDataMid.bind(this)
+    this.limit = 0
+    this.fetchNum = 0
+  }
+  componentWillReceiveProps(nextProps) {
+    const { selectedCity } = nextProps
+    const preSelectedCity = this.props.selectedCity
+    if (!equals(selectedCity)(preSelectedCity)) {
+      this.setState({ selectedCity })
+    }
+  }
+  shouldComponentUpdate() {
+    const maskNode = document.querySelector('.mask')
+    // 当点击遮罩时，关闭所有滑层，并改变对应状态
+    if (maskNode) {
+      maskNode.onclick = () => {
+        Mask.closeAll()
+        this.setState({ businessActive: false, timesActive: false, sortActive: false })
+        this.closeBusiness = ''
+        this.closeTimes = ''
+        this.closeSort = ''
+      }
+    }
+    return true
+  }
+  handleSelectCity(cityData) {
+    const { city, name, location } = cityData
+    console.log('cityData', cityData)
+    // 将经纬度转为详细地址
+    const pointToCity = (longitude, latitude) => {
+      window.AMap.service('AMap.Geocoder', () => {
+        // 地址 <-> 经纬度
+        const geocoder = new window.AMap.Geocoder({
+          radius:     1000,
+          extensions: 'all',
+        })
+        geocoder.getAddress([longitude, latitude], (status, result) => {
+          if (status === 'complete' && result.info === 'OK') {
+            const selectedCity = { city, address: name, county: result.regeocode.addressComponent.district, longitude, latitude }
+            setStore('selectedCity', selectedCity, 'session')
+            this.setState({ selectedCity, offset: 0 })
+          } else {
+            console.log('经纬度转地址失败')
+          }
+        })
+      })
+    }
+    pointToCity(location.lng, location.lat)
+  }
+  handleFilterClickMiddleware(currentCategoryIndex) {
+    const { categories } = this.props
+    const { goodsParas } = this.state
+    this.setState({ currentCategoryIndex, offset: 0 })
+    goodsParas.industryCategoryId = categories[currentCategoryIndex].industryCategoryId
+    this.handleFetchDataMid(20, 0, goodsParas, this.onSuccess)
+  }
+  // 分别定义选择商家按钮和商家选择按钮的点击事件
+  handleGridClick(res) {
+    console.log('res', res)
+    const { goodsParas } = this.state
+    goodsParas.brandId = res.id
+    this.setState({ goodsParas, offset: 0, currentBusinnessName: res.text })
+    this.handleFetchDataMid(20, 0, goodsParas, this.onSuccess)
+    // 将closeBusiness的Mask变成''
+    this.closeBusiness = ''
+    this.setState({ businessActive: false })
+  }
+  handleBusinessClick() {
+    const { serverBusiness } = this.props
+    if (this.closeBusiness) {
+      this.closeBusiness()
+      this.closeBusiness = ''
+      this.setState({ businessActive: false })
+      return
+    }
+    this.setState({ businessActive: true, timesActive: false, sortActive: false })
+    // 关闭其他的slidePage
+    if (this.closeTimes) this.closeTimes()
+    this.closeTimes = ''
+    if (this.closeSort) this.closeSort()
+    this.closeSort = ''
+    this.closeBusiness = Mask(<SlidePage showClose={ false } target='up selector-mask'><SelectBusiness { ...{ serverBusiness, handleGridClick: this.handleGridClick } } /></SlidePage>, { style: { marginTop: '1.63rem', zIndex: '10' } })
+  }
+  // 分别定义选择时间按钮和时间选择按钮的点击事件
+  handleTimeItemClick(res) {
+    const { goodsParas } = this.state
+    const { date, serviceTime, currentDateIndex, currentTimeIndex } = res
+    goodsParas.date = date
+    goodsParas.serviceTime = serviceTime
+    this.setState({ goodsParas, currentDateIndex, currentTimeIndex, timesActive: false })
+    this.handleFetchDataMid(20, 0, goodsParas, this.onSuccess)
+    // 将closeBusiness的Mask变成''
+    this.closeTimes = ''
+  }
+  handleTimesClick() {
+    const { serverTimes } = this.props
+    const { currentDateIndex, currentTimeIndex } = this.state
+    if (this.closeTimes) {
+      this.closeTimes()
+      this.closeTimes = ''
+      this.setState({ timesActive: false })
+      return
+    }
+    this.setState({ timesActive: true, businessActive: false, sortActive: false })
+    // 关闭其他的slidePage
+    if (this.closeBusiness) this.closeBusiness()
+    this.closeBusiness = ''
+    if (this.closeSort) this.closeSort()
+    this.closeSort = ''
+    this.closeTimes = Mask(<SlidePage showClose={ false } target='up selector-mask'><SelectTimes { ...{ serverTimes, handleTimeItemClick: this.handleTimeItemClick, currentDateIndex, currentTimeIndex } } /></SlidePage>, { style: { marginTop: '1.63rem', zIndex: '10' } })
+  }
+  // 分别定义选择时间按钮和时间选择按钮的点击事件
+  handleSortItemClick(currentSort) {
+    const { goodsParas } = this.state
+    goodsParas.sort = currentSort.id
+    this.setState({ currentSort, sortActive: false, goodsParas })
+    this.handleFetchDataMid(20, 0, goodsParas, this.onSuccess)
+    // 将closeBusiness的Mask变成''
+    this.closeSort = ''
+  }
+  handleSortClick() {
+    const serverSorts = [{ name: '推荐排序', id: 'default' }, { name: '价格从低到高', id: 'price' }, { name: '好评从高到低', id: 'quality' }]
+    const { currentSort } = this.state
+    if (this.closeSort) {
+      this.closeSort()
+      this.closeSort = ''
+      this.setState({ sortActive: false })
+      return
+    }
+    this.setState({ sortActive: true, businessActive: false, timesActive: false })
+    // 关闭其他的slidePage
+    if (this.closeTimes) this.closeTimes()
+    this.closeTimes = ''
+    if (this.closeBusiness) this.closeBusiness()
+    this.closeBusiness = ''
+    this.closeSort = Mask(<SlidePage showClose={ false } target='up selector-mask'><SelectSort { ...{ serverSorts, handleSortItemClick: this.handleSortItemClick, currentSort } } /></SlidePage>, { style: { marginTop: '1.63rem', zIndex: '10' } })
+  }
+
+  handleFetchDataMid(limit, offset, fetchData, onSuccess) {
+    const closeLoading = Loading()
+    this.onSuccess = onSuccess
+    const selectedCity = getStore('selectedCity', 'session')
+    let { goodsParas } = this.state
+    const { industryCode } = this.props
+    console.log('limit22222', limit, offset)
+    goodsParas = merge(goodsParas)({ limit: Math.ceil(offset / limit) + 1, offset: limit })
+    const { longitude, latitude, city, county } = selectedCity
+    goodsParas = merge(goodsParas)({ longitude, latitude, city, county, industryCode })
+    if (goodsParas.date === '' || (goodsParas.date && isNaN(Number(goodsParas.date[0])))) delete goodsParas.date
+    if (goodsParas.serviceTime === '' || (goodsParas.serviceTime && isNaN(Number(goodsParas.serviceTime[0])))) delete goodsParas.serviceTime
+    send('/daojia/v1/category/services', goodsParas).then(({ code, data, message }) => {
+      if (code === 0) {
+        const { serviceData } = data
+        onSuccess(serviceData)
+        if (serviceData.length > 0) this.setState({ offset: this.state.offset + serviceData.length })
+      } else {
+        Toast.fail(message, 1)
+      }
+      closeLoading()
+    })
+  }
+
+
+  render() {
+    const {
+      offset, currentCategoryIndex, goodsParas, businessActive, timesActive, sortActive, currentSort,
+      currentDateIndex, currentTimeIndex,
+      selectedCity,
+      currentBusinnessName,
+    } = this.state
+    const {
+      handleGoodClick,
+      categories,
+      serverTimes,
+      industryCode,
+      handleSearchClick,
+    } = this.props
+    if (!categories) {
+      return <div />
+    }
+    console.log('currentBusinnessName', currentBusinnessName)
+    return (
+      <div className='app'>
+        <UserCenter categoryCode={ industryCode } />
+        <LItem className='header' extra={ <Icon onClick={ handleSearchClick } type={ require('svg/daojia/search.svg') } size='md' /> }>
+          <div className='position' onClick={ () => Mask(
+            <SlidePage showClose={ false }>
+              <AddressSearchGaode { ...{ selectedCity, onSuccess: this.handleSelectCity, noFocus: true } } />
+            </SlidePage>)
+          }
+          >
+            <p>{ (selectedCity && selectedCity.address) ? selectedCity.address : '' }</p>
+            <Icon type={ require('svg/daojia/down_push.svg') } size='xxs' />
+          </div>
+        </LItem>
+        <ul className='selector'>
+          <li onClick={ () => this.handleBusinessClick() } className={ businessActive ? 'container active' : 'container' }>
+            <p>{ currentBusinnessName }</p>
+            <Icon type={ businessActive ? 'up' : 'down' } size='xxs' color='#999' />
+          </li>
+          <li onClick={ () => this.handleTimesClick() } className={ timesActive ? 'container active' : 'container' }>
+            <p>{ currentDateIndex === 0 ? '选择时间' : `${ serverTimes[currentDateIndex].date }(${ serverTimes[currentDateIndex].timePointVos[currentTimeIndex].timePoint })` }</p>
+            <Icon type={ timesActive ? 'up' : 'down' } size='xxs' color='#999' />
+          </li>
+          <li onClick={ () => this.handleSortClick() } className={ sortActive ? 'container active' : 'container' }>
+            <p>{ currentSort.name }</p>
+            <Icon type={ sortActive ? 'up' : 'down' } size='xxs' color='#999' />
+          </li>
+        </ul>
+        <ul className='s-label'>
+          {
+            categories.map((item, index) => <li className={ index === currentCategoryIndex ? 'active' : '' } key={ item.industryCategoryId } onClick={ () => this.handleFilterClickMiddleware(index) }>{ item.industryCategoryName }</li>)
+          }
+        </ul>
+        <ul className='goods'>
+          <Listview
+            listItem={ <GoodItem onClick={ handleGoodClick } /> }
+            onFetch={ this.handleFetchDataMid }
+            limit={ 20 }
+            offset={ offset }
+            fetchData={ goodsParas }
+            noOneComponent={ <NoOneComponent /> }
+          />
+        </ul>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/business-container.js 
+ 
+import React from 'react'
+
+const BusinessContainer = ({ children }) => (<div>{ children }</div>)
+
+export default BusinessContainer
+         
+ 
+ 
+ 
+ daojia/components/business.js 
+ 
+import React, { Component } from 'react'
+import { get, getStore, parseQuery } from '@boluome/common-lib'
+import { Listview, Loading } from '@boluome/oto_saas_web_app_component'
+import { Flex, List, Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+
+import GoodItem from './common-component/good-item'
+import NoOneComponent from './common-component/no-one-component'
+import '../styles/business.scss'
+
+const FItem = Flex.Item
+const LItem = List.Item
+
+export default class Business extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      offset:                    0,
+      currentCategoryIndex:      0,
+      currentIndustryCategoryId: 0,
+    }
+    this.handleFetchDataMid = this.handleFetchDataMid.bind(this)
+    this.handleFilterClickMiddleware = this.handleFilterClickMiddleware.bind(this)
+  }
+  componentWillReceiveProps(nextProps) {
+    const { businessData } = nextProps
+    let { currentIndustryCategoryId } = this.state
+    if (!currentIndustryCategoryId && businessData && businessData.industryCategoryBoList) {
+      currentIndustryCategoryId = businessData.industryCategoryBoList[0].industryCategoryId
+      this.setState({ currentIndustryCategoryId })
+    }
+  }
+  handleFetchDataMid(limit, offset, fetchData, onSuccess) {
+    const closeLoading = Loading()
+    const brandId = parseQuery(location.search).brandId
+    const { currentIndustryCategoryId } = this.state
+    if (currentIndustryCategoryId || currentIndustryCategoryId === 0) {
+      this.onSuccess = onSuccess
+      let paras = {
+        brandId,
+        limit:              Math.ceil(offset / limit) ? Math.ceil(offset / limit) : 1,
+        offset:             limit,
+        industryCategoryId: Array.isArray(currentIndustryCategoryId) ? 0 : currentIndustryCategoryId,
+      }
+      const selectedCity = getStore('selectedCity', 'session')
+      const { longitude, latitude, city, county } = selectedCity
+      paras = merge(paras)({ longitude, latitude, city, county })
+      get('/daojia/v1/brand/services', paras).then(({ code, data, message }) => {
+        if (code === 0) {
+          const currentServiceVoList = data.serviceVoList
+          onSuccess(currentServiceVoList)
+          if (currentServiceVoList.length > 0) this.setState({ offset: this.state.offset + limit + 1 })
+        } else {
+          Toast.fail(message, 1)
+        }
+        closeLoading()
+      })
+    }
+  }
+  handleFilterClickMiddleware(currentCategoryIndex, industryCategoryBoList) {
+    const currentIndustryCategoryId = industryCategoryBoList[currentCategoryIndex].industryCategoryId
+    this.setState({ currentIndustryCategoryId, currentCategoryIndex, offset: 0 })
+    // this.handleFetchDataMid(20, 0, {}, this.onSuccess, currentIndustryCategoryId)
+  }
+
+  render() {
+    const { businessData, handleToAllComment, handleGoodClick } = this.props
+    const { offset, currentCategoryIndex } = this.state
+    return (
+      <Listview
+        listItem={ <GoodItem onClick={ handleGoodClick } /> }
+        onFetch={ this.handleFetchDataMid }
+        limit={ 20 }
+        offset={ offset }
+        topComponent={ <TopComponent { ...{ businessData, handleToAllComment, currentCategoryIndex, handleFilterClickMiddleware: this.handleFilterClickMiddleware } } /> }
+        fetchData={{}}
+        noOneComponent={ <NoOneComponent /> }
+      />
+    )
+  }
+}
+
+const TopComponent = ({ businessData, handleToAllComment, currentCategoryIndex, handleFilterClickMiddleware }) => {
+  if (!businessData) return <div />
+  const { publicityImg, brandName, smallLogoImg, brandSlogan, serviceCount, goodCommentCount, industryCategoryBoList } = businessData
+  return (
+    <div className='business'>
+      <div className='header'>
+        <img className='banner-img' src={ publicityImg } alt={ brandName } />
+        <div className='brand-info'>
+          <img src={ smallLogoImg } alt={ brandName } />
+          <div className='right'>
+            <h1>{ brandName }</h1>
+            <p>{ brandSlogan }</p>
+          </div>
+        </div>
+        <Flex className='brand-num'>
+          <FItem className='server-count'>
+            <p className='top'>{ serviceCount }</p>
+            <p className='bottom'>服务次数</p>
+          </FItem>
+          <FItem className='good-comment-count'>
+            <p className='top'>{ goodCommentCount }</p>
+            <p className='bottom'>好评数</p>
+          </FItem>
+        </Flex>
+      </div>
+      <LItem className='user-comment' arrow='horizontal' extra='查看全部' onClick={ () => handleToAllComment(businessData) }>
+        用户评价
+      </LItem>
+      <div className='good-list'>
+        <ul className='s-label'>
+          {
+            industryCategoryBoList.map((item, index) => <li className={ index === currentCategoryIndex ? 'active' : '' } key={ item.industryCategoryId } onClick={ () => { if (index !== currentCategoryIndex) handleFilterClickMiddleware(index, industryCategoryBoList) } }>{ item.industryCategoryName }</li>)
+          }
+        </ul>
+      </div>
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ daojia/components/comment-info.js 
+ 
+import React from 'react'
+import { parseQuery, get, getStore } from '@boluome/common-lib'
+import { Listview, Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+
+import CommentItem from './common-component/comment-item'
+import NoOneComponent from './common-component/no-one-component'
+
+import '../styles/comment-info.scss'
+
+export default class CommentInfo extends React.Component {
+  constructor(props) {
+    super(props)
+    const brandCode = parseQuery(location.search).brandCode
+    const brandId = parseQuery(location.search).brandId
+    const serviceId = parseQuery(location.search).serviceId
+    const currentLabel = { score: 'all', name: '全部' }
+    this.state = {
+      currentLabel,
+      brandCode,
+      brandId,
+      serviceId,
+      offset: 0,
+    }
+    this.getComments = this.getComments.bind(this)
+    this.getCommenetApi = this.getCommenetApi.bind(this)
+    this.getCommenetApi({ score: 'all', limit: 1, offset: 20 }, data => this.setState({ commentAllData: data }))
+  }
+
+  handleLabelClickMiddleware(currentLabel) {
+    this.setState({ currentLabel, offset: 0 })
+  }
+  getComments(limit, offset, fetchData, onSuccess) {
+    this.onSuccess = onSuccess
+    const { currentLabel } = this.state
+    const commentParas = { score: currentLabel.score, limit: Math.ceil(offset / limit) ? Math.ceil(offset / limit) : 1, offset: limit }
+    const callback = data => {
+      const commentData = data.commentData
+      onSuccess(commentData)
+      if (commentData.length > 0) this.setState({ offset: offset + limit + 1 })
+    }
+    this.getCommenetApi(commentParas, callback)
+  }
+  getCommenetApi(paras, callback) {
+    const closeLoading = Loading()
+    const { brandCode, brandId, serviceId } = this.state
+    let url = '/daojia/v1/brand/comments'
+    if (serviceId) {
+      url = '/daojia/v1/service/comments'
+      const industryCode = getStore('industryCode', 'session')
+      paras = merge(paras)({ industryCode, serviceId })
+    } else {
+      paras = merge(paras)({ brandCode, brandId })
+    }
+    get(url, paras).then(({ code, data, message }) => {
+      if (code === 0) {
+        callback(data)
+        // 如果第一次，保存所有资料
+        // if (isFirst) this.setState({ commentAllData: data })
+      } else {
+        Toast.fail(message)
+      }
+      closeLoading()
+    })
+  }
+  render() {
+    const { currentLabel, offset, commentAllData } = this.state
+    if (!commentAllData) return <div />
+    const datas = [
+      { score: 'all', name: '全部' },
+      { score: 'good', name: '好评' },
+      { score: 'medium', name: '中评' },
+      { score: 'fail', name: '差评' },
+    ]
+    if (commentAllData) {
+      const { failComment, goodComment, mediumComment, total } = commentAllData
+      datas[0].num = total
+      datas[1].num = goodComment
+      datas[2].num = mediumComment
+      datas[3].num = failComment
+    }
+    console.log(commentAllData)
+    const { commentData = [] } = commentAllData
+    return (
+      <div className='comment-info'>
+        <ul className='s-label'>
+          {
+            datas.map(item => <li className={ item.score === currentLabel.score ? 'active' : '' } key={ item.score } onClick={ item.score === currentLabel.score ? '' : () => this.handleLabelClickMiddleware(item) }>{ `${ item.name }(${ item.num })` }</li>)
+          }
+        </ul>
+        {
+          commentData.length === 0
+          ? <NoOneComponent />
+          : <div>
+            <Listview
+              listItem={ <CommentItem /> }
+              onFetch={ this.getComments }
+              limit={ 20 }
+              offset={ offset }
+              fetchData={{}}
+              dataList={ commentData }
+              noOneComponent={ <NoOneComponent /> }
+            />
+          </div>
+        }
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/comment.js 
+ 
+import React from 'react'
+
+const Comment = ({ mock }) => {
+  console.log('mock', mock)
+  return (
+    <div>{ mock }</div>
+  )
+}
+
+export default Comment
+         
+ 
+ 
+ 
+ daojia/components/common-component/comment-item.js 
+ 
+import React from 'react'
+import { Evaluation } from '@boluome/oto_saas_web_app_component'
+import { Grid, Icon } from 'antd-mobile'
+
+import '../../styles/comment-item.scss'
+
+const CommentItem = ({ data }) => {
+  const { userId, name, contact, comment } = data
+  const { address } = contact
+  const { commentTime, imgs, score, userComment, replys } = comment
+  return (
+    <div className='comment-item'>
+      <ul className='comment-header'>
+        <li className='comment-info'>
+          <p className='user-icon' />
+          <span>{ userId }</span>
+          <Evaluation defaultValue={ `${ score / 0.05 }%` } width={ '1.6rem' } />
+        </li>
+        <li className='comment-time'>
+          { commentTime } &nbsp;&nbsp;{ `服务：${ name }` }
+        </li>
+        <li className='comment-content'>
+          <p className='text'>{ userComment }</p>
+          <Grid
+            data={ imgs }
+            columnNum={ 3 }
+            renderItem={ (dataItem, index) => (
+              <div style={ index % 3 !== 2 ? { paddingRight: '.12rem', marginBottom: '.2rem' } : { marginBottom: '.2rem' } }>
+                <img src={ dataItem } style={{ width: '100%', height: '100%' }} alt='icon' />
+              </div>)
+            }
+          />
+        </li>
+        <li className='comment-address'>{ `来自于：${ address }` }</li>
+      </ul>
+      <div className='comment-reply'>
+        {
+          replys && replys.length > 0 &&
+          replys.map(item => <p key={ item.value }><Icon type={ require('svg/daojia/message.svg') } size='md' />{ `${ item.key }：${ item.value }` }</p>)
+        }
+      </div>
+    </div>
+  )
+}
+
+export default CommentItem
+         
+ 
+ 
+ 
+ daojia/components/common-component/good-item.js 
+ 
+import React, { Component } from 'react'
+import { Icon, Toast } from 'antd-mobile'
+
+import '../../styles/good-item.scss'
+
+const GoodItem = ({ data, onClick }) => {
+  const { serviceThumbnailImg, serviceName, brandName, sellPrice, goodCommentCount, statusDescription, isCanService, count, checkNum, maxSellPrice, unitName } = data
+  return (
+    <li className='good-item' onClick={ onClick ? () => onClick(data) : '' }>
+      <div className='left'>
+        <img src={ serviceThumbnailImg } alt={ serviceName } />
+        {
+          statusDescription && isCanService !== false &&
+          <p>
+            <span>{ statusDescription }</span>
+          </p>
+        }
+        {
+          isCanService === false &&
+          <p>
+            <span>不支持<br />当前地址</span>
+          </p>
+        }
+      </div>
+      <div className='right'>
+        <p className='top'>{ serviceName }</p>
+        <p className='middle'>{ brandName }</p>
+        <p className='bottom'>
+          <span className='price'>
+            { maxSellPrice ? `¥${ sellPrice } ~ ¥${ maxSellPrice }/${ unitName }` : `¥${ sellPrice }/${ unitName }` }
+          </span>
+          {
+            goodCommentCount !== undefined &&
+            <span className='good-comment'>
+              <Icon type={ require('svg/daojia/good_comment.svg') } size='xs' />
+              { `好评数：${ goodCommentCount }` }
+            </span>
+          }
+        </p>
+        {
+          Boolean(count) && !checkNum &&
+          <span className='good-count'>{ `x ${ count }` }</span>
+        }
+        {
+          Boolean(count) && checkNum &&
+          <ChangeGoodCount count={ count } { ...checkNum } />
+        }
+      </div>
+    </li>
+  )
+}
+
+export default GoodItem
+
+
+class ChangeGoodCount extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      count: 1,
+    }
+  }
+  componentWillReceiveProps(nextProps) {
+    const { count } = nextProps
+    const preCount = this.state.count
+    if (count !== preCount) this.setState({ count })
+  }
+  handleAddClick(count) {
+    const { handleChangeCount, currentDate, serviceCount } = this.props
+    if (!currentDate) {
+      Toast.info('请先选择服务时间')
+      return
+    }
+    if (count >= serviceCount) {
+      Toast.info('已经到达最大购买数量')
+      return
+    }
+    count++
+    handleChangeCount(count)
+  }
+  handleSubClick(count) {
+    const { handleChangeCount, currentDate, minQuantity } = this.props
+    if (!currentDate) {
+      Toast.info('请先选择服务时间')
+      return
+    }
+    if (count <= minQuantity) {
+      Toast.info(`${ minQuantity }份起购买`)
+      return
+    }
+    count--
+    handleChangeCount(count)
+  }
+  render() {
+    const { count } = this.state
+    const { minQuantity } = this.props
+    return (
+      <div className='change-good-count good-count'>
+        <Icon onClick={ () => this.handleSubClick(count) } type={ count <= minQuantity ? require('svg/daojia/sub_disable.svg') : require('svg/daojia/sub.svg') } size='md' />
+        <span>&nbsp;{ count }&nbsp;</span>
+        <Icon onClick={ () => this.handleAddClick(count) } type={ require('svg/daojia/add.svg') } size='md' />
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/common-component/label.js 
+ 
+import React from 'react'
+
+const Label = ({ datas,  }) => (
+  <ul className='s-label'>
+    {
+      datas.map((item, index) => <li className={ index === currentCategoryIndex ? 'active' : '' } key={ item.industryCategoryId } onClick={ () => this.handleFilterClickMiddleware(index) }>{ item.industryCategoryName }</li>)
+    }
+  </ul>
+)
+
+export default Label
+         
+ 
+ 
+ 
+ daojia/components/common-component/no-one-component.js 
+ 
+import React from 'react'
+import { Empty } from '@boluome/oto_saas_web_app_component'
+
+const NoOneComponent = () => {
+  return (
+    <Empty selfClass='no-one-component' message='暂无数据～' imgUrl={ require('../../img/no_data.png') } style={{ background: '#f5f5f6' }} />
+  )
+}
+
+export default NoOneComponent
+         
+ 
+ 
+ 
+ daojia/components/common-component/pay-footer.js 
+ 
+import React from 'react'
+import { Toast } from 'antd-mobile'
+import { merge } from 'ramda'
+
+const pStyle = {
+  fontSize:    '.28rem',
+  lineHeight:  '1rem',
+  float:       'left',
+  color:       '#ff4848',
+  paddingLeft: '.3rem',
+}
+
+const spanStyle = {
+  fontSize:    '.20rem',
+  lineHeight:  '1rem',
+  color:       '#999',
+  paddingLeft: '.13rem',
+}
+
+const disableBtn = {
+  background: '#e5e5e5',
+  width:      '3rem',
+  height:     '1rem',
+  fontSize:   '.36rem',
+  lineHeight: '1rem',
+  textAlign:  'center',
+  float:      'right',
+  color:      '#fff',
+}
+const activeBtn = merge(disableBtn)({ background: '#ffab00' })
+const footerStyle = {
+  background: '#fff',
+  height:     '1rem',
+  width:      '100%',
+}
+
+const PayFooter = ({ sellPrice, discount, handlePlaceClick = '', orderParas, mustOptions, text = '立即缴费' }) => {
+  if (discount === undefined) return <div />
+  discount = Number(discount)
+  let payPrice = sellPrice - discount
+  if (payPrice <= 0) payPrice = 0.01
+  payPrice = payPrice.toFixed(2)
+
+  // canplace 表示当前可不可以提交，默认可以, reason 表示不可提交的原因
+  let canplace = true
+  let reason = ''
+  mustOptions.forEach(item => {
+    if (!item.status) {
+      canplace = false
+      reason = item.title
+    }
+  })
+  return (
+    <div className='pay-footer' style={ footerStyle }>
+      <p style={ pStyle }>
+        实付：¥
+        <span style={{ fontSize: '.36rem' }}>{ payPrice.split('.')[0] }</span>
+        { `.${ payPrice.split('.')[1] }` }
+        {
+          Boolean(discount) &&
+          <span style={ spanStyle }>{ `优惠${ discount.toFixed(2) }` }元</span>
+        }
+      </p>
+      <p style={ canplace ? activeBtn : disableBtn } onClick={ canplace ? () => handlePlaceClick(orderParas) : () => Toast.info(`请选择${ reason }`, 1) }>{ text }</p>
+    </div>
+  )
+}
+
+export default PayFooter
+         
+ 
+ 
+ 
+ daojia/components/common-component/picture-upload/image-list-mask.js 
+ 
+import React from 'react'
+import { Carousel, Icon } from 'antd-mobile'
+
+import './style/image-list-mask.scss'
+
+export default class ImageListMask extends React.Component {
+  constructor(props) {
+    super(props)
+    let { defaultIndex } = props
+    const { imgs } = props
+    // isDel: 当前是删除操作
+    this.state = {
+      index: ++defaultIndex,
+      isDel: false,
+      imgs,
+    }
+  }
+  handleImgCarouseChange(index) {
+    const { isDel } = this.state
+    if (isDel) {
+      this.setState({ isDel: false })
+      return
+    }
+    this.setState({ index })
+  }
+  handleIconClick(index, imgs) {
+    const { handleIconClick, handleContainerClose } = this.props
+    index--
+    imgs.splice(index, 1)
+    if (index < 1) index = 1
+    this.setState({ imgs, index, isDel: true })
+    if (imgs.length === 0) handleContainerClose()
+    handleIconClick(imgs)
+  }
+  render() {
+    const { index, imgs } = this.state
+    return (
+      <div className='image-list' onClick={ e => e.preventDefault() }>
+        <p className='icon-container'><Icon onClick={ () => this.handleIconClick(index, imgs) } type={ require('svg/shangcheng/del.svg') } size='md' /></p>
+        <Carousel className='img-list-carousel' selectedIndex={ index - 1 } afterChange={ a => this.handleImgCarouseChange(a + 1) }>
+          {
+            imgs.map(o => <div key={ o.url }><img src={ o.url } alt='img_update' /></div>)
+          }
+        </Carousel>
+        <p className='page-index'>{ `${ index } / ${ imgs.length }` }</p>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/common-component/picture-upload/index.js 
+ 
+/*
+  使用说明：
+    1， handleChangeImg ：Function(newImgs){}，当图片内容改变时，将改变后的图片对象返回出去
+    2， imgs ：Array，当前选中的图片列表
+    3， imgsLength ：Number，非必传默认九图，上传图片的最大数量（现支持3，6，9图）
+    (注：1，2返回的图片列表，都是上传后返回的服务器中的图片地址)
+*/
+
+import React from 'react'
+import { getStore } from '@boluome/common-lib'
+import { Mask, Loading } from '@boluome/oto_saas_web_app_component'
+import { ImagePicker, Toast } from 'antd-mobile'
+
+import ImageListMask from './image-list-mask'
+
+import './style/index.scss'
+
+export default class PicSelect extends React.Component {
+  constructor(props) {
+    super(props)
+    const { imgs } = props
+    this.state = {
+      imgs,
+    }
+    this.imgUpload = this.imgUpload.bind(this)
+    this.createCanvas = this.createCanvas.bind(this)
+    this.canvertToBinary = this.canvertToBinary.bind(this)
+  }
+  componentWillUnmount() {
+    if (this.closeMask) this.closeMask()
+  }
+
+  // 判断大小
+  handleChangeImg(v, o, i, imgs) {
+    const { handleChangeImg } = this.props
+    if (o === 'add') {
+      const file = v[v.length ? v.length - 1 : 0].file
+      const fileType = file.type
+      const fileReader = new FileReader()
+      fileReader.readAsDataURL(file)
+      fileReader.onload = event => {
+        const result = event.target.result  // 返回的dataURL
+        const img = new Image()
+        img.src = result
+        const max = 1024 * 1024 // Math.pow(1024, 2)
+        if (file.size / max < 8) {
+          img.onload = () => {
+            const base64 = this.createCanvas(img, fileType)
+            const a = this.canvertToBinary(base64)
+            this.imgUpload(a, imgs)
+          }
+        } else {
+          Toast.info('图片不能超过8MB !', 2, null, false)
+        }
+      }
+    } else if (o === 'remove') {
+      imgs.splice(i, 1)
+      const { onChangeimg } = this.props
+      if (onChangeimg) { onChangeimg(imgs) }
+      handleChangeImg(imgs)
+    }
+  }
+  // 图片处理
+  createCanvas(img, fileType) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const quality = 0.7  // 默认图片质量为0.7
+    const width = img.width * 1
+    const height = img.height * 1
+
+    canvas.width = width
+    canvas.height = height
+
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, 0, 0, width, height)
+
+    // 压缩--quality值越小，所绘制出的图像越模糊
+    const base64data = canvas.toDataURL(fileType, quality)
+    return base64data
+  }
+  // 对base64 进行处理
+  canvertToBinary(dataURI) {
+    const byteString = window.atob(dataURI.split(',')[1])
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i)
+    }
+    const bb = new window.Blob([ab], { type: 'image/png' })
+    return bb
+  }
+  imgUpload(imgUrl, imgs) {
+    const closeLoading = Loading()
+    const { handleChangeImg } = this.props
+    const userid = getStore('customerUserId', 'session')
+    const token = getStore('accessToken', 'session')
+    const appcode = getStore('customerCode', 'session')
+    const headers = {
+      appcode,
+      userid,
+      token,
+    }
+    fetch('https://upload.otosaas.com/new', { body: imgUrl, method: 'post', headers })
+    .then(response => response.json())
+    .then(json => {
+      const { code, data } = json
+      if (code === 0) {
+        Toast.info('上传成功 !', 2, null, false)
+        imgs.push({ url: `https://f2.otosaas.com/${ data.md5 }` })
+        handleChangeImg(imgs)
+      } else {
+        Toast.info('图片上传失败 !', 2, null, false)
+      }
+      closeLoading()
+    })
+    .catch(error => {
+      console.log('request failed: ', error)
+      closeLoading()
+    })
+  }
+  onImageClick(defaultIndex) {
+    const { handleChangeImg, imgs } = this.props
+    this.closeMask = Mask(<ImageListMask { ...{ defaultIndex, imgs, handleIconClick: handleChangeImg } } />)
+  }
+
+  render() {
+    const { imgs, imgsLength = 9 } = this.props
+    console.log('imgs', imgs)
+    return (
+      <div className='pic-img-container'>
+        {
+          imgs.length >= 0 && imgsLength >= 3 &&
+          <ImagePicker
+            files={ imgs.slice(0, 3) }
+            onChange={ (changeFiles, type, index) => this.handleChangeImg(changeFiles, type, index, imgs) }
+            onImageClick={ index => this.onImageClick(index) }
+          />
+        }
+        {
+          imgs.length >= 3 && imgsLength >= 6 &&
+          <ImagePicker
+            files={ imgs.slice(3, 6) }
+            onChange={ (changeFiles, type, index) => this.handleChangeImg(changeFiles, type, index + 3, imgs) }
+            onImageClick={ index => this.onImageClick(index + 3) }
+          />
+        }
+        {
+          imgs.length >= 6 && imgsLength >= 9 &&
+          <ImagePicker
+            files={ imgs.slice(6, 9) }
+            onChange={ (changeFiles, type, index) => this.handleChangeImg(changeFiles, type, index + 6, imgs) }
+            onImageClick={ index => this.onImageClick(index + 6) }
+          />
+        }
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/common-component/picture-upload/style/common.scss 
+ 
+@mixin s_middle{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    -ms-transform:translateY(-50%);     /* IE 9 */
+    -moz-transform:translateY(-50%);    /* Firefox */
+    -webkit-transform:translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateY(-50%);
+}
+@mixin s_allCenter{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    -ms-transform:translateX(-50%) translateY(-50%);     /* IE 9 */
+    -moz-transform:translateX(-50%) translateY(-50%);    /* Firefox */
+    -webkit-transform:translateX(-50%) translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%) translateY(-50%);
+}
+
+/*块元素模版，参数对应：$w对应宽，$h对应高，*/
+@mixin s_blockDemo ($w, $h) {
+    width: $w;
+    height: $h;
+}
+
+@mixin s_fontDemo ($size, $l, $clr) {
+    font-size: $size;
+    line-height: $l;
+    color: $clr;
+}
+
+/* img的容器*/
+@mixin sc_img_container($w, $h) {
+  @include s_blockDemo($w, $h);
+  position: relative;
+  overflow: hidden;
+  img {
+    height: 100%;
+    @include s_allCenter;
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/common-component/picture-upload/style/image-list-mask.scss 
+ 
+@import "./common.scss";
+
+// image-mask中的样式
+.image-list {
+  background: #fff;
+  @include s_middle;
+  width: 100%;
+  z-index: 2;
+  .icon-container {
+    height: 75px;
+    position: relative;
+    .am-icon {
+      @include s_middle;
+      right: 30px;
+    }
+  }
+  .page-index {
+    @include s_fontDemo(28px, 75px, #666);
+    text-align: center;
+  }
+  .img-list-carousel {
+    .slider-list {
+      height: 750px !important;
+      div {
+        @include sc_img_container(100%, 750px);
+      }
+    }
+    .slider-decorator-0 {
+      display: none;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/common-component/picture-upload/style/index.scss 
+ 
+
+.pic-img-container {
+  .am-image-picker-list .am-flexbox {
+    .am-flexbox-item:nth-of-type(4) {
+      display: none;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/detail-components/bottom-component.js 
+ 
+import React from 'react'
+import { parseQuery } from '@boluome/common-lib'
+import { Mask } from '@boluome/oto_saas_web_app_component'
+import { flatten } from 'ramda'
+
+import ImageListMask from '../image-list-mask'
+
+export default class BottomComponent extends React.Component {
+  constructor(props) {
+    super(props)
+    console.log('class_props', props)
+  }
+  render() {
+    const { goodDetails, currentAddress, bottomComponentStyle } = this.props
+    const { duration, serviceDetailsData, serviceAreaVOs, updateBefore, wait, deductAfter, deductPercentage, undeductBefore } = goodDetails
+    const supportThisCity = parseQuery(location.search).supportThisCity
+    let imgs = serviceDetailsData.filter(o => o.imgList.length > 0).map(o => {
+      const imgList = o.imgList.map(oo => ({ url: oo.imgUrl, text: oo.imgDesc }))
+      return imgList
+    })
+    imgs = flatten(imgs)
+    return (
+      <div className='detail-bottom detail-container' style={ bottomComponentStyle }>
+        <ul className='service-list'>
+          <li>
+            <div className='service-title'>
+              <p />
+              <p>服务区域</p>
+            </div>
+            <div className='service-content'>{ supportThisCity === 'false' ? `您的地址（${ currentAddress }）暂不支持该服务` : `您的地址（${ currentAddress }）支持该服务` }</div>
+          </li>
+          <li className='server-feature'>
+            <p className='title' onClick={ () => Mask(<SupportArea { ...{ serviceAreaVOs } } />) }>查看支持区域</p>
+          </li>
+          {
+            duration &&
+            <li>
+              <div className='service-title'>
+                <p />
+                <p>服务时长</p>
+              </div>
+              <div className='service-content'>{ `${ duration }分钟` }</div>
+            </li>
+          }
+          {
+            serviceDetailsData && serviceDetailsData.length > 0 &&
+            serviceDetailsData.map(item => {
+              if (item.title === '退款、修改订单注意事项') {
+                return (
+                  <li key={ item.title }>
+                    <div className='service-title'>
+                      <p />
+                      <p>{ item.title }</p>
+                    </div>
+                    <h1 className='text'>
+                      { `1、如需修改订单，请提前${ updateBefore }天致电客服热线改约，更改时间以反馈的可预约时间为准。` }<br />
+                      { `2、若因用户原因导致无法入户服务，工程师将在等待${ wait }分钟后自行离开视同服务。` }<br />
+                      { `3、服务预约时间开始前${ deductAfter }小时内取消订单，扣除订单金额的${ deductPercentage }%作为违约金：服务前${ undeductBefore }小时 外取消订单，全额退款。` }
+                    </h1>
+                  </li>
+                )
+              }
+              return (
+                <li key={ item.title }>
+                  <div className='service-title'>
+                    <p />
+                    <p>{ item.title }</p>
+                  </div>
+                  {
+                    item.content &&
+                    <div className='service-content'>{ item.content }</div>
+                  }
+                  {
+                    item.imgList && item.imgList.map(ii => (
+                      <div key={ ii.imgUrl } className='service-img-container'>
+                        <img src={ ii.imgUrl } alt={ ii.imgDesc } onClick={ () => Mask(<ImageListMask { ...{ imgs, currentImgUrl: ii.imgUrl } } />, { maskStyle: { background: '#1f1f1f', opacity: '1' } }) } />
+                      </div>
+                    ))
+                  }
+                </li>
+              )
+            })
+          }
+        </ul>
+      </div>
+    )
+  }
+}
+
+
+const SupportArea = ({ serviceAreaVOs }) => (
+  <div className='support-area'>
+    <p className='support-area-title'>该服务支持区域</p>
+    <table>
+      <thead>
+        <tr>
+          <td>{ serviceAreaVOs[0].city }</td>
+          <td>{ serviceAreaVOs[0].countyList.join('、') }</td>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          serviceAreaVOs && serviceAreaVOs.length > 0 &&
+          serviceAreaVOs.map((item, index) => {
+            if (index > 0) {
+              return (
+                <tr key={ item.city }>
+                  <td>{ item.city }</td>
+                  <td>{ item.countyList.join('、') }</td>
+                </tr>
+              )
+            }
+            return false
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+)
+         
+ 
+ 
+ 
+ daojia/components/detail-components/reserve-time.js 
+ 
+/*
+  传入的参数：
+    time: {
+      startH: '00:00',
+      endH:   '21:00'
+    }
+    dayArray: [
+      {
+        date:'2017-07-29'
+        dateDesc:'周六'
+        shortDate:'07-29'
+        timeVoList:[]
+      },
+      {
+        date:'2017-07-30'
+        dateDesc:'周日'
+        shortDate:'07-30'
+        timeVoList:[{startH: '00:00', endH: '23:00'}]
+      }
+    ]
+    handleAllTimeClick: Function
+*/
+
+import React from 'react'
+import { Flex } from 'antd-mobile'
+import { contains, flatten } from 'ramda'
+
+import '../../styles/reserve-time.scss'
+
+const FItem = Flex.Item
+
+const getMins = (startTime, endTime) => {
+  const startH = startTime.split(':')[0]
+  const startM = startTime.split(':')[1]
+  const endH = endTime.split(':')[0]
+  const endM = endTime.split(':')[1]
+  const mins = ((endH - startH) * 60) + (endM - startM)
+  return mins
+}
+
+const ReserveTime = ({ time, dayArray, cutTimePoint }) => {
+  const startTime = time.startTime
+  const endTime = time.endTime
+  const startH = Number(startTime.split(':')[0])
+  // 当结束时间分钟大于0时，小时数加1，保证时间轴坐标够长
+  const endH = Number(endTime.split(':')[1] > 0 ? ++endTime.split(':')[0] : endTime.split(':')[0])
+  const timesLengthArr = []
+  for (let i = startH; i <= endH; i++) {
+    timesLengthArr.push(i)
+  }
+  // timeTotalIndex: 时间按返回的间隔分成的总分数
+  let timeTotalIndex = Math.ceil(Number(getMins(startTime, endTime) / cutTimePoint))
+  // 因为上一个时间返回的最小单位是小时，而下面的最小单位都是半小时，为了上下对应，所以timeTotalIndex不能为单数
+  if (timeTotalIndex % 2 === 1) timeTotalIndex++
+  console.log('timeTotalIndex', timeTotalIndex)
+  return (
+    <div className='reserve-time'>
+      <div className='axis'>
+        <p className='time-part'>时段</p>
+        <Flex>
+          {
+            timesLengthArr.map((item, index) => {
+              if (index % 2 === 0) {
+                return (
+                  <FItem className='long' key={ item }>
+                    <p>{ item }</p>
+                  </FItem>
+                )
+              }
+              return <FItem className='short' key={ item } />
+            })
+          }
+        </Flex>
+      </div>
+      <div className='reserve-time-list'>
+        {
+          dayArray.slice(0, 20).map((item, index) => <TimeAxisItem key={ item.date } { ...{ title: index > 2 ? item.shortDate : item.dateDesc, timeTotalIndex, timeVoList: item.timeVoList, startTime, cutTimePoint } } />)
+        }
+      </div>
+    </div>
+  )
+}
+
+export default ReserveTime
+
+const TimeAxisItem = ({ title, timeTotalIndex, timeVoList, startTime, cutTimePoint }) => {
+  const timeTotal = Array.from(new Array(timeTotalIndex)).map((o, i) => !o && ++i)
+  let canServiceTimes = []
+  // 将timeVoList中所有的时间段，都转化成和timeTotal这个总时间对应的索引，timeTotal表示[1, 2, 3, 4, 5， 6]这种共分成几份的意思
+  if (timeVoList.length > 0) {
+    const getCanservice = timeVoList.map(o => {
+      const beginIndex = Number(getMins(startTime, o.startTime) / cutTimePoint) + 1
+      const length = Number(getMins(o.startTime, o.endTime) / cutTimePoint)
+      const times = Array.from(new Array(length)).map((oo, i) => !oo && beginIndex + i)
+      return times
+    })
+    canServiceTimes = [...flatten(getCanservice)]
+  }
+  return (
+    <div className='time-axis-item'>
+      <p className='time-part'>{ title }</p>
+      <Flex>
+        {
+          timeTotal.map(item => {
+            if (contains(item)(canServiceTimes)) {
+              return <FItem className='able' key={ item } />
+            }
+            return <FItem className='disable' key={ item } />
+          })
+        }
+      </Flex>
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ daojia/components/detail-components/specification.js 
+ 
+import React from 'react'
+import { Icon } from 'antd-mobile'
+
+import '../../styles/specification.scss'
+
+export default class Specification extends React.Component {
+  constructor(props) {
+    super(props)
+    const { currentSpec = '' } = props
+    // let currentIndex = ''
+    // if (currentSpec) {
+    //   specificationsList.forEach((item, index) => {
+    //     if (item.specificationsId === currentSpec.specificationsId) {
+    //       currentIndex = index
+    //       return
+    //     }
+    //   })
+    // }
+    this.state = {
+      currentSpec,
+    }
+  }
+  handleGoodClick(currentSpec) {
+    const { handleSpecClick } = this.props
+    handleSpecClick(currentSpec)
+    this.setState({ currentSpec })
+  }
+  render() {
+    const { currentSpec } = this.state
+    const { specificationsList, serviceThumbnailImg, handleBtnClick, goodDetails, statusDescription, handleCloseClick, unitName } = this.props
+    let { sellPrice, maxSellPrice } = this.props
+    let commodityName = '请选择商品规格'
+    let originalPrice = ''
+    if (currentSpec) {
+      sellPrice = currentSpec.sellPrice
+      maxSellPrice = currentSpec.maxSellPrice
+      commodityName = currentSpec.commodityName
+      originalPrice = currentSpec.originalPrice
+    }
+    let priceText = `价格：¥${ sellPrice }/${ unitName }`
+    if (maxSellPrice) priceText = `价格：¥${ sellPrice } ~ ¥${ maxSellPrice }/${ unitName }`
+    if (currentSpec) priceText = `价格：¥${ currentSpec.sellPrice }/${ unitName }`
+    return (
+      <div className='specification'>
+        <Icon className='close-icon' type='cross' size='md' onClick={ handleCloseClick } />
+        <div className='header'>
+          <div className='specification-left'>
+            <img src={ serviceThumbnailImg } alt='商品图片' />
+          </div>
+          <ul className='specification-right'>
+            <li className='price'>
+              { priceText }
+              {
+                sellPrice !== originalPrice && currentSpec &&
+                <del>{ ` ¥${ originalPrice }` }</del>
+              }
+            </li>
+            <li className='selected-info'>{ commodityName }</li>
+          </ul>
+        </div>
+        <ul className='specification-list'>
+          <h1>请选择需购买的规格</h1>
+          {
+            specificationsList.map((item, index) => {
+              const isSelect = currentSpec && (currentSpec.specificationsId === item.specificationsId)
+              return (
+                <li
+                  style={ index % 2 === 1 ? { float: 'right' } : {} }
+                  onClick={ () => { if (!isSelect) this.handleGoodClick(item) } }
+                  key={ item.specificationsId }
+                  className={ isSelect ? 'active' : '' }
+                >
+                  { item.commodityName }
+                </li>
+              )
+            })
+          }
+        </ul>
+        <p className={ !statusDescription && currentSpec ? 'button active' : 'button' } onClick={ () => { if (!statusDescription && currentSpec) handleBtnClick({ goodDetails, currentSpec }) } }>立即购买</p>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/detail-components/top-component.js 
+ 
+import React, { Component } from 'react'
+import { List, Popup, Icon } from 'antd-mobile'
+
+import CommentItem from '../common-component/comment-item'
+import ReserveTime from './reserve-time'
+import Specification from './specification'
+
+const LItem = List.Item
+
+export default class TopComponent extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      showAllTimes: false,
+    }
+  }
+
+  componentDidUpdate() {
+    return true
+  }
+
+  handleCloseClick() {
+    Popup.hide()
+  }
+
+  render() {
+    const { goodDetails, handleBusinessNameClick, handleMoreCommentClick, allTimes, handleSpecClick, handleBtnClick, currentSpec, topComponentStyle } = this.props
+    const {
+      serviceDetailsImg, serviceName, brand, orderComment, commentCount, goodCommentCount, time, dayArray, cutTimePoint,
+      specificationsList, serviceThumbnailImg,
+      statusDescription,
+      sellPrice, maxSellPrice, unitName,
+    } = goodDetails
+    // hasSpec 表示当前是否是多规格
+    const hasSpec = specificationsList && specificationsList.length > 0
+    const { brandId, brandName, brandSlogan, serviceCount, smallLogoImg } = brand
+    return (
+      <div className='detail-top detail-container' style={ topComponentStyle }>
+        <div className='good-info'>
+          <img src={ serviceDetailsImg } alt={ serviceName } />
+          <LItem
+            extra={
+              maxSellPrice ?
+                <p>¥<span>{ sellPrice }</span> ~ ¥<span>{ maxSellPrice }</span>/{ unitName }</p> :
+                <p>¥<span>{ sellPrice }</span>/<span>{ unitName }</span></p>
+            }
+            className='good-name'
+          >
+            { serviceName }
+          </LItem>
+          {
+            hasSpec &&
+            <LItem arrow='horizontal' className='spec' onClick={ () => Popup.show(<Specification { ...{ currentSpec, specificationsList, serviceThumbnailImg, handleSpecClick, handleBtnClick, goodDetails, statusDescription, handleCloseClick: this.handleCloseClick, maxSellPrice, unitName, sellPrice } } />, { animationType: 'slide-up', maskClosable: true }) }>
+              { !currentSpec ? '请选择规格' : `已选 ${ currentSpec.commodityName }` }
+            </LItem>
+          }
+        </div>
+        {
+          Boolean(commentCount) &&
+          <div className='comment'>
+            <LItem
+              className='comment-header'
+              arrow='horizontal'
+              extra={
+                <span className='good-comment'>
+                  <Icon type={ require('svg/daojia/good_comment.svg') } size='xs' />
+                  { `好评数：${ goodCommentCount }` }
+                </span>
+              }
+              onClick={ handleMoreCommentClick }
+            >
+              用户评价
+            </LItem>
+            {
+              orderComment &&
+              <CommentItem data={ orderComment } />
+            }
+          </div>
+        }
+        <div className='reserve-time'>
+          <LItem arrow='horizontal' extra='全部时间' className='header' onClick={ () => Popup.show(<ReserveTimePopup { ...{ time: allTimes.time, dayArray: allTimes.dayArray, cutTimePoint: allTimes.cutTimePoint } } />, { animationType: 'slide-up', maskClosable: true }) }>
+            <p>
+              可预约时间&nbsp;&nbsp;
+              <span className='green-bg' />&nbsp;
+              <span className='text'>可约</span>&nbsp;&nbsp;
+              <span className='white-bg' />&nbsp;
+              <span className='text'>不可约</span>
+            </p>
+          </LItem>
+          <ReserveTime { ...{ time, dayArray, cutTimePoint } } />
+        </div>
+        <div className='brand-info'>
+          <dl className='brand-name' onClick={ () => handleBusinessNameClick(brandId) }>
+            <dt><img src={ smallLogoImg } alt={ brandName } /></dt>
+            <dd>
+              <h1>{ brandName }</h1>
+              <p>{ brandSlogan }</p>
+            </dd>
+          </dl>
+          <ul className='brand-number'>
+            <li>
+              <h1>{ serviceCount }</h1>
+              <p>服务次数</p>
+            </li>
+            <li>
+              <h1>{ brand.goodCommentCount }</h1>
+              <p>好评数</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    )
+  }
+}
+
+const ReserveTimePopup = ({ time, dayArray, cutTimePoint }) => {
+  return (
+    <div className='reserve-time'>
+      <LItem extra={ <Icon type='cross' size='xxs' onClick={ () => Popup.hide() } /> } className='header'>
+        <p>
+          可预约时间&nbsp;&nbsp;
+          <span className='green-bg' />&nbsp;
+          <span className='text'>可约</span>&nbsp;&nbsp;
+          <span className='white-bg' />&nbsp;
+          <span className='text'>不可约</span>
+        </p>
+      </LItem>
+      <ReserveTime { ...{ time, dayArray, cutTimePoint } } />
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ daojia/components/detail-container.js 
+ 
+import React from 'react'
+
+const DetailContainer = ({ children }) => (<div>{ children }</div>)
+
+export default DetailContainer
+         
+ 
+ 
+ 
+ daojia/components/detail.js 
+ 
+import React, { Component } from 'react'
+import { DragDirection } from '@boluome/oto_saas_web_app_component'
+import { Icon, Popup, WhiteSpace } from 'antd-mobile'
+import { merge } from 'ramda'
+
+import TopComponent from './detail-components/top-component'
+import BottomComponent from './detail-components/bottom-component'
+import Specification from './detail-components/specification'
+
+import '../styles/detail.scss'
+
+export default class Detail extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { topContainerStyle: { top: '0px' }, bottomContainerStyle: { top: '100%' } }
+    this.handleDragDirctionTop = this.handleDragDirctionTop.bind(this)
+    this.handleDragDirctionBottom = this.handleDragDirctionBottom.bind(this)
+  }
+  componentWillUnmount() {
+    Popup.hide()
+  }
+
+  handleDragDirctionTop(res) {
+    if (res === 'up') {
+      this.setState({ showBottomComponent: true, topContainerStyle: { top: '-100%' }, bottomContainerStyle: { top: '0px' } })
+    }
+  }
+
+  handleDragDirctionBottom(res) {
+    if (res === 'down') {
+      this.setState({ showBottomComponent: false, topContainerStyle: { top: '0px' }, bottomContainerStyle: { top: '100%' } })
+    }
+  }
+
+  handleCloseClick() {
+    Popup.hide()
+  }
+
+  render() {
+    const {
+      goodDetails,
+      handleBusinessNameClick,
+      handleMoreCommentClick,
+      allTimes,
+      handleSpecClick, handleBtnClick, currentSpec,
+      currentAddress,
+    } = this.props
+    if (!goodDetails) return <div />
+
+    let { topContainerStyle, bottomContainerStyle } = this.state
+    topContainerStyle = merge(topContainerStyle)({ transition: '.8s', WebkitTransition: '.8s' })
+    bottomContainerStyle = merge(bottomContainerStyle)({ transition: '.8s', WebkitTransition: '.8s' })
+
+
+    const {
+      specificationsList,
+      servicePhone, brand,
+      pineapplePhone, platformName,
+      statusDescription,
+      serviceThumbnailImg, maxSellPrice, unitName, sellPrice,
+    } = goodDetails
+    const { brandName } = brand
+
+    // btnDisable 表示当前提交按钮是否 不可用（多规格且未选中）, statusDescription表示当前商家是否是休或满的状态
+    const hasSpec = specificationsList && specificationsList.length > 0
+    // const btnDisable = statusDescription || (hasSpec && !currentSpec)
+    const btnDisable = hasSpec && !currentSpec
+
+    const currentGood = { goodDetails }
+    if (currentSpec) currentGood.currentSpec = currentSpec
+
+    return (
+      <div className='detail'>
+        {
+          <DragDirection
+            ContentComponent={ TopComponent }
+            allProps={{ goodDetails, handleBusinessNameClick, handleMoreCommentClick, allTimes, handleSpecClick, handleBtnClick, currentSpec }}
+            handleDragDirction={ this.handleDragDirctionTop }
+            containerStyle={ topContainerStyle }
+            showBottomTips={ 'true' }
+          />
+        }
+        {
+          <DragDirection
+            ContentComponent={ BottomComponent }
+            allProps={{ goodDetails, currentAddress }}
+            handleDragDirction={ this.handleDragDirctionBottom }
+            containerStyle={ bottomContainerStyle }
+            showTopTips={ 'true' }
+          />
+        }
+        <div className='detail-footer'>
+          <p className='place-btn active' onClick={ () => {
+            if (btnDisable) {
+              Popup.show(<Specification { ...{ currentSpec, specificationsList, serviceThumbnailImg, handleSpecClick, handleBtnClick, goodDetails, statusDescription, handleCloseClick: this.handleCloseClick, maxSellPrice, unitName, sellPrice } } />, { animationType: 'slide-up', maskClosable: true })
+            } else {
+              handleBtnClick(currentGood)
+            }
+          }
+          }
+          >
+            立即购买
+          </p>
+          <p className='contact' onClick={ () => Popup.show(<CustomerService { ...{ brandName, servicePhone, pineapplePhone, platformName } } />, { animationType: 'slide-up', maskClosable: true, maskProps: { onTouchStart: e => e.preventDefault() } }) }><Icon type={ require('svg/daojia/contact.svg') } size='lg' /></p>
+        </div>
+      </div>
+    )
+  }
+}
+
+const CustomerService = ({ brandName, servicePhone, pineapplePhone, platformName }) => {
+  const nodo = false
+  return (
+    <ul className='contact'>
+      {
+        nodo &&
+        <li className='contact-second'><a href={ `tel:${ pineapplePhone }` }>{ `联系${ platformName }客服` }</a></li>
+      }
+      <li className='contact-first'><a href={ `tel:${ servicePhone }` }>{ `联系${ brandName }客服（8:00-20:00）` }</a></li>
+      <WhiteSpace size='sm' style={{ background: '#f3f3f4' }} />
+      <li className='contact-third' onClick={ () => Popup.hide() }>取消</li>
+    </ul>
+  )
+}
+         
+ 
+ 
+ 
+ daojia/components/image-list-mask/index.js 
+ 
+/*
+  props:
+    currentImgUrl: 当前点击的图片所在索引
+    imgs:          [{ url: , text: }], 图片列表
+*/
+
+import React from 'react'
+import { Carousel, Icon } from 'antd-mobile'
+
+import './index.scss'
+
+export default class ImageListMask extends React.Component {
+  constructor(props) {
+    super(props)
+    const { currentImgUrl } = props
+    const { imgs } = props
+    let index = 1
+    imgs.forEach((o, i) => {
+      if (o.url === currentImgUrl) {
+        index += i
+      }
+    })
+    // isDel: 当前是删除操作
+    this.state = {
+      isDel: false,
+      index,
+      imgs,
+    }
+  }
+  handleImgCarouseChange(index) {
+    const { isDel } = this.state
+    if (isDel) {
+      this.setState({ isDel: false })
+      return
+    }
+    this.setState({ index })
+  }
+  handleIconClick(index, imgs) {
+    const { handleIconClick, handleContainerClose } = this.props
+    index--
+    imgs.splice(index, 1)
+    if (index < 1) index = 1
+    this.setState({ imgs, index, isDel: true })
+    if (imgs.length === 0) handleContainerClose()
+    handleIconClick(imgs)
+  }
+  render() {
+    const { handleIconClick } = this.props
+    const { index, imgs } = this.state
+    const currentIndex = index - 1
+    return (
+      <div className='image-list'>
+        {
+          handleIconClick &&
+          <p className='icon-container'><Icon onClick={ () => this.handleIconClick(index, imgs) } type={ require('svg/shangcheng/del.svg') } size='md' /></p>
+        }
+        <Carousel className='img-list-carousel' selectedIndex={ currentIndex } afterChange={ a => this.handleImgCarouseChange(a + 1) }>
+          {
+            imgs.map(o => <div key={ o.url }><img src={ o.url } alt='img_update' /></div>)
+          }
+        </Carousel>
+        <p className='page-index'>
+          <span>{ imgs[currentIndex].text }</span>
+          <span>{ `${ index } / ${ imgs.length }` }</span>
+        </p>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/image-list-mask/index.scss 
+ 
+
+@mixin s_middle{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    -ms-transform:translateY(-50%);     /* IE 9 */
+    -moz-transform:translateY(-50%);    /* Firefox */
+    -webkit-transform:translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateY(-50%);
+}
+@mixin s_allCenter{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    -ms-transform:translateX(-50%) translateY(-50%);     /* IE 9 */
+    -moz-transform:translateX(-50%) translateY(-50%);    /* Firefox */
+    -webkit-transform:translateX(-50%) translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%) translateY(-50%);
+}
+@mixin s_fontDemo ($size, $l, $clr) {
+    font-size: $size;
+    line-height: $l;
+    color: $clr;
+}
+@mixin sc_img_container($w, $h) {
+  width: $w;
+  height: $h;
+  position: relative;
+  overflow: hidden;
+  img {
+    height: 100%;
+    @include s_allCenter;
+  }
+}
+
+.image-list {
+  @include s_middle;
+  width: 100%;
+  z-index: 2;
+  .icon-container {
+    height: 75px;
+    position: relative;
+    .am-icon {
+      @include s_middle;
+      right: 30px;
+    }
+  }
+  .page-index {
+    @include s_fontDemo(28px, 40px, #fff);
+    padding: 20px 30px;
+    span {
+      &:nth-of-type(1) {
+        float: left;
+      }
+      &:nth-of-type(2) {
+        float: right;
+      }
+    }
+  }
+  .img-list-carousel {
+    .slider-list {
+      height: 750px !important;
+      div {
+        @include sc_img_container(100%, 750px);
+      }
+    }
+    .slider-decorator-0 {
+      display: none;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/index-search-components/default-bottom.js 
+ 
+import React, { Component } from 'react'
+import { getStore, removeStore, setStore } from '@boluome/common-lib'
+import { Icon } from 'antd-mobile'
+
+export default class DefaultBottom extends Component {
+  constructor(props) {
+    super(props)
+    const industryCode = getStore('industryCode', 'session')
+    const searchHistorys = getStore(`${ industryCode }_searchHistorys`)
+    this.state = {
+      industryCode,
+      searchHistorys,
+    }
+  }
+  handleCrossClick(e, item, index) {
+    e.stopPropagation()
+    const { industryCode, searchHistorys } = this.state
+    searchHistorys.splice(index, 1)
+    this.setState({ searchHistorys })
+    setStore(`${ industryCode }_searchHistorys`, searchHistorys)
+  }
+  handleClearHistoryClick() {
+    const { industryCode } = this.state
+    this.setState({ searchHistorys: [] })
+    removeStore(`${ industryCode }_searchHistorys`)
+  }
+  render() {
+    const { handleHistoryClick } = this.props
+    const { searchHistorys } = this.state
+    if (!searchHistorys || searchHistorys.length === 0) {
+      return <div />
+    }
+    return (
+      <ul className='search-history'>
+        <li className='title'>搜索记录</li>
+        {
+          searchHistorys.map((item, index) => <li onClick={ () => handleHistoryClick(item) } key={ item }>{ item }<Icon onClick={ e => this.handleCrossClick(e, item, index) } type='cross' size='md' color='#999' /></li>)
+        }
+        <div className='footer' onClick={ () => this.handleClearHistoryClick() }>
+          <Icon type={ require('svg/daojia/del.svg') } size='xs' />
+          <span>清除搜索记录</span>
+        </div>
+      </ul>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/index-search.js 
+ 
+import React, { Component } from 'react'
+import { browserHistory } from 'react-router'
+import { getStore, send, setStore } from '@boluome/common-lib'
+import { Empty } from '@boluome/oto_saas_web_app_component'
+import { Grid, Toast } from 'antd-mobile'
+
+import GoodItem from './common-component/good-item'
+import DefaultBottom from './index-search-components/default-bottom'
+
+import '../styles/index-search.scss'
+
+export default class IndexSearch extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { searchValue: '' }
+    this.handleHistoryClick = this.handleHistoryClick.bind(this)
+    this.handleSearch = this.handleSearch.bind(this)
+    this.handleBusinessClick = this.handleBusinessClick.bind(this)
+    this.handleGoodClick = this.handleGoodClick.bind(this)
+  }
+  inputChange(searchValue) {
+    searchValue = searchValue.target.value
+    this.setState({ searchValue })
+    if (searchValue.length > 0) {
+      // 当500s内第二次触发了input的onchange事件，则取消上一个搜索的定时器，重新设定一个
+      clearTimeout(this.timer)
+      this.timer = setTimeout(() => this.handleSearch(searchValue), 500)
+    }
+  }
+  handleSearch(searchParam) {
+    const industryCode = getStore('industryCode', 'session')
+    const selectedCity = getStore('selectedCity', 'session')
+    const paras = {
+      limit:   1,
+      offset:  10,
+      mapType: 'gaode',
+      searchParam,
+      industryCode,
+      ...selectedCity,
+    }
+    send('/daojia/v1/resources', paras).then(({ code, data, message }) => {
+      if (code === 0) {
+        this.setState({ searchResult: data })
+        let searchHistorys = getStore(`${ industryCode }_searchHistorys`) ? getStore(`${ industryCode }_searchHistorys`) : []
+        searchHistorys = searchHistorys.filter(i => i !== searchParam)
+        searchHistorys.unshift(searchParam)
+        setStore(`${ industryCode }_searchHistorys`, searchHistorys)
+      } else {
+        Toast.fail(message)
+      }
+    })
+  }
+  handleHistoryClick(searchValue) {
+    this.handleSearch(searchValue)
+    this.setState({ searchValue })
+  }
+  handleBusinessClick(res) {
+    const { id } = res
+    const channel = getStore('channel', 'session')
+    browserHistory.push(`/daojia/${ channel }/business?brandId=${ id }`)
+  }
+  handleGoodClick(res) {
+    const { serviceId } = res
+    const industryCode = getStore('industryCode', 'session')
+    browserHistory.push(`/daojia/${ industryCode }/detail?serviceId=${ serviceId }`)
+  }
+  render() {
+    const { searchValue, searchResult } = this.state
+    return (
+      <div className='index-search'>
+        <div className='header'>
+          <div className='search-main'>
+            <input value={ searchValue } placeholder='请输入搜索内容' onChange={ value => this.inputChange(value) } type='text' />
+          </div>
+          <Cancel />
+        </div>
+        {
+          !searchResult &&
+          <DefaultBottom { ...{ handleHistoryClick: this.handleHistoryClick } } />
+        }
+        {
+          searchResult && searchResult.brandData.length === 0 && searchResult.serviceData.length === 0 &&
+          <Empty message='没找到服务和品牌' imgUrl={ require('../img/no_data.png') } style={{ background: '#f5f5f6', height: 'calc(100% - 1rem)' }} />
+        }
+        {
+          searchResult && (searchResult.brandData.length !== 0 || searchResult.serviceData.length !== 0) &&
+          <SearchResultBottom { ...{ searchResult, handleBusinessClick: this.handleBusinessClick, handleGoodClick: this.handleGoodClick } } />
+        }
+      </div>
+    )
+  }
+}
+
+const SearchResultBottom = ({ searchResult, handleBusinessClick, handleGoodClick }) => {
+  const { serviceData } = searchResult
+  let { brandData } = searchResult
+  brandData = brandData.map(item => ({ icon: item.bigLogoImg, text: item.brandName, id: item.brandId }))
+  return (
+    <div className='search-result'>
+      {
+        brandData.length > 0 &&
+        <p className='title'>品牌</p>
+      }
+      {
+        brandData.length > 0 &&
+        <Grid data={ brandData } onClick={ res => handleBusinessClick(res) } />
+      }
+      {
+        serviceData.length > 0 &&
+        <p className='title'>服务</p>
+      }
+      {
+        serviceData.length > 0 &&
+        serviceData.map(item => <GoodItem key={ item.serviceId } { ...{ data: item, onClick: handleGoodClick } } />)
+      }
+    </div>
+  )
+}
+
+
+const cancelStyle = {
+  fontSize:  '0.28rem',
+  color:     '#ffab00',
+  display:   'inline-block',
+  width:     '15%',
+  textAlign: 'center',
+}
+const Cancel = () => <span style={ cancelStyle } onClick={ () => history.back() }>取消</span>
+         
+ 
+ 
+ 
+ daojia/components/order-component/personality-selector.js 
+ 
+import React, { Component } from 'react'
+import { Popup, Icon } from 'antd-mobile'
+import { contains, has } from 'ramda'
+
+
+export default class PersonalitySelector extends Component {
+  constructor(props) {
+    super(props)
+    const { title, personalityList } = this.props
+    // selectStatus 表示当前选中的个性化服务对应的选中状态
+    let selectStatus = personalityList.filter(ii => has(title)(ii))
+    if (selectStatus.length > 0) selectStatus = selectStatus[0][title]
+    this.state = {
+      selectStatus,
+    }
+  }
+  handleSelectClick(servicePersonaliseName, selectStatus) {
+    if (contains(servicePersonaliseName)(selectStatus)) {
+      selectStatus = selectStatus.filter(item => item !== servicePersonaliseName)
+    } else {
+      selectStatus.push(servicePersonaliseName)
+    }
+
+    this.setState({ selectStatus })
+  }
+  render() {
+    const { personalityTipList, title, handleSelectConfirm, index, personalityList } = this.props
+    const { selectStatus } = this.state
+    return (
+      <div className='personality-popup-item'>
+        <div className='header'>
+          { title }
+          <p onClick={ () => { handleSelectConfirm(index, selectStatus, personalityList, title); Popup.hide() } }>确定</p>
+        </div>
+        <ul>
+          {
+            personalityTipList.map(o => (
+              <li key={ o.servicePersonaliseTipId } onClick={ () => this.handleSelectClick(o.servicePersonaliseName, selectStatus) }>
+                { o.servicePersonaliseName }
+                {
+                  contains(o.servicePersonaliseName)(selectStatus) ? <Icon type={ require('svg/daojia/success.svg') } size='md' /> : <span />
+                }
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/order-component/time-selector.js 
+ 
+import React, { Component } from 'react'
+import { get } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Tabs, Toast } from 'antd-mobile'
+
+import '../../styles/time-select.scss'
+
+const TabPane = Tabs.TabPane
+
+export default class TimeSelector extends Component {
+  constructor(props) {
+    super(props)
+    const { currentTime = '', currentDate = '' } = this.props
+    this.state = {
+      timesData: '',
+      currentTime,
+      currentDate,
+    }
+    this.getTimes = this.getTimes.bind(this)
+    this.getTimes()
+  }
+  getTimes() {
+    const closeLoading = Loading()
+    const { serviceId } = this.props
+    get('/daojia/v1/process/service/time', { serviceId }).then(({ code, data, message }) => {
+      if (code === 0) {
+        this.setState({ timesData: data })
+      } else {
+        Toast.fail(message, 1)
+      }
+      closeLoading()
+    })
+  }
+  handleTabClick(currentDate) {
+    this.setState({ currentDate, currentTime: '' })
+  }
+  handleTimeClick(currentDate, currentTime, serviceCount) {
+    const { handleSelectTime, handleContainerClose } = this.props
+    this.setState({ currentTime })
+    handleSelectTime(currentDate, currentTime, serviceCount)
+    handleContainerClose()
+  }
+  render() {
+    const { timesData, currentTime } = this.state
+    let { currentDate } = this.state
+    if (!timesData) return <div />
+    const { workTimeType, dateVoList } = timesData
+    if (!currentDate) currentDate = dateVoList[0].shortDate
+    return (
+      <div className='time-select'>
+        <Tabs defaultActiveKey={ currentDate } pageSize={ 5 } onTabClick={ ii => this.handleTabClick(ii) }>
+          {
+            dateVoList.map(data => {
+              const { date, shortDate, tag, timePointVos = [] } = data
+              const newTimePointVos = JSON.parse(JSON.stringify(timePointVos))
+              // 长度不为1时，把第一个不限时间删掉，为1时，就将第一个展示出来
+              if (newTimePointVos.length !== 1) newTimePointVos.shift()
+              const ttt = newTimePointVos.map(item => {
+                const { timePoint, serviceTag, serviceCount } = item
+                const active = currentTime === timePoint
+                let className = 'point'
+                if (workTimeType === 1) className = 'section'
+                if (serviceTag) className += ' disable'
+                return (
+                  <li style={ active ? { color: '#ffab00', borderColor: '#ffab00' } : {} } onClick={ !serviceTag ? () => this.handleTimeClick(currentDate, timePoint, serviceCount) : '' } key={ item.timePoint } className={ className }>
+                    { timePoint }
+                    {
+                      serviceTag &&
+                      <span>{ serviceTag }</span>
+                    }
+                  </li>
+                )
+              })
+              return (
+                <TabPane
+                  tab={
+                    <div className={ tag ? 'tab-name disable' : 'tab-name' }>
+                      <h1>
+                        { date }
+                        {
+                          tag &&
+                          <span>{ tag }</span>
+                        }
+                      </h1>
+                      <p>{ shortDate }</p>
+                    </div>
+                  }
+                  key={ shortDate }
+                >
+                  <ul className='tab-content'>
+                    {
+                      newTimePointVos &&
+                      ttt
+                    }
+                  </ul>
+                </TabPane>
+              )
+            })
+          }
+        </Tabs>
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/order-details.js 
+ 
+import React from 'react'
+import { browserHistory } from 'react-router'
+import { moment, send } from '@boluome/common-lib'
+import { OrderDetail as OrderDetailCommon, Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast, List, WhiteSpace, Icon } from 'antd-mobile'
+import { get, afterOrdering } from 'business'
+
+import '../styles/order-details.scss'
+
+const LItem = List.Item
+
+export default class OrderDetails extends React.Component {
+  constructor(props) {
+    super(props)
+    console.log('history', history.length)
+    this.state = {
+      orderData: '',
+    }
+    this.handleToEvaluation = this.handleToEvaluation.bind(this)
+    this.handleConfirmService = this.handleConfirmService.bind(this)
+    this.getOrderStatus = this.getOrderStatus.bind(this)
+  }
+  componentWillMount() {
+    this.getOrderStatus()
+  }
+
+  getOrderStatus() {
+    // 设置serverUrl
+    const closeLoading = Loading()
+    const id = location.pathname.split('/')[4]
+    const orderType = location.pathname.split('/')[2]
+    get(`/order/v1/${ orderType }/${ id }/info`).then(({ code, data, message }) => {
+      if (code === 0) {
+        this.setState({ orderData: data })
+      } else {
+        Toast.fail(message)
+      }
+      closeLoading()
+    })
+  }
+
+  handleToEvaluation() {
+    const { id, orderType, serviceMsgList, brandLogo } = this.state.orderData
+    browserHistory.push(`/daojia/user-comment?orderId=${ id }&orderType=${ orderType }&brandImage=${ brandLogo }&serviceId=${ serviceMsgList[0].serviceId }`)
+  }
+
+  handleConfirmService() {
+    const closeLoading = Loading()
+    const { id, orderType } = this.state.orderData
+    send('/daojia/v1/order/update', { orderId: id, orderType, code: 4 }, 'PUT').then(({ code, data, message }) => {
+      if (code === 0) {
+        console.log('update', data)
+        this.getOrderStatus()
+      } else {
+        Toast.fail(message)
+      }
+      closeLoading()
+    })
+  }
+
+  render() {
+    const { orderData } = this.state
+    if (!orderData) return <div />
+    const { id, orderType } = orderData
+    return (
+      <div className='haufei-order'>
+        <OrderDetailCommon { ...{ id, orderType, goPay: () => afterOrdering(orderData), content: <Content { ...orderData } />, handleToEvaluation: this.handleToEvaluation, handleConfirmService: this.handleConfirmService } } />
+      </div>
+    )
+  }
+}
+
+const Content = ({ brandId, brandLogo, brandName, serviceMsgList, servicePhone, contact, serviceTime, remark, id, creatAt, platformActivity, coupon, price }) => {
+  const { name, purchaseQuantity, unitPrice } = serviceMsgList[0]
+  const ServiceAddress = () => (
+    <div>
+      <p>{ `${ contact.name } ${ contact.gender ? '女士' : '男士' }` }</p>
+      <p>{ contact.phone }</p>
+      <p>{ `${ contact.province === contact.city ? '' : contact.province }${ contact.city }${ contact.county }${ contact.detail ? contact.detail : '' }${ contact.houseNum ? contact.houseNum : '' }` }</p>
+    </div>
+  )
+  return (
+    <List className='daojia-order-content'>
+      <WhiteSpace size='md' />
+      <LItem className='brand-info' arrow='horizontal' onClick={ () => browserHistory.push(`/daojia/lijisong/business?brandId=${ brandId }`) }>
+        <p>
+          <img src={ brandLogo } alt='' />
+          <span>{ brandName }</span>
+        </p>
+      </LItem>
+      <LItem extra={ <div><span>{ `x${ purchaseQuantity }` }</span><span>{ `¥${ unitPrice }` }</span></div> } className='good-info'>{ name }</LItem>
+      {
+        platformActivity &&
+        <LItem extra={ `- ¥${ platformActivity.price }` } className='activity-price'>
+          <div>
+            <span>减</span>
+            <span>{ platformActivity.title }</span>
+          </div>
+        </LItem>
+      }
+      {
+        coupon &&
+        <LItem extra={ `- ¥${ coupon.price }` } className='coupon-price'>
+          <div>
+            <span>红</span>
+            <span>{ coupon.title }</span>
+          </div>
+        </LItem>
+      }
+      <LItem extra={ <p>实付 <span>{ `¥${ price }` }</span></p> } className='order-price'>
+        <p>
+          <a href={ `tel:${ servicePhone }` }><Icon type={ require('svg/phone.svg') } size='sm' /></a>
+          <span>联系商家</span>
+        </p>
+      </LItem>
+      <WhiteSpace size='md' />
+      <LItem className='service-address' extra={ <ServiceAddress /> }>服务地址</LItem>
+      <LItem extra={ serviceTime }>服务时间</LItem>
+      <LItem className='remark' extra={ remark.length > 14 ? `${ remark.slice(0, 14) }...` : remark }>备注</LItem>
+      <WhiteSpace size='md' />
+      <LItem extra={ id }>订单编号</LItem>
+      <LItem extra={ moment('YYYY-MM-DD HH:mm')(creatAt) }>下单时间</LItem>
+      <LItem extra='在线支付'>支付方式</LItem>
+    </List>
+  )
+}
+         
+ 
+ 
+ 
+ daojia/components/order.js 
+ 
+/*
+  最大购买数量，是选择的服务时间中的serviceCount字段，checkNum是用来表示是否有加减按钮的
+*/
+
+import React, { Component } from 'react'
+import { Mask, SlidePage, ContactShow, Contact, NewPromotion } from '@boluome/oto_saas_web_app_component'
+import { List, InputItem, Picker, Popup } from 'antd-mobile'
+
+import TimeSelector from './order-component/time-selector'
+import GoodItem from './common-component/good-item'
+import PayFooter from './common-component/pay-footer'
+import PersonalitySelector from './order-component/personality-selector'
+
+import '../styles/order.scss'
+
+const LItem = List.Item
+
+export default class Order extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      currentDate:  '',
+      currentTime:  '',
+      remark:       '',
+      serviceCount: 0,
+    }
+    this.handleSuccess = this.handleSuccess.bind(this)
+    this.handleSelectTime = this.handleSelectTime.bind(this)
+    this.handleRemarkChange = this.handleRemarkChange.bind(this)
+  }
+  handleSuccess() {
+    const { handleSelectAddress, selectGood } = this.props
+    // const { contactId } = contact
+    const { serviceId } = selectGood.goodDetails
+    // const paras = {
+      // serviceId,
+      // contactId,
+    // }
+    Mask(
+      <SlidePage target='right' type='root' showClose={ false }>
+        <Contact source='daojia' handleChange={ contact => handleSelectAddress(contact, serviceId) } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  handleSelectTime(currentDate, currentTime, serviceCount) {
+    this.setState({ currentDate, currentTime, serviceCount })
+  }
+  handleRemarkChange(remark) {
+    this.setState({ remark })
+  }
+  render() {
+    const {
+      contact = '', selectGood, industryCode,
+      handlePromotion, promotionData = {},
+      addressAvail, handlePlaceClick,
+      personality, handleSelectConfirm, personalityList = [],
+      handleChangeCount, count = 1,
+    } = this.props
+    if (!selectGood) return <div />
+    const { currentDate, currentTime, remark, serviceCount } = this.state
+    const { goodDetails, currentSpec } = selectGood
+    const { serviceThumbnailImg, serviceId, minQuantity, checkNum, unitName } = goodDetails
+    const defaultRemark = goodDetails.remark
+    let { sellPrice, serviceName, originalPrice } = goodDetails
+    let orderServiceMsgList = [{ serviceId, purchaseQuantity: count }]
+    if (currentSpec) {
+      sellPrice = currentSpec.sellPrice
+      serviceName = currentSpec.commodityName
+      originalPrice = currentSpec.originalPrice
+      orderServiceMsgList = [{ serviceId, purchaseQuantity: count, specificationsId: currentSpec.specificationsId }]
+    }
+    const data = { serviceThumbnailImg, serviceName, sellPrice, originalPrice, count, unitName }
+    if (checkNum) data.checkNum = { serviceCount, minQuantity, handleChangeCount, currentDate }
+
+    let couponId = ''
+    let activityId = ''
+    let contactId = ''
+    const { coupon, activities, discount } = promotionData
+    if (coupon) couponId = coupon.id
+    if (activityId) activityId = activities.id
+    if (contact) contactId = contact.contactId
+    const orderParas = {
+      couponId,
+      activityId,
+      contactId,
+      orderServiceMsgList,
+      remark,
+      serviceTime: `${ currentDate } ${ currentTime }`,
+      personality: personalityList,
+    }
+    const mustOptions = [{ title: '配送地址', status: addressAvail }, { title: '服务时间', status: currentDate }]
+    return (
+      <div className='order'>
+        <div className='order-top'>
+          <ContactShow { ...{ contact, handleSuccess: this.handleSuccess } } />
+          <LItem extra={ currentDate ? `${ currentDate } ${ currentTime }` : '请选择服务时间' } arrow='horizontal' className='time' onClick={ () => Mask(
+            <SlidePage showClose={ false }>
+              <TimeSelector { ...{ serviceId, handleSelectTime: this.handleSelectTime, currentDate, currentTime } } />
+            </SlidePage>)
+          }
+          >
+            服务时间
+          </LItem>
+          <div className='select-goods'>
+            <GoodItem key={ serviceId } { ...{ data } } />
+          </div>
+          {
+            personality && personality.length > 0 &&
+            personality.map((item, index) => {
+              const { title, multipleChoice, personalityTipList, required } = item
+              // status表示当前的选项是否被选择, title表示当前选项的名称
+              if (required) mustOptions.push({ title, status: (this.props[`personality${ index }`] && this.props[`personality${ index }`].length > 0) })
+              if (multipleChoice) {
+                return (
+                  <LItem arrow='horizontal' className='personality-popup' key={ item.servicePersonaliseId } extra={ (this.props[`personality${ index }`] && this.props[`personality${ index }`].length !== 0) ? this.props[`personality${ index }`].join('、') : '请选择' } onClick={ () => Popup.show(<PersonalitySelector { ...{ personalityTipList, title, handleSelectConfirm, index, personalityList } } />, { animationType: 'slide-up' }) }>
+                    { title }
+                  </LItem>
+                )
+              }
+              const datas = personalityTipList.map(ii => ({ label: ii.servicePersonaliseName, value: ii.servicePersonaliseName }))
+              return (
+                <Picker extra={ this.props[`personality${ index }`] ? this.props[`personality${ index }`] : '请选择' } onChange={ content => handleSelectConfirm(index, content, personalityList, title) } cols={ 1 } key={ item.servicePersonaliseId } data={ datas } title={ title }>
+                  <LItem arrow='horizontal' className='personality-picker'>{ title }</LItem>
+                </Picker>
+              )
+            })
+          }
+          <InputItem
+            placeholder={ defaultRemark }
+            onChange={ this.handleRemarkChange }
+            className='user-tips'
+            clear={ 1 }
+            maxLength={ 36 }
+          >
+            备注信息：
+          </InputItem>
+          <NewPromotion count={ count } orderType={ industryCode } channel='blmdaojia' amount={ sellPrice * count } handleChange={ handlePromotion } />
+        </div>
+        <PayFooter { ...{ sellPrice: sellPrice * count, discount, handlePlaceClick, orderParas, mustOptions, text: '立即下单' } } />
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/root.js 
+ 
+import React from 'react'
+import customize from 'customize'
+
+import '../../../styles/index.scss'
+
+export default customize(
+  ({ children }) => (
+    <div style={{ overflow: 'auto', height: '100%', borderTop: '1px solid #e5e5e5', boxSizing: 'border-box' }}>
+      { children }
+    </div>
+  )
+)
+         
+ 
+ 
+ 
+ daojia/components/routerDemo.js 
+ 
+import React from 'react'
+
+const RouterDemo = ({ children }) => (<div>{ children }</div>)
+
+export default RouterDemo
+         
+ 
+ 
+ 
+ daojia/components/user-comment/image-picker-example.js 
+ 
+import React, { Component } from 'react'
+import { ImagePicker } from 'antd-mobile'
+
+
+export default class ImagePickerExample extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      files: [],
+    }
+    this.onChange = this.onChange.bind(this)
+  }
+  onChange(files) {
+    const { handleImgsChange } = this.props
+    this.setState({
+      files,
+    })
+    handleImgsChange(files.map(item => item.url))
+  }
+  render() {
+    const { files } = this.state
+    return (
+      <div>
+        <ImagePicker
+          files={ files }
+          onChange={ this.onChange }
+          onImageClick={ (index, fs) => console.log(index, fs) }
+          selectable={ files.length < 9 }
+          className='img-list'
+        />
+      </div>
+    )
+  }
+}
+         
+ 
+ 
+ 
+ daojia/components/user-comment.js 
+ 
+import React, { Component } from 'react'
+import { browserHistory } from 'react-router'
+import { parseQuery, send, getStore } from '@boluome/common-lib'
+import { Evaluation, Loading } from '@boluome/oto_saas_web_app_component'
+import { TextareaItem, Toast } from 'antd-mobile'
+import { createForm } from 'rc-form'
+
+import PictureUpload from './common-component/picture-upload'
+
+import '../styles/user-comment.scss'
+
+export default createForm()(
+  class UserComment extends Component {
+    constructor(props) {
+      super(props)
+      this.state = {
+        score: 5,
+        level: '好',
+      }
+      this.handleChangeImg = this.handleChangeImg.bind(this)
+    }
+    handleSelectStar(score) {
+      score = score.split('%')[0] / 20
+      let level = '差'
+      if (score > 1 && score <= 3) level = '中'
+      if (score > 3) level = '好'
+      this.setState({ level, score })
+    }
+    handleCommit(paras) {
+      const closeLoading = Loading()
+      send('/daojia/v1/order/comment', paras).then(({ code, message }) => {
+        if (code === 0) {
+          browserHistory.push(`/daojia/comment-info?serviceId=${ parseQuery(location.search).serviceId }`)
+        } else {
+          Toast.fail(message)
+        }
+        closeLoading()
+      })
+    }
+    handleCommentChange(comment) {
+      if (comment.length >= 120) Toast.info('最多输入120个字符')
+      this.setState({ comment })
+    }
+    handleChangeImg(imgs) {
+      this.setState({ imgs })
+    }
+    render() {
+      const { level, score, comment = '', imgs = [] } = this.state
+      const { form } = this.props
+      const { getFieldProps } = form
+      const orderId = parseQuery(location.search).orderId
+      const orderType = parseQuery(location.search).orderType
+      const brandImage = parseQuery(location.search).brandImage
+      const serviceId = parseQuery(location.search).serviceId
+      const userId = getStore('customerUserId', 'session')
+      const paras = {
+        orderId,
+        orderType,
+        serviceId,
+        userId,
+        score,
+        comment,
+        imgs: imgs.map(o => o.url),
+      }
+      return (
+        <div className='user-comment'>
+          <div className='header'>
+            <img className='user-icon' src={ brandImage } alt='user-comment' />
+            <Evaluation selfClass='test' integerMode={ 1 } defaultValue={ `${ score / 0.05 }%` } width={ '2rem' } handleSelectStar={ i => this.handleSelectStar(i) } />
+            <p>{ level }</p>
+          </div>
+          <TextareaItem
+            {
+              ...getFieldProps('count')
+            }
+            rows={ 3 }
+            count={ 120 }
+            value={ comment }
+            placeholder='服务满意吗？说说此次上门服务之后的感受吧~'
+            onChange={ i => this.handleCommentChange(i) }
+          />
+          <PictureUpload handleChangeImg={ this.handleChangeImg } imgs={ imgs } />
+          <p className='commit' onClick={ () => this.handleCommit(paras) }>发布评价</p>
+        </div>
+      )
+    }
+  }
+)
+         
+ 
+ 
+ 
+ daojia/containers/app.js 
+ 
+/*
+  industryCode: 商品的code
+  channel：     商家的code
+*/
+
+
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { getStore, setStore } from '@boluome/common-lib'
+import { wrap, Mask, Loading } from '@boluome/oto_saas_web_app_component'
+import { getLocationGaode, login } from 'business'
+
+import App from '../components/app'
+
+import { getCategories, getSeverBusiness, getSeverTimes } from '../actions/app'
+
+const closeLoading = Loading()
+
+const mapStateToProps = ({ app }) => {
+  return {
+    ...app,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleGoodClick(goodInfo) {
+      const { serviceId, isCanService } = goodInfo
+      const industryCode = getStore('industryCode', 'session')
+      browserHistory.push(`/daojia/${ industryCode }/detail?serviceId=${ serviceId }&supportThisCity=${ isCanService }`)
+    },
+    handleSearchClick() {
+      browserHistory.push('/daojia/search')
+    },
+  }
+}
+
+// 根据经纬度获取城市信息，主要是county
+// const getLocationAddress = () => dispatch => {
+//   const currentPosition = getStore('currentPosition', 'session')
+//   const { city, district } = currentPosition
+//   const address = getStore('currentAddress', 'session')
+//   const geopoint = getStore('geopoint', 'session')
+//   // 将定位城市名保存到本地
+//   const localCity = city.replace('市', '')
+//   setStore('localCity', localCity, 'session')
+//   // 将定位的 longitude, latitude, city, county 作为默认的selectedCity保存到本地
+//   const selectedCity = { city, address, county: district, ...geopoint }
+//   setStore('selectedCity', selectedCity, 'session')
+//   dispatch({ type: 'SET_SELECTED_ADDRESS', selectedCity })
+// }
+
+const mapFunToComponent = dispatch => {
+  return {
+    componentWillMount() {
+      // mock
+      // setStore(`daojia${ channel }_searchHistorys`, ['手机', '苹果', '鲜花'])
+
+      // const industryCode = `mms_daojia${ location.pathname.split('/')[2] }`
+      const industryCode = location.pathname.split('/')[2]
+      setStore('industryCode', industryCode, 'session')
+      dispatch({ type: 'SET_INDUSTRY_CODE', industryCode })
+
+      getLocationGaode(() => {
+        // dispatch(getLocationAddress())
+        const address = getStore('currentAddress', 'session')
+        const geopoint = getStore('geopoint', 'session')
+        const currentPosition = getStore('currentPosition', 'session')
+        const { city, district } = currentPosition
+        const selectedCity = { city, address, county: district, ...geopoint }
+        setStore('selectedCity', selectedCity, 'session')
+        dispatch({ type: 'SET_SELECTED_ADDRESS', selectedCity })
+
+        dispatch(getCategories())
+        // dispatch(getGoods({}))
+        dispatch(getSeverBusiness())
+        dispatch(getSeverTimes())
+
+        closeLoading()
+      })
+      login(err => {
+        if (err) {
+          console.log('login error')
+        } else {
+          console.log('login sucess')
+        }
+      })
+    },
+    componentWillUnmount() {
+      Mask.closeAll()
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(App))
+         
+ 
+ 
+ 
+ daojia/containers/business.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { getStore } from '@boluome/common-lib'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+
+import Business from '../components/business'
+
+import { getBusinessData, getBrandGoods } from '../actions/business'
+
+const mapStateToProps = ({ business }) => {
+  return {
+    ...business,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleToAllComment(businessData) {
+      const { brandCode, brandId } = businessData
+      browserHistory.push(`/daojia/comment-info?brandId=${ brandId }&brandCode=${ brandCode }`)
+    },
+    handleGoodClick(goodInfo) {
+      const { serviceId } = goodInfo
+      const industryCode = getStore('industryCode', 'session')
+      browserHistory.push(`/daojia/${ industryCode }/detail?serviceId=${ serviceId }`)
+    },
+    handleFilterClickMiddleware(currentCategoryIndex, industryCategoryBoList) {
+      dispatch({ type: 'SET_CURRENT_CATEGORY_ID', currentCategoryIndex })
+      if (currentCategoryIndex !== 0) {
+        const currentIndustryCategoryId = industryCategoryBoList[currentCategoryIndex].industryCategoryId
+        dispatch(getBrandGoods(currentIndustryCategoryId))
+      }
+    },
+  }
+}
+
+const mapFunToComponent = dispatch => {
+  return {
+    componentWillMount() {
+      dispatch(getBusinessData())
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(Business))
+         
+ 
+ 
+ 
+ daojia/containers/comment.js 
+ 
+import { connect } from 'react-redux'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+
+import Comment from '../components/comment'
+
+const mapStateToProps = () => {
+  const mock = 'Comment'
+  return {
+    mock,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+  }
+}
+
+const mapFunToComponent = () => {
+  return {
+    componentWillMount() {
+      console.log('Comment componentWillMount')
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(Comment))
+         
+ 
+ 
+ 
+ daojia/containers/demo.js 
+ 
+import { connect } from 'react-redux'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+
+import Demo from '../components/demo'
+
+const mapStateToProps = () => {
+  const mock = 'demo'
+  return {
+    mock,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+  }
+}
+
+const mapFunToComponent = () => {
+  return {
+    componentWillMount() {
+      console.log('demo componentWillMount')
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(Demo))
+         
+ 
+ 
+ 
+ daojia/containers/detail.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { parseQuery, getStore, setStore } from '@boluome/common-lib'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+import { Popup } from 'antd-mobile'
+
+import Detail from '../components/detail'
+
+import { getGoodDetails, getAllReserveTimes } from '../actions/detail'
+
+const mapStateToProps = ({ detail }) => {
+  const selectedCity = getStore('selectedCity', 'session')
+  const currentAddress = `${ selectedCity.city }${ selectedCity.county }`
+  return {
+    ...detail,
+    currentAddress,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleMoreCommentClick() {
+      const serviceId = parseQuery(location.search).serviceId
+      browserHistory.push(`/daojia/comment-info?serviceId=${ serviceId }`)
+    },
+    handleBusinessNameClick(brandId) {
+      const channel = getStore('channel', 'session')
+      browserHistory.push(`/daojia/${ channel }/business?brandId=${ brandId }`)
+    },
+    handleSpecClick(currentSpec) {
+      dispatch({ type: 'SET_CUREENT_SPECIFICATION', currentSpec })
+    },
+    // btnDisable： 为true时，表示当前商品是多规格且未选中
+    handleBtnClick(goods) {
+      Popup.hide()
+      const channel = getStore('channel', 'session')
+      const industryCode = getStore('industryCode', 'session')
+      setStore(`selectGood_${ industryCode }`, goods, 'session')
+      browserHistory.push(`/daojia/${ channel }/order`)
+    },
+  }
+}
+
+const mapFunToComponent = dispatch => {
+  return {
+    componentWillMount() {
+      const industryCode = location.pathname.split('/')[2]
+      setStore('industryCode', industryCode, 'session')
+      const serviceId = parseQuery(location.search).serviceId
+      dispatch(getGoodDetails(serviceId))
+      dispatch(getAllReserveTimes(serviceId))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(Detail))
+         
+ 
+ 
+ 
+ daojia/containers/order.js 
+ 
+import { connect } from 'react-redux'
+import { parseQuery, getStore } from '@boluome/common-lib'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+import { has } from 'ramda'
+
+import Order from '../components/order'
+
+import { getBestAddress, placeOrder, getPersonality, checkAddressAvail } from '../actions/order'
+
+const mapStateToProps = ({ order }) => {
+  const serviceId = parseQuery(location.search).serviceId
+  const industryCode = getStore('industryCode', 'session')
+  const selectGood = getStore(`selectGood_${ industryCode }`, 'session')
+  return {
+    ...order,
+    serviceId,
+    selectGood,
+    industryCode,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleSelectAddress(contact, serviceId) {
+      dispatch({ type: 'SET_CURRENT_ADDRESS', contact })
+      if (contact) {
+        const { contactId, mapType } = contact
+        dispatch(checkAddressAvail({ contactId, serviceId, mapType }))
+      }
+    },
+    handlePromotion(promotionData) {
+      dispatch({ type: 'SET_PROMOTION_DATA', promotionData })
+    },
+    handlePlaceClick(paras) {
+      dispatch(placeOrder(paras))
+    },
+    handleSelectConfirm(index, content, personalityList, title) {
+      // index表示当前选择的是第几个个性化选项，content 表示当前选中的内容, personalityList 表示当前个性化选择的列表，title表示列表中每个个性化选择的名称
+      personalityList = personalityList.filter(ii => !has(title)(ii))
+      personalityList.push({ [title]: content })
+      dispatch({ type: 'SET_PERSONALITY_CONTENT', [`personality${ index }`]: content, personalityList })
+    },
+    handleChangeCount(count) {
+      dispatch({ type: 'SET_CURRENT_COUNT', count })
+    },
+  }
+}
+
+const mapFunToComponent = dispatch => {
+  return {
+    componentWillMount() {
+      dispatch(getBestAddress())
+      dispatch(getPersonality())
+
+      // 还原默认数据
+      dispatch({ type: 'SET_CURRENT_COUNT', count: 1 })
+      dispatch({ type: 'SET_PERSONALITY_CONTENT', personalityList: [], personality0: '', personality1: '', personality2: '', personality3: '', personality4: '' })
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFunToComponent)(Order))
+         
+ 
+ 
+ 
+ daojia/index.js 
+ 
+import React        from 'react'
+import { render }   from 'react-dom'
+import { createStore, applyMiddleware } from 'redux'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+import Routes       from './routes'
+
+// 定义根组件
+const Root  = () => (
+  <Provider store={ createStore(reducers, applyMiddleware(thunk)) }>
+    <Routes />
+  </Provider>
+)
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ daojia/reducers/app.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:                'xianhua',
+  currentCategoryIndex: 0,
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    case 'SET_INDUSTRY_CODE':
+    case 'SET_SELECTED_ADDRESS':
+    case 'SET_CURRENT_CATEGORYID':
+    case 'GET_CATEGORIES':
+    case 'GET_CURRENT_GOODS':
+    case 'GET_SERVER_BUSINESS':
+    case 'GET_SERVER_TIMES':
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default app
+         
+ 
+ 
+ 
+ daojia/reducers/business.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  currentCategoryIndex: 0,
+}
+
+const business = (state = initialState, action) => {
+  switch (action.type) {
+    case 'SET_BUSINESS_DATA':
+    case 'SET_CURRENT_CATEGORY_ID':
+    case 'SET_CURRENT_SERVICE':
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default business
+         
+ 
+ 
+ 
+ daojia/reducers/detail.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {}
+
+const detail = (state = initialState, action) => {
+  switch (action.type) {
+    case 'SET_GOOD_DETAILS':
+    case 'SET_RESERVER_TIMES':
+    case 'SET_CUREENT_SPECIFICATION':
+      return mergeState(state, action)
+    default:
+      return state
+  }
+}
+
+export default detail
+         
+ 
+ 
+ 
+ daojia/reducers/index.js 
+ 
+import { combineReducers } from 'redux'
+// 引入reducers
+import app  from './app'
+import detail  from './detail'
+import business from './business'
+import order from './order'
+// 组合reducers
+export default combineReducers({
+  app,
+  detail,
+  business,
+  order,
+})
+         
+ 
+ 
+ 
+ daojia/reducers/order.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {}
+
+const detail = (state = initialState, action) => {
+  switch (action.type) {
+    case 'SET_CURRENT_ADDRESS':
+    case 'SET_PROMOTION_DATA':
+    case 'SET_ADDRESS_AVAIL':
+    case 'SET_PERSONALITY':
+    case 'SET_PERSONALITY_CONTENT':
+    case 'SET_CURRENT_COUNT':
+      return mergeState(state, action)
+    default:
+      return state
+  }
+}
+
+export default detail
+         
+ 
+ 
+ 
+ daojia/routes.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/daojia' component={ require('react-router?name=root!./components/root') } >
+      <Route path='user-comment' component={ require('react-router?name=userComment!./components/user-comment.js') } />
+      <Route path='comment-info' component={ require('react-router?name=commentInfo!./components/comment-info') } />
+      <Route path='search' component={ require('react-router?name=search!./components/index-search') } />
+      <Route path=':orderType/orderDetails/:orderId' component={ require('react-router?name=order-details!./components/order-details') } />
+      <Route path=':industryCode' component={ require('react-router?name=root!./components/root') } >
+        <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+        <Route path='detail' component={ require('react-router?name=detail!./components/detail-container') }>
+          <IndexRoute component={ require('react-router?name=detail!./containers/detail') } />
+        </Route>
+        <Route path='business' component={ require('react-router?name=business!./components/business-container') }>
+          <IndexRoute component={ require('react-router?name=business!./containers/business') } />
+        </Route>
+        <Route path='order' component={ require('react-router?name=order!./containers/order') } />
+        <Route path='comment' component={ require('react-router?name=comment!./containers/comment') } />
+      </Route>
+    </Route>
+  </Router>
+)
+export default Routes
+
+/*
+  评论页面的路由设计：
+  /daojia/user-comment?orderId&orderType&brandImage&serviceId
+*/
+         
+ 
+ 
+ 
+ daojia/styles/app.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+@mixin spanIcon {
+  display: inline-block;
+  @include s_fontDemo(20px, 28px, $font-ff);
+  padding: 0 5px;
+  background: #999;
+  text-align: center;
+  margin-left: 10px;
+}
+
+.app {
+  -webkit-overflow-scrolling: touch !important;
+  .header {
+    @include s_border_b;
+    background: $bg-ff;
+    z-index: 11;
+    .position {
+      overflow: hidden;
+      width: 350px;
+      p, .am-icon {
+        float: left;
+      }
+      p {
+        @include s_fontDemo(32px, 44px, $font-33);
+        margin-right: 10px;
+        max-width: 300px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .am-icon {
+        -webkit-transform: translateY(7px);
+                transform: translateY(7px);
+      }
+    }
+  }
+  .selector {
+    @include s_border_b;
+    background: $bg-ff;
+    z-index: 11;
+    position: relative;
+    height: 80px;
+    li.container {
+      height: 80px;
+      float: left;
+      width: 33.3333333%;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      p {
+        @include s_fontDemo(26px, 44px, $font-33);
+      }
+      &.active {
+        p, .am-icon {
+          color: $theme;
+        }
+      }
+    }
+  }
+  .goods {
+    overflow: hidden;
+    height: calc(100% - 393px);
+    .no-data {
+      padding-top: 300px;
+      background: none;
+      img {
+        display: block;
+        margin: 0 auto;
+        width: 160px;
+      }
+      p {
+        @include s_fontDemo(28px, 40px, $font-99);
+        text-align: center;
+      }
+    }
+  }
+
+  /* 公共组件样式更改*/
+  .empty-container {
+    z-index: 1 !important;
+  }
+}
+
+.dj-select-times {
+  overflow: hidden;
+  ul {
+    width: 50%;
+    height: 480px;
+    float: left;
+    background: $bg-ff;
+    overflow: auto;
+    li {
+      height: 80px;
+      padding-left: 60px;
+      box-sizing: border-box;
+      @include s_fontDemo(24px, 80px, $font-33);
+      &.active {
+        color: $theme;
+        background: $bg-ff;
+      }
+    }
+  }
+  .dates {
+    background: #e5e5e5;
+    li span {
+      @include spanIcon;
+    }
+  }
+  .times li {
+    @include s_border_b;
+    position: relative;
+    p {
+      display: inline-block;
+      span {
+        @include spanIcon;
+      }
+    }
+    .am-icon {
+      @include s_middle;
+      right: 30px;
+    }
+  }
+}
+
+.dj-select-sort {
+  overflow: hidden;
+  background: $bg-ff;
+  li {
+    height: 80px;
+    padding-left: 53px;
+    box-sizing: border-box;
+    @include s_border_b;
+    @include s_fontDemo(28px, 80px, $font-99);
+    position: relative;
+    &.active {
+      color: $theme;
+    }
+    .am-icon {
+      @include s_middle;
+      right: 30px;
+    }
+  }
+}
+
+
+/* 公共组件样式*/
+.slide-page-container.info.selector-mask {
+  background: none;
+  height: auto;
+}
+
+.wrap, .wrap .list {
+  height: -webkit-fill-available;
+}
+         
+ 
+ 
+ 
+ daojia/styles/business.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.business {
+  .header {
+    background: $bg-ff;
+    margin-bottom: 20px;
+    .banner-img {
+      height: 516px;
+      display: block;
+      margin: 0 auto;
+    }
+    .brand-info {
+      overflow: hidden;
+      padding: 10px 23px;
+      @include s_border_b;
+      img {
+        float: left;
+        @include s_blockDemo(80px, 80px);
+        margin-right: 18px;
+      }
+      .right {
+        float: left;
+        h1 {
+          @include s_fontDemo(28px, 40px, $font-33);
+          font-weight: normal;
+          margin-bottom: 6px;
+        }
+        p {
+          @include s_fontDemo(24px, 33px, $font-66);
+        }
+      }
+    }
+    .brand-num {
+      padding-top: 5px;
+      padding-bottom: 8px;
+      @include s_border_b;
+      .am-flexbox-item {
+        text-align: center;
+        .top {
+          @include s_fontDemo(28px, 40px, $font-33);
+        }
+        .bottom {
+          @include s_fontDemo(20px, 28px, $font-99);
+        }
+        &.server-count {
+          @include s_border_r;
+        }
+      }
+    }
+  }
+
+
+  .s-label {
+    margin-bottom: 0;
+    @include s_border_b;
+  }
+
+  .user-comment.am-list-item {
+    margin-bottom: 20px;
+   .am-list-line{
+     .am-list-content {
+       font-size: 28px;
+       color: $font-33;
+     }
+     .am-list-extra {
+       font-size: 20px;
+       color: $font-66;
+     }
+   }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/comment-info.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.comment-info {
+  .s-label {
+
+  }
+  .comment-item {
+    margin-bottom: 13px;
+  }
+  /* 公共组件listview*/
+  .wrap {
+    height: calc(100% - 142px);
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/comment-item.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.comment-item {
+  .comment-header {
+    padding: 10px 23px 0;
+    background: $bg-ff;
+    @include s_border_b;
+    .comment-info {
+      @include s_fontDemo(28px, 60px, $font-66);
+      margin-bottom: 20px;
+      p, span {
+        float: left;
+      }
+      .user-icon {
+        @include s_blockDemo(60px, 60px);
+        background: #000;
+        border-radius: 100%;
+        margin-right: 23px;
+      }
+      span {
+        margin-right: 20px;
+      }
+    }
+    .comment-time {
+      @include s_fontDemo(20px, 28px, $font-99);
+      margin-bottom: 10px;
+    }
+    .comment-content {
+      @include s_fontDemo(24px, 32px, $font-33);
+      @include s_border_b;
+      margin-bottom: 10px;
+      .text {
+        margin-bottom: 22px;
+      }
+      div p {
+        @include s_blockDemo(226px, 226px);
+      }
+    }
+    .comment-address {
+      @include s_fontDemo(20px, 50px, $font-99);
+    }
+
+    /* 改变默认样式*/
+    .am-flexbox-item.am-grid-item {
+      margin-bottom: 20px;
+    }
+    .evaluationContainer {
+      -webkit-transform: translateY(7px);
+              transform: translateY(7px);
+    }
+  }
+  .comment-reply {
+    background: $bg-ff;
+    padding-left: 23px;
+    p {
+      @include s_fontDemo(24px, 80px, $font-66);
+      @include s_border_b;
+      .am-icon {
+        vertical-align: middle;
+        margin-right: 15px;
+      }
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/demo.scss 
+ 
+@import "../../../styles/s_common.scss";
+         
+ 
+ 
+ 
+ daojia/styles/detail.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.detail {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+
+  .detail-container {
+    overflow: auto;
+  }
+  &>div:nth-of-type(1), &>div:nth-of-type(2) {
+    height: calc(100% - 100px) !important;
+  }
+  .detail-top {
+    padding-bottom: 20px;
+    .good-info {
+      background: $bg-ff;
+      overflow: hidden;
+      margin-bottom: 20px;
+      img {
+        height: 670px;
+        display: block;
+        margin: 0 auto;
+        margin-bottom: 37px;
+      }
+      .good-name {
+        @include s_border_b;
+        .am-list-line {
+          min-height: 99px;
+        }
+        .am-list-content {
+          @include s_fontDemo(32px!important, 32px, $font-33);
+        }
+        .am-list-extra {
+          @include s_fontDemo(26px, 32px, $font-f48);
+          span {
+            font-size: 36px;
+          }
+        }
+      }
+      .spec {
+        .am-list-line {
+          min-height: 90px;
+        }
+      }
+    }
+    .comment {
+      margin-bottom: 20px;
+      .comment-header {
+        @include s_border_b;
+        .good-comment {
+          float: right;
+          width: 200px;
+          text-align: right;
+          @include s_fontDemo(20px, 33px, $font-66);
+          .am-icon {
+            vertical-align: middle;
+            margin-right: 7px;
+          }
+        }
+      }
+    }
+    .brand-info {
+      background: $bg-ff;
+      .brand-name {
+        @include s_border_b;
+        overflow: hidden;
+        padding: 10px 0 10px 23px;
+        dt {
+          float: left;
+          margin-right: 20px;
+          overflow: hidden;
+          @include s_blockDemo(80px, 80px);
+          img {
+            height: 100%;
+            margin: 0 auto;
+          }
+        }
+        dd {
+          float: left;
+          h1 {
+            @include s_fontDemo(28px, 40px, $font-33);
+            font-weight: normal;
+            margin-bottom: 6px;
+          }
+          p {
+            @include s_fontDemo(24px, 33px, $font-66);
+          }
+        }
+      }
+      .brand-number {
+        overflow: hidden;
+        li {
+          float: left;
+          width: 50%;
+          box-sizing: border-box;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          -webkit-box-orient: vertical;
+          -webkit-box-direction: normal;
+              -ms-flex-direction: column;
+                  flex-direction: column;
+          -webkit-box-align: center;
+              -ms-flex-align: center;
+                  align-items: center;
+          -webkit-box-pack: center;
+              -ms-flex-pack: center;
+                  justify-content: center;
+          padding: 7px 0;
+          &:nth-of-type(1) {
+            @include s_border_r;
+          }
+          h1 {
+            @include s_fontDemo(28px, 40px, $font-33);
+            font-weight: normal;
+            text-align: center;
+          }
+          p {
+            @include s_fontDemo(20px, 30px, $font-99);
+            text-align: center;
+          }
+        }
+      }
+    }
+  }
+  .detail-bottom {
+    padding-top: 22px;
+    background: $bg-ff;
+    .server-feature {
+      overflow: hidden;
+      .title {
+        float: left;
+        padding: 0 23px;
+        height: 60px;
+        @include s_fontDemo(28px, 60px, $font-33);
+        border: 1px solid $border-e5;
+        margin-left: 50%;
+        margin-bottom: 13px;
+        -webkit-transform: translateX(-50%);
+                transform: translateX(-50%);
+      }
+      .content {
+        @include s_fontDemo(24px, 32px, $font-33);
+        clear: both;
+        text-align: center;
+        margin-bottom: 18px;
+      }
+    }
+    .service-list {
+      margin-top: 20px;
+      li {
+        margin-bottom: 30px;
+        overflow: hidden;
+        &:nth-of-type(1), &:nth-of-type(3) {
+          .service-content {
+            text-align: center;
+            text-indent: 0px;
+          }
+        }
+        .service-title {
+          overflow: hidden;
+          float: left;
+          margin-left: 50%;
+          margin-bottom: 30px;
+          -webkit-transform: translateX(-50%);
+                  transform: translateX(-50%);
+          white-space: nowrap;
+          p {
+            float: left;
+            &:nth-of-type(1) {
+              position: absolute;
+              z-index: -1;
+              height: 19px;
+              width: 100%;
+              border-bottom: 1px solid #313131;
+            }
+            &:nth-of-type(2) {
+              @include s_fontDemo(28px, 40px, $font-33);
+              background: $bg-ff;
+              white-space: nowrap;
+              padding: 0 20px;
+              margin: 0 60px;
+              position: relative;
+              z-index: 10;
+            }
+          }
+        }
+        .service-content {
+          clear: both;
+          padding: 0 18px 10px;
+          @include s_fontDemo(24px, 40px, $font-66);
+          text-indent: 48px;
+        }
+        .service-img-container {
+          img {
+            @include s_blockDemo(100%, auto);
+          }
+          p {
+            @include s_fontDemo(24px, 32px, $font-33);
+            padding: 20px 20px 0;
+          }
+        }
+        .text {
+          @include s_fontDemo(24px, 40px, $font-66);
+          padding: 0 18px;
+          font-weight: normal;
+          clear: both;
+        }
+      }
+    }
+  }
+  .detail-footer {
+    height: 100px;
+    width: 100%;
+    background: $bg-ff;
+    position: absolute;
+    bottom: 0;
+    z-index: 10;
+    .contact, .place-btn {
+      height: 100px;
+      float: right;
+    }
+    .contact {
+      width: 140px;
+      position: relative;
+      @include s_border_l;
+      .am-icon {
+        @include s_allCenter;
+      }
+    }
+    .place-btn {
+      width: 300px;
+      text-align: center;
+      background: $disable;
+      @include s_fontDemo(36px, 100px, $font-ff);
+      &.active {
+        background: $theme;
+      }
+    }
+  }
+}
+
+.am-popup .contact {  li {
+    height: 114px;
+    text-align: center;
+    @include s_fontDemo(36px, 114px, $font-33);
+    &.contact-first {
+      @include s_border_b;
+    }
+  }
+}
+
+.support-area {
+  background: $bg-ff;
+  @include s_allCenter;
+  z-index: 100;
+  width: 100%;
+  padding-bottom: 60px;
+  .support-area-title {
+    text-align: center;
+    @include s_fontDemo(30px, 92px, $font-33);
+  }
+  table {
+    width: 680px;
+    margin: 0 auto;
+    border-top: 1px solid $border-eb;
+    border-left: 1px solid $border-eb;
+    @include s_fontDemo(22px, 60px, $font-66);
+    border-spacing: 0;
+    thead {
+      color: $font-33;
+    }
+    td {
+      border-right: 1px solid $border-eb;
+      border-bottom: 1px solid $border-eb;
+      text-align: center;
+      &:first-of-type {
+        width: 150px;
+      }
+    }
+  }
+}
+
+/* 公共组件样式*/
+.evaluationContainer {
+  z-index: 10;
+}
+         
+ 
+ 
+ 
+ daojia/styles/good-item.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.good-item {
+  overflow: hidden;
+  padding: 20px;
+  background: $bg-ff;
+  list-style: none;
+  @include s_border_b;
+  .left, .right {
+    float: left;
+    box-sizing: border-box;
+  }
+  .left {
+    @include s_blockDemo(180px, 180px);
+    overflow: hidden;
+    position: relative;
+    img {
+      display: block;
+      height: 180px;
+      margin: 0 auto;
+    }
+    p {
+      background: rgba(35,35,35,0.60);
+      border-radius: 100%;
+      text-align: center;
+      overflow: hidden;
+      @include s_fontDemo(24px, 31px, $font-ff);
+      @include s_allCenter;
+      @include s_blockDemo(140px, 140px);
+      span {
+        width: 100%;
+        @include s_allCenter;
+      }
+    }
+  }
+  .right {
+    @include s_blockDemo(calc(100% - 180px), 180px);
+    position: relative;
+    padding-left: 20px;
+    .top {
+      width: 480px;
+      @include s_fontDemo(32px, 45px, $font-33);
+    }
+    .middle {
+      @include s_fontDemo(24px, 33px, $font-99);
+      margin-bottom: 20px;
+    }
+    .bottom {
+      overflow: hidden;
+      width: 100%;
+      position: absolute;
+      bottom: 0;
+      .price {
+        float: left;
+        @include s_fontDemo(24px, 33px, $font-f48);
+        del {
+          color: $font-99;
+        }
+      }
+      .good-comment {
+        float: right;
+        width: 200px;
+        text-align: right;
+        margin-right: 25px;
+        @include s_fontDemo(20px, 33px, $font-66);
+        .am-icon {
+          vertical-align: middle;
+          margin-right: 7px;
+        }
+      }
+    }
+    .good-count {
+      @include s_fontDemo(28px, 40px, $font-66);
+      @include s_middle;
+      right: 23px;
+      &.change-good-count {
+        @include s_fontDemo(28px, 45px, $font-33);
+        .am-icon, span {
+          float: left;
+        }
+      }
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/index-search.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.search-slidePage {
+  height: 100%;
+  overflow: auto;
+}
+
+.index-search {
+  .header {
+    height: 1rem;
+    line-height: 1rem;
+    text-align: left;
+    background-color: $bg-ff;
+    padding: 0 0.16rem;
+    .search-main {
+      width: 85%;
+      height: 0.54rem;
+      border: 0.01rem solid #e4e4e5;
+      border-radius: 0.08rem;
+      font-size: 0.28rem;
+      text-align: center;
+      background-color: $bg-f3;
+      display: inline-block;
+      line-height: 0.54rem;
+      background-image: url(/daojia/images/fangdajing.549ac6e2.png);
+      background-size: 0.27rem;
+      background-position: 3% center;
+      background-repeat: no-repeat;
+      margin-top: 0.23rem;
+      display: inline-block;
+      box-sizing: border-box;
+      input {
+        width: 80%;
+        height: 100%;
+        font-size: 0.28rem;
+        background-color: $bg-f3;
+      }
+    }
+  }
+
+  .search-history {
+    background: $bg-ff;
+    padding-left: 25px;
+    height: calc(100% - 100px);
+    li {
+      height: 69px;
+      position: relative;
+      @include s_border_b;
+      @include s_fontDemo(28px, 69px, $font-33);
+      &.title {
+        font-size: 24px;
+        color: $font-99;
+      }
+      .am-icon {
+        @include s_middle;
+        right: 30px;
+      }
+    }
+    .footer {
+      height: 96px;
+      text-align: center;
+      position: relative;
+      @include s_fontDemo(28px, 96px, $font-99);
+      .am-icon {
+        vertical-align: middle;
+        margin-right: 10px;
+        -webkit-transform: translateY(-4px);
+                transform: translateY(-4px);
+      }
+    }
+  }
+
+  .search-result {
+    .title {
+      padding-left: 23px;
+      @include s_fontDemo(20px, 60px, $font-99);
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/order-details.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.daojia-order-content {
+  .am-list-item .am-list-line .am-list-content, .am-list-item .am-list-line .am-list-extra {
+    font-size: 28px;
+    color: $font-33;
+  }
+  .am-list-item.am-list-item-middle {
+    @include s_border_b;
+    &.good-info {
+      .am-list-extra {
+        width: 160px;
+        span:nth-of-type(1) {
+          float: left;
+          color:#adadad;
+        }
+      }
+    }
+    &.activity-price, &.coupon-price {
+      border-bottom: none;
+      .am-list-line {
+        @include s_border_b;
+        .am-list-content {
+          span {
+            float: left;
+            &:nth-of-type(1) {
+              display: inline-block;
+              @include s_blockDemo(32px, 32px);
+              background: #ff6e19;
+              border-radius:6px;
+              @include s_fontDemo(20px, 32px, #fff);
+              text-align: center;
+              margin-right: 10px;
+            }
+          }
+        }
+        .am-list-extra {
+          color: $font-f48;
+        }
+      }
+    }
+    &.coupon-price .am-list-line .am-list-content span:nth-of-type(1) {
+      background: $font-f48;
+    }
+    &.order-price .am-list-line {
+      -webkit-box-pack: end;
+          -ms-flex-pack: end;
+              justify-content: flex-end;
+      .am-list-extra {
+        span {
+          font-size: 28px;
+          font-weight: bold;
+        }
+      }
+      .am-list-content {
+        p {
+          overflow: hidden;
+          a, span {
+            float: left;
+            @include s_fontDemo(28px, 28px, $theme);
+          }
+          a {
+            margin-right: 8px;
+            .am-icon {
+              width: 30px;
+              height: 30px;
+            }
+          }
+        }
+      }
+    }
+  }
+  .brand-info {
+    p {
+      img {
+        @include s_blockDemo(30px, 30px);
+        border-radius: 6px;
+        float: left;
+        margin-right: 15px;
+      }
+    }
+  }
+  .am-list-body div:not(:last-child) .am-list-line:after {
+    border-bottom: none;
+  }
+  .am-whitespace {
+    background: #f4f4f5;
+  }
+
+  .service-address {
+    .am-list-extra {
+      width: calc(100% - 170px);
+      white-space: normal;
+      padding-top: 20px;
+      padding-bottom: 30px;
+      p {
+        @include s_fontDemo(28px, 42px, $font-33);
+        text-align: left;
+      }
+    }
+  }
+  .remark {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    // width: 100%;
+    // .am-list-line {
+    //   width: 100%;
+    // }
+    .am-list-extra {
+      // width: calc(100% - 1.7rem);
+      text-align: left;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/order.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.order {
+  height: 100%;
+  position: relative;
+  .order-top {
+    height: calc(100% - 100px);
+    overflow: auto;
+    .am-list-item.time .am-list-line .am-list-extra {
+      @include s_fontDemo(24px, auto, $font-33);
+    }
+    .time {
+      margin-bottom: 25px;
+    }
+    .user-tips.am-list-item {
+      height: 80px;
+      .am-input-label.am-input-label-5 {
+        @include s_fontDemo(28px, 80px, $font-33);
+        width: auto;
+        padding: 0;
+      }
+      .am-input-control input {
+        @include s_fontDemo(24px, auto, $font-33);
+        padding: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    /* 改变默认样式*/
+    .am-list-item.am-input-item:after {
+      border-bottom: none;
+    }
+  }
+
+  .personality-picker {
+    @include s_border_b;
+  }
+  .personality-popup {
+    @include s_border_b;
+    .am-list-extra {
+      width: 250px !important;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+  }
+  .personality-popup-item {
+    .header {
+      @include s_fontDemo(32px, 90px, $font-33);
+      text-align: center;
+      position: relative;
+      @include s_border_b;
+      p {
+        @include s_middle;
+        color: $theme;
+        right: 25px;
+      }
+    }
+    ul {
+      padding-left: 30px;
+      li {
+        height: 79px;
+        @include s_border_b;
+        @include s_fontDemo(28px, 79px, $font-33);
+        position: relative;
+        .am-icon {
+          @include s_middle;
+          right: 30px;
+        }
+        span {
+          display: inline-block;
+          @include s_middle;
+          right: 30px;
+          width: 40px;
+          height: 40px;
+          border: 1px solid #ccc;
+          border-radius: 100%;
+        }
+      }
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/reserve-time.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.reserve-time {
+  background: $bg-ff;
+  margin-bottom: 10px;
+  .header {
+    @include s_border_b;
+    p {
+      @include s_fontDemo(28px, auto, $font-33);
+      .text {
+        @include s_fontDemo(20px, auto, $font-66);
+      }
+      .green-bg, .white-bg {
+        display: inline-block;
+        @include s_blockDemo(20px, 20px);
+      }
+      .green-bg {
+        background: #83cd47;
+      }
+      .white-bg {
+        background: #ededed;
+      }
+    }
+  }
+  .axis {
+    height: 70px;
+    /* padding-right: 24px;*/
+    border-bottom: 1px solid #000;
+    margin-bottom: 30px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    .time-part {
+      width: 70px;
+      text-align: right;
+      @include s_fontDemo(22px, 70px, $font-33);
+    }
+    .am-flexbox.am-flexbox-align-middle {
+      -webkit-box-align: end;
+          -ms-flex-align: end;
+              align-items: flex-end;
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      padding-left: 30px;
+      .long {
+        height: 16px;
+        border-left: 1px solid #333;
+      }
+      .short {
+        height: 12px;
+        border-left: 1px solid #999;
+      }
+      .am-flexbox-item {
+        position: relative;
+        margin-left: 0;
+        &:last-of-type {
+          width: 1px;
+          -webkit-box-flex: 0;
+              -ms-flex: none;
+                  flex: none;
+          padding-right: 24px;
+        }
+        p {
+          position: absolute;
+          z-index: 2;
+          @include s_fontDemo(20px, 29px, $font-66);
+          -webkit-transform: translate3d(-50%, -30px, 0);
+                  transform: translate3d(-50%, -30px, 0);
+        }
+      }
+    }
+  }
+  .reserve-time-list {
+    max-height: 400px;
+    overflow: auto;
+  }
+  .time-axis-item {
+    height: 30px;
+    padding-bottom: 30px;
+    padding-right: 24px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    .time-part {
+      width: 70px;
+      height: 30px;
+      text-align: right;
+      @include s_fontDemo(22px, 30px, $font-66);
+    }
+    .am-flexbox.am-flexbox-align-middle {
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      height: 20px;
+      padding-left: 30px;
+      .am-flexbox-item {
+        height: 20px;
+        margin-left: 0;
+      }
+      .able {
+        background: #83cd47;
+      }
+      .disable {
+        background: #eee;
+      }
+    }
+  }
+  /* 改变antd组件样式*/
+  .am-list-item .am-list-line .am-list-extra {
+    @include s_fontDemo(24px, auto, $font-66);
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/specification.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.specification {
+  padding: 0 23px;
+  position: relative;
+  .close-icon {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    color: #666;
+  }
+  .header {
+    padding: 23px 0;
+    overflow: hidden;
+    @include s_border_b;
+    .specification-left {
+      float: left;
+      overflow: hidden;
+      margin-right: 23px;
+      img {
+        height: 140px;
+        margin: 0 auto;
+      }
+    }
+    .specification-right {
+      overflow: hidden;
+      float: left;
+      .price {
+        margin-bottom: 8px;
+        @include s_fontDemo(24px, 33px, $font-f48);
+        del {
+          color: $font-99;
+        }
+      }
+      .selected-info {
+        @include s_fontDemo(24px, 33px, $font-66);
+      }
+    }
+  }
+  .specification-list {
+    padding-top: 24px;
+    padding-bottom: 112px;
+    max-height: 780px;
+    overflow: auto;
+    h1 {
+      @include s_fontDemo(28px, 40px, $font-33);
+      margin-bottom: 24px;
+      font-weight: normal;
+    }
+    li {
+      @include s_fontDemo(24px, 60px, $font-66);
+      @include s_blockDemo(48%, 60px);
+      text-align: center;
+      border: 1px solid $font-99;
+      margin-bottom: 20px;
+      float: left;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      &.active {
+        border-color: $theme;
+        color: $theme;
+      }
+    }
+  }
+  .button {
+    @include s_fontDemo(36px, 112px, $font-ff);
+    @include s_blockDemo(100%, 112px);
+    text-align: center;
+    background: $disable;
+    position: absolute;
+    bottom: 0;
+    margin-left: -23px;
+    &.active {
+      background: $theme;
+    }
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/time-select.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.time-select {
+  .tab-name {
+    h1 {
+      @include s_fontDemo(30px, 42px, $font-33);
+      text-align: center;
+      font-weight: normal;
+      span {
+        float: right;
+        @include s_fontDemo(20px, 28px, $font-ff);
+        background: $font-99;
+        padding: 0 3px;
+        margin-top: 7px;
+      }
+    }
+    p {
+      @include s_fontDemo(20px, 28px, $font-33);
+      text-align: center;
+    }
+    &.disable {
+      h1, p {
+        color: $font-99;
+      }
+    }
+  }
+  .tab-content {
+    overflow: hidden;
+    padding-left: 25px;
+    padding-top: 40px;
+    li {
+      @include s_blockDemo(22%, 80px);
+      @include s_fontDemo(26px, 80px, $font-66);
+      @include s_border;
+      box-sizing: border-box;
+      background: $bg-ff;
+      margin-right: 3%;
+      text-align: center;
+      float: left;
+      margin-bottom: 20px;
+      position: relative;
+      &.section {
+        @include s_blockDemo(30.33333%, 80px);
+      }
+      &.disable {
+        background: none;
+        color: $font-99;
+      }
+      span {
+        position: absolute;
+        font-size: 20px;
+        line-height: 28px;
+        right: 3px;
+        bottom: 3px;
+      }
+    }
+  }
+  /* 改变默认样式*/
+  .am-tabs-bar .am-tabs-tab.am-tabs-tab-active .tab-name {
+    h1, p {
+      color: $theme;
+    }
+    span {
+      background: $theme;
+    }
+  }
+  .am-tabs-ink-bar {
+    background: $theme;
+  }
+}
+         
+ 
+ 
+ 
+ daojia/styles/user-comment.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.user-comment {
+  .header {
+    background: $bg-ff;
+    overflow: hidden;
+    padding: 25px 30px;
+    @include s_border_b;
+    .user-icon {
+      float: left;
+      @include s_blockDemo(80px, 80px);
+      margin-right: 26px;
+    }
+    .evaluationContainer {
+      float: left;
+      -webkit-transform: translateY(50%);
+              transform: translateY(50%);
+    }
+    p {
+      float: right;
+      @include s_fontDemo(24px, 80px, $font-66);
+    }
+  }
+  .am-list-item {
+    padding-right: 30px;
+    .am-textarea-control textarea {
+      background: $bg-ff;
+      @include s_fontDemo(28px, 40px, $font-33);
+    }
+  }
+  .img-list {
+    padding-bottom: 1px;
+    background: $bg-ff;
+  }
+  .commit {
+    width: 694px;
+    @include s_fontDemo(36px, 100px, $font-ff);
+    background: $theme;
+    text-align: center;
+    margin: 50px auto 30px;
+    border-radius: 4px;
+  }
+  /* 改变antd默认样式*/
+  .am-textarea-count {
+    right: 30px;
+  }
+  .pic-img-container {
+    background: #fff;
+    padding-bottom: 1px;
+  }
+}

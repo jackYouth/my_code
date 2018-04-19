@@ -1,0 +1,20 @@
+@import "./app.scss";
+
+.addOrMinus-container{
+  display: inline-block;
+  .add{
+    color: #fff;background-color: #ff9a00;width: 44px !important;height: 44px !important;text-align: center;line-height: 39px !important;display: inline-block;border-radius: 100%;
+    font-size: 40px !important;font-weight: 700;
+  }
+  .no-add{
+    color: #fff;background-color: #ccc;width: 44px !important;height: 44px !important;text-align: center;line-height: 39px !important;display: inline-block;border-radius: 100%;
+    font-size: 40px;font-weight: 700;
+  }
+  .minus{
+    width: 44px !important;height: 44px !important;background-color: #fff;display: inline-block;text-align: center;line-height: 39px !important;border: 1px solid #ccc;
+    border-radius: 100%;font-size: 40px !important;font-weight: 700;color: #ccc;
+  }
+  .foodLen{
+    font-size: 28px;margin: 0 20px;display: inline-block;
+  }
+}

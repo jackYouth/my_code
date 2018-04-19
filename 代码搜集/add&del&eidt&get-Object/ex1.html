@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Table Operations</title>
+</head>
+<style>
+  .selected{
+    background: yellow;
+  }
+</style>
+<body>
+
+
+    <div id="ctrl-panel" style="margin: 20px 0px">
+
+        <form method="post" id="myForm">
+            会员号:<input/>
+            姓名:<input/>
+            性别:<input/>
+            生日:<input/>
+            星座:<input/>
+
+            <button class="add" type="button">新增行</button>
+            <button class="edit" type="button">修改</button>
+            <button class="del" type="button">删除行</button>
+            <button class="up" type="button">上移</button>
+            <button class="down" type="button">下移</button>
+        </form>
+
+    </div>
+
+    <table border="1" width="100%" class="table" id="myTable">
+        <tr class="th">
+            <td>No.</td>
+            <td>会员号</td>
+            <td>姓名</td>
+            <td>性别</td>
+            <td>生日</td>
+            <td>星座</td>
+        </tr>
+    </table>
+    <script src="./jquery-1.11.3.min.js"></script>
+    <script src="./tablePlugin.js"></script>
+</body>
+</html>

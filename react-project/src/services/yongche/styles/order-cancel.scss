@@ -1,0 +1,21 @@
+@import "../../../styles/s_common.scss";
+
+.order-cancel {
+  padding-top: 40px;
+  li {
+    border:1px solid $font-99 !important;
+    border-radius:6px;
+    margin: 0 auto 20px;
+    @include s_blockDemo(688px, 88px);
+    @include s_fontDemo(28px, 88px, $font-99);
+    color: $font-99 !important;
+    text-align: center;
+    &.active {
+      border-color: $theme !important;
+      color: $theme !important;
+    }
+    &:last-child {
+      margin-bottom: 50px;
+    }
+  }
+}

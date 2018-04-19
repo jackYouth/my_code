@@ -1,0 +1,67 @@
+@import "../../../styles/s_common.scss";
+
+.order-item {
+  // background: $bg-ff;
+  // padding-left: 30px;
+  // padding-right: 30px;
+  .order-item-header {
+    border-bottom: 1px dashed $border-e5;
+    overflow: hidden;
+    .order-item-left {
+      height: 193px;
+      width: 65px;
+      line-height: 193px;
+      position: relative;
+      .am-icon {
+        @include s_middle;
+      }
+    }
+    .order-item-right {
+      padding-top: 25px;
+      margin-left: 10px;
+      div {
+        height: 28px;
+        margin-bottom: 30px;
+        font-size:28px;
+        color:$font-66;
+        .am-icon {
+          display: inline-block;
+          margin-right: 27px;
+          margin-left: -8px;
+        }
+        p {
+          width: 518px;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          white-space: nowrap;
+          display: inline-block;
+          margin-right: 36px;
+          transform: translateY(-11px);
+        }
+        span {
+          display: inline-block;
+          width: 89%;
+          text-overflow:ellipsis;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+      }
+      .order-item-middle {
+        p {
+          background:#4a90e2;
+          width:10px;
+          height:10px;
+          border-radius:100%;
+        }
+      }
+      .order-item-bottom {
+        p {
+          background:#ff6d7f;
+          width:10px;
+          height:10px;
+          border-radius:100%;
+        }
+      }
+    }
+  }
+}

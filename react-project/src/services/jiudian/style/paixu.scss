@@ -1,0 +1,24 @@
+@import "./app.scss";
+
+.paixu-container{
+  background-color: #fff;
+  .top-bar{
+    height: 100px;width: 100%;line-height: 100px;padding: 0 30px;border-bottom: 1px solid #e5e5e5;
+    span{
+      font-size: 32px;display: inline-block;width: calc(100% / 3);
+    }
+    span:nth-child(1){color: #666;}
+    span:nth-child(2){color: #333;text-align: center;}
+    span:nth-child(3){color: #ffab00;text-align: right;}
+  }
+  .sort-main{
+    .sort-box{
+      height: 99px;box-sizing: border-box;border-bottom: 1px solid #e5e5e5;line-height: 99px;font-size: 32px;color: #999;
+      padding: 0 30px;
+    }
+    .choosen{
+      color: #ffab00;background-image: url('../image/choose.png');background-size: 30px;background-repeat: no-repeat;
+      background-position: 95% center;
+    }
+  }
+}

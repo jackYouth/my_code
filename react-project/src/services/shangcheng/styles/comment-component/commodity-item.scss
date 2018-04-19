@@ -1,0 +1,87 @@
+@import "../common.scss";
+
+.commodity-item {
+  overflow: hidden;
+  padding-right: 30px;
+  background: $bg-ff;
+  list-style: none;
+  .commodity-item-left, .commodity-item-right {
+    float: left;
+    box-sizing: border-box;
+  }
+  .commodity-item-left {
+    @include s_blockDemo(260px, 260px);
+    overflow: hidden;
+    position: relative;
+    margin-right: 20px;
+    overflow: hidden;
+    img {
+      display: block;
+      height: 250px;
+      @include s_allCenter;
+    }
+    p {
+      background: rgba(35,35,35,0.60);
+      border-radius: 100%;
+      text-align: center;
+      overflow: hidden;
+      @include s_fontDemo(24px, 31px, $font-ff);
+      @include s_allCenter;
+      @include s_blockDemo(140px, 140px);
+      span {
+        width: 100%;
+        @include s_allCenter;
+      }
+    }
+  }
+  .commodity-item-right {
+    @include s_blockDemo(calc(100% - 280px), 260px);
+    position: relative;
+    @include s_border_b;
+    .commodity-item-top {
+      @include s_fontDemo(28px, 35px, $font-33);
+      padding-top: 16px;
+    }
+    .commodity-item-middle {
+      @include s_fontDemo(24px, 35px, $font-99);
+    }
+    .commodity-item-bottom {
+      overflow: hidden;
+      width: 100%;
+      position: absolute;
+      bottom: 23px;
+      .commodity-item-price {
+        display: block;
+        @include s_fontDemo(28px, 52px, $font-f48);
+        span {
+          font-size: 36px;
+        }
+      }
+      .commodity-item-original-price, .commodity-item-purchases-count, .commodity-item-commodity-comment {
+        float: left;
+        margin-right: 20px;
+        @include s_fontDemo(24px, 35px, $font-ad);
+      }
+      .commodity-item-commodity-comment {
+        margin-right: 0;
+      }
+      .commodity-item-cart-icon {
+        position: absolute;
+        right: 0;
+        bottom: 5px;
+      }
+    }
+
+    .commodity-count {
+      @include s_fontDemo(28px, 40px, $font-66);
+      @include s_middle;
+      right: 23px;
+      &.change-commodity-count {
+        @include s_fontDemo(28px, 45px, $font-33);
+        .am-icon, span {
+          float: left;
+        }
+      }
+    }
+  }
+}

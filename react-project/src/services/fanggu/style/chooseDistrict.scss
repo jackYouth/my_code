@@ -1,0 +1,39 @@
+.searchBar{
+  width: 100%;height: 100px;line-height: 100px;text-align: left;background-color: #f5f5f6;position: fixed;top: 0;left: 0;z-index: 99;
+  div{
+    width: 80%;height: 54px;border: 1px solid #e4e4e5;border-radius: 8px;font-size: 28px;text-align: center;background-color: #fff;display: inline-block;line-height: 54px;margin-left: 32px;
+    background-image: url('../img/magnifier.png');background-size: 27px;background-position: 3% center;background-repeat: no-repeat;margin-top: 23px;
+    input{width: 80%;height: 100%;font-size: 0.28rem;}
+  }
+  .cancel{font-size: 0.28rem;color: #ffa000;display: inline-block;width: 14%;text-align: center;}
+}
+.districtList{
+  position: absolute;top: 100px;width: 100%;overflow-y: scroll;height: calc(100% - 100px);
+  ul{
+    li{
+      padding: 0 32px;background-image: url('../img/icon_loc.png');
+      background-repeat: no-repeat;background-size: 32px;height: 140px;background-color: #fff;
+      background-position: 32px center;
+      .districtContainer{
+        border-bottom: 1px solid #f5f5f6;padding-top: 34px;text-indent: 64px;height: calc(100% - 34px);
+        h2{font-size: 0.3rem;margin-bottom: 20px}
+        p{font-size: 0.24rem;color: #aaa;}
+      }
+    }
+  }
+}
+.notFound{
+  position: absolute;top: 50%;width: 100%;text-align: center;height: 100px;background-image: url('../img/notFound_house.png');
+  background-size: 200px;background-repeat: no-repeat;background-position: center top;padding-top: 150px;color: #888;font-size: 0.28rem;
+  line-height: 100px;margin-top: -175px;
+}
+.history{
+  position: absolute;top: 100px;width: 100%;overflow-y: scroll;height: calc(100% - 100px);
+  .title{font-size: 0.3rem;color: #888;height: 90px;line-height: 90px;padding: 0 32px;}
+  .deleteHistory{font-size: 0.3rem;color: #888;height: 90px;line-height: 90px;text-align: center;}
+  ul{
+    li{
+      background-color: #fff;height: 89px;border: 1px solid #e5e5e5;line-height: 89px;padding: 0 32px;
+    }
+  }
+}

@@ -1,0 +1,51 @@
+@import "../../../styles/s_common.scss";
+
+.user-comment {
+  .header {
+    background: $bg-ff;
+    overflow: hidden;
+    padding: 25px 30px;
+    @include s_border_b;
+    .user-icon {
+      float: left;
+      @include s_blockDemo(80px, 80px);
+      margin-right: 26px;
+    }
+    .evaluationContainer {
+      float: left;
+      -webkit-transform: translateY(50%);
+              transform: translateY(50%);
+    }
+    p {
+      float: right;
+      @include s_fontDemo(24px, 80px, $font-66);
+    }
+  }
+  .am-list-item {
+    padding-right: 30px;
+    .am-textarea-control textarea {
+      background: $bg-ff;
+      @include s_fontDemo(28px, 40px, $font-33);
+    }
+  }
+  .img-list {
+    padding-bottom: 1px;
+    background: $bg-ff;
+  }
+  .commit {
+    width: 694px;
+    @include s_fontDemo(36px, 100px, $font-ff);
+    background: $theme;
+    text-align: center;
+    margin: 50px auto 30px;
+    border-radius: 4px;
+  }
+  /* 改变antd默认样式*/
+  .am-textarea-count {
+    right: 30px;
+  }
+  .pic-img-container {
+    background: #fff;
+    padding-bottom: 1px;
+  }
+}

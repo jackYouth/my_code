@@ -1,0 +1,207 @@
+@import 'self_common';
+
+.orderWrap{
+    width: $w;
+    height:100%;
+    .orderMain{
+      width: 100%;
+      height:calc(100% - 112px);
+      overflow: scroll;
+    }
+    .addrWrap{
+       width: $w;
+       height:auto;
+       background:#fff;
+       @extend .pos-relative;
+       top:0;
+       .addr_no{
+           width: $w;
+           height: 164px;
+           padding:32px;
+          //  float:left;
+          //  display:none;
+           img{
+               @extend .inline-block;
+               float:left;
+               width: 50px;
+               height:auto;
+               margin-top:24px;
+           }
+           span{
+               @extend .inline-block;
+               float: left;
+               margin-top:32px;
+               margin-left:20px;
+               color:rgb(255,170,0);
+               font-size:33px;
+           }
+           .goChoose{
+              float: right;
+              width: 20px;
+              margin-top:32px;
+           }
+       }
+       .addr_one{
+          padding:32px;
+          .addr_main{
+              width: $w;
+              height:auto;
+              .clear{
+                  clear:both;
+              }
+              .addr_l{
+                 width: 10%;
+                 height:auto;
+                 float:left;
+                 img{
+                    width: 30px;
+                    margin-top:35%;
+                 }
+              }
+              .addr_c{
+                 width: 80%;
+                 height:auto;
+                 float:left;
+                 font-size:26px;
+                 .addr_name{
+                //    display:flex;
+                //    align-items: center;
+                //    justify-content: space-between;
+                 }
+              }
+              .addr_r{
+                width: 10%;
+                height:auto;
+                float:left;
+                 img{
+                    width: 20px;
+                    float: right;
+                    margin-top:45%;
+                 }
+              }
+              .kong{
+                  margin-bottom:12px;
+                  span{
+                     margin-right:14px;
+                  }
+                  .tag{
+                     @extend .inline-block;
+                    //  width: 56px;
+                     height:32px;
+                     border-radius: 6px;
+                     background:rgb(255,160,0);
+                     color:#fff;
+                     text-align: center;
+                  }
+              }
+          }
+       }
+       .addr_line{
+          width: $w;
+          height:10px;
+          background: url(../img/bgs.png) repeat-x;
+          bottom: -10px;
+          background-size: contain;
+       }
+
+    }
+    .showData{
+       padding:32px;
+       margin-top:10px;
+       background:#fff;
+       .showMain{
+          width: $w;
+          height:auto;
+          .clear{
+            clear: both;
+          }
+          .showPic{
+             width: 35%;
+             height:150px;
+             float:left;
+             margin-right:5%;
+             img{
+                width: $w;height:$h;
+             }
+          }
+          .showPrice{
+              width: 60%;
+              float:left;
+              .show_title{
+                 width: $w;
+                 margin-bottom:16px;
+                 white-space: nowrap;
+                 overflow: hidden;
+                 text-overflow: ellipsis;
+                 font-size:30px;
+              }
+              .show_sum{
+                  color:#ffab00;
+                  text-align: right;
+                  margin-bottom:16px;
+                  font-size:0.35rem;
+              }
+              .show_price{
+                  width: $w;
+                  font-size:0.35rem;
+                  color: #ffab00;
+              }
+          }
+       }
+    }
+    .Sum{
+        margin:0 28px;
+    }
+    .supplier{
+      background: #f5f5f6;
+      width: $w;
+      height:82px;
+      line-height: 82px;
+      padding: 0 32px;
+      font-size:0.24rem;
+      color:rgb(170,170,170);
+    }
+    .promotion_title{
+        padding:0 32px;
+        width: $w;
+        height:82px;
+        line-height: 82px;
+        font-size:28px;
+    }
+  .orderBtnWrap{
+     @extend .pos-fixed;
+     bottom:0;
+     left:0;
+     width: $w;
+     height:112px;
+     border-top:1px solid #f5f5f6;
+     background:#fff;
+     .orderSumPrice{
+        width: 60%;
+        height:$h;
+        color: #ffab00;
+        font-size:34px;
+        font-weight: 700;
+        float:left;
+        text-indent: 32px;
+        line-height:112px;
+     }
+     .orderBtn{
+         width: 40%;
+         height:$h;
+         text-align: center;
+         line-height:112px;
+         font-size:36px;
+         color:#fff;
+         float:left;
+     }
+     .orderBg{
+         background: #ffab00;
+     }
+  }
+  .ItemTime .am-list-item{
+    .am-list-line{
+      height:88px;
+    }
+  }
+}

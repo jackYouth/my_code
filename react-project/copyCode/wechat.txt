@@ -1,0 +1,336 @@
+         
+ 
+ 
+ 
+ wechat/actions/index.js 
+ 
+
+         
+ 
+ 
+ 
+ wechat/components/app.js 
+ 
+import React from 'react'
+import WechatHome from './wechatHome'
+
+const App = props => {
+  console.log('props', props)
+  return (
+    <div>
+      <WechatHome />
+    </div>
+  )
+}
+
+export default App
+         
+ 
+ 
+ 
+ wechat/components/root.js 
+ 
+import React from 'react'
+import customize from 'customize'
+
+export default customize(
+  ({ children }) => (
+    <div>{ children }</div>
+  )
+)
+         
+ 
+ 
+ 
+ wechat/components/wechatHome.js 
+ 
+import React, { Component } from 'react'
+import { Carousel } from 'antd-mobile'
+import '../style/wechatHome.scss'
+import banner1   from '../image/banner1.png'
+import banner2   from '../image/banner2.png'
+import huafei    from '../image/huafei.png'
+import jiayou    from '../image/jiayou.png'
+import shenghuo  from '../image/shenghuojiaofei.png'
+import weizhang  from '../image/weizhang.png'
+import waimai    from '../image/waimai.png'
+import dianyin   from '../image/dianyin.png'
+import shengxian from '../image/shengxian.png'
+import coffee    from '../image/coffee.png'
+import paotui    from '../image/paotui.png'
+import jiudian   from '../image/jiudian.png'
+import jingdian  from '../image/jingdian.png'
+import huoche    from '../image/huoche.png'
+import jipiao    from '../image/jipiao.png'
+
+class WechatHome extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      data: [
+        {
+          name:  '充值缴费',
+          datas: [
+            {
+              serverName: '话费充值',
+              img:        huafei,
+              url:        'http://blm.test.otosaas.com/chongzhi/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '加油卡充值',
+              img:        jiayou,
+              url:        'http://blm.test.otosaas.com/jiayouka/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '生活缴费',
+              img:        shenghuo,
+              url:        'http://blm.test.otosaas.com/shenghuojiaofei/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '违章缴费',
+              img:        weizhang,
+              url:        'http://blm.test.otosaas.com/weizhang/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+          ],
+        }, {
+          name:  '品质生活',
+          datas: [
+            {
+              serverName: '外卖',
+              img:        waimai,
+              url:        'https://dev-me.otosaas.com/waimai/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '电影',
+              img:        dianyin,
+              url:        'http://blm.test.otosaas.com/dianying/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '水果生鲜',
+              img:        shengxian,
+              url:        'https://dev-me.otosaas.com/shengxian/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '星巴克',
+              img:        coffee,
+              url:        'http://blm.test.otosaas.com/coffee/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '跑腿代购',
+              img:        paotui,
+              url:        'http://blm.test.otosaas.com/paotui/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+          ],
+        }, {
+          name:  '商旅出行',
+          datas: [
+            {
+              serverName: '酒店',
+              img:        jiudian,
+              url:        'https://dev-me.otosaas.com/jiudian/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '景点',
+              img:        jingdian,
+              url:        'http://blm.test.otosaas.com/menpiao/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '火车票',
+              img:        huoche,
+              url:        'https://dev-me.otosaas.com/huoche/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+            {
+              serverName: '机票',
+              img:        jipiao,
+              url:        'https://dev-me.otosaas.com/jipiao/?customerUserId=gongzhonghao&customerUserPhone=13100000000',
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  componentWillMount() {
+  }
+
+  render() {
+    const { data = {} } = this.state
+    console.log(data)
+    return (
+      <div className='wechat-home-container'>
+        <div className='banner-container'>
+          <Carousel className='my-carousel'
+            infinite
+            autoplay
+            dotStyle={{ backgroundColor: '#ffab00', width: '.3rem', height: '.06rem', borderRadius: '0' }}
+          >
+            <img src={ banner1 } alt='banner1' />
+            <img src={ banner2 } alt='banner2' />
+          </Carousel>
+        </div>
+        {
+          data.map(({ name, datas }) => {
+            return (
+              <div className='server-container' key={ name }>
+                <div className='server-title-container'>
+                  <i />
+                  <span>{ name }</span>
+                </div>
+                <div className='server-main-container'>
+                  {
+                    datas.map(({ serverName, img, url }) => {
+                      return (
+                        <div href={ url } key={ serverName } className='server-box' onClick={ () => window.location.href = url }>
+                          <img src={ img } alt={ serverName } />
+                          <span>{ serverName }</span>
+                        </div>
+                      )
+                    })
+                  }
+                </div>
+              </div>
+            )
+          })
+        }
+      </div>
+    )
+  }
+}
+
+export default WechatHome
+         
+ 
+ 
+ 
+ wechat/containers/app.js 
+ 
+import { connect } from 'react-redux'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+import App         from '../components/app'
+
+const mapStateToProps = ({ app }) => ({ ...app })
+
+const mapDispatchToProps = dispatch => ({ dispatch })
+
+const mapFunToComponent  = () => ({
+  componentDidMount: () => console.log('root mounted'),
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+         
+ 
+ 
+ 
+ wechat/index.js 
+ 
+import React        from 'react'
+import { createStore, applyMiddleware } from 'redux'
+import { render }   from 'react-dom'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+import Routes       from './routes'
+
+// 定义根组件
+const Root  = () => (
+  <Provider store={ createStore(reducers, applyMiddleware(thunk)) }>
+    <Routes />
+  </Provider>
+)
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ wechat/reducers/app.js 
+ 
+const initialState = {
+  title: 'wechat',
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    default: return state
+  }
+}
+
+export default app
+         
+ 
+ 
+ 
+ wechat/reducers/index.js 
+ 
+import { combineReducers } from 'redux'
+// 引入reducers
+import app  from './app'
+// 组合reducers
+export default combineReducers({
+  app,
+})
+         
+ 
+ 
+ 
+ wechat/routes.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/wechat' component={ require('react-router?name=root!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+    </Route>
+  </Router>
+)
+export default Routes
+         
+ 
+ 
+ 
+ wechat/style/wechatHome.scss 
+ 
+.wechat-home-container{
+  .banner-container{
+    width: 92%;height: 252px;text-align: center;display: inline-block;margin-left: 4%;margin-top: 20px;
+    .my-carousel{
+      height: 100% !important;
+      .slider-frame, ul, li {
+        height: 100% !important;
+      }
+      .am-carousel-wrap{
+        height: .2rem;
+      }
+      .am-carousel-wrap-dot > span{
+        width: 30px;height: 6px;border-radius: 0;
+      }
+    }
+  }
+  .server-container{
+    padding: 30px 0;border-bottom: 1px solid #e5e5e5;
+    .server-title-container{
+      margin-top: 20px;padding-bottom: 20px;
+      i{display: inline-block;width: 6px;height: 23px;background-color: #ffab00;border-radius: 1px;margin-left: 30px;}
+      span{font-size: 24px;color: #999;margin-left: 10px;}
+    }
+    .server-main-container{
+      .server-box{
+        width: 25%;display: inline-block;margin-top: 20px;
+        img{
+          display: inline-block;width: 100%;height: 100px;
+        }
+        span{
+          display: inline-block;width: 100%;font-size: 24px;color: #333;text-align: center;
+        }
+      }
+    }
+  }
+}
+
+body{
+  background-color: #fff;
+}

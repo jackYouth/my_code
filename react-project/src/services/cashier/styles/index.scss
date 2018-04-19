@@ -1,0 +1,39 @@
+.cashier-container {
+  font-family: "-apple-system",BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Source Han Sans","Noto Sans CJK Sc","Microsoft YaHei",sans-serif;
+  text-rendering: opximizeLegibility;
+-webkit-font-smoothing: antialiased;
+  .cashier-info {
+    background-color: #fff;
+    padding: .32rem;
+    position: relative;
+
+    .title {
+      font-size: .32rem;
+      margin-bottom: .24rem;
+    }
+    .price {
+      color: #ff4848;
+      font-size: .28rem
+    }
+    .price-name {
+      color: #808080;
+      font-size: .28rem;
+      margin-right: .12rem;
+    }
+
+  }
+  .btn {
+    position: relative;
+    text-align: center;
+    font-size: .32rem;
+    font-weight: 700;
+    color: #fff;
+    border-radius: .1rem;
+    line-height: .76rem;
+    width: 100%;
+  }
+  .btn.primary {
+    border: 0;
+    background-color: #ffab00;
+  }
+}

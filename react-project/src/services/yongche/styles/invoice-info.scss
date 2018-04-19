@@ -1,0 +1,61 @@
+@import "../../../styles/s_common.scss";
+
+.invoiceInfo {
+  .invoiceInfo-header {
+    padding: 30px 30px 100px;
+    .invoiceInfo-item {
+      background: $bg-ff;
+      padding-left: 30px;
+      padding-right: 30px;
+      margin-bottom: 10px;
+      .footer {
+        height: 65px;
+        line-height: 65px;
+        font-size:24px;
+        color:$font-66;
+        text-align: right;
+        background: $bg-ff;
+        span {
+          color: $font-f48;
+        }
+      }
+    }
+  }
+
+  .invoiceInfo-footer {
+    position: absolute;
+    bottom: 0;
+    height: 100px;
+    width: 100%;
+    padding-left: 30px;
+    background: $bg-ff;
+    border-top: 1px solid $border-e5;
+    box-sizing: border-box;
+    .am-icon, h1, span, p {
+      display: inline-block;
+      line-height: 100px;
+    }
+    .am-icon {
+      margin-right: 20px;
+      transform: translateY(10px);
+    }
+    h1 {
+      font-size:28px;
+      color:$font-33;
+      font-weight: normal;
+    }
+    span {
+      font-size:24px;
+      color:$font-99;
+    }
+    p {
+      background:$border-eb;
+      width:180px;
+      font-size:36px;
+      color: $font-ff;
+      text-align:center;
+      float: right;
+    }
+
+  }
+}

@@ -1,0 +1,183 @@
+@import 'lib';
+@import 'antd';
+
+// 以上是清除页面默认样式
+body,
+dd,
+dl,
+dt,
+fieldset,
+form,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+html,
+img,
+legend,
+li,
+ol,
+p,
+ul {
+    margin: 0;
+    padding: 0;
+}
+
+fieldset,
+img {
+    border: none;
+}
+
+address,
+caption,
+cite,
+code,
+dfn,
+th,
+var {
+    font-style: normal;
+    font-weight: normal;
+}
+
+ol,
+ul {
+    list-style: none;
+}
+
+input {
+    outline: none;
+    border: none;
+}
+
+body,
+html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: #f5f5f6;
+}
+
+html {
+    overflow-x: hidden;
+}
+body { font-family: PingFangSC-Regular !important; overflow-y: hidden !important; }
+
+
+// 以上是清除页面默认样式
+$displayArray: block inline inline-block;
+
+@each $d in $displayArray {
+  .#{ $d } {
+    display: $d
+  }
+}
+
+@for $i from 1 through 100 {
+  .wp#{ $i } {
+    @include w(#{ $i + '%' })
+  }
+}
+
+$positionArray: fixed absolute relative;
+
+@each $p in $positionArray {
+  .pos-#{ $p } {
+    position: $p
+  }
+}
+
+.fright {
+  float: right
+}
+.fleft {
+  float: left
+}
+.blod {
+  font-weight: 700;
+}
+.brand-color {
+  @include color($brand)
+}
+
+.gray-1 {
+  @include color($gray-1)
+}
+.gray-2 {
+  @include color($gray-2)
+}
+.gray-3 {
+  @include color($gray-3)
+}
+.gray-4 {
+  @include color($gray-4)
+}
+.gray-5 {
+  @include color($gray-5)
+}
+
+@each $key, $val in (xx:.36, x: .30, m: .28, s: .26, ss: .20) {
+  .font-#{ $key } {
+    @include rem(#{ $val });
+  }
+}
+.tmr {
+  @include margin(24px, right)
+}
+.white {
+  @include color($white)
+}
+.tcenter {
+  text-align: center;
+}
+.vtop {
+  vertical-align: top
+}
+
+.btn {
+  @extend %pos-relative;
+  @extend .tcenter;
+  @extend .font-x;
+  @extend .blod;
+  @include color($white);
+  @include radius(10px);
+  @include lh(76px);
+  &.primary {
+    @include bgc($brand);
+    border: 0;
+  }
+  &.disabled {
+    @include bgc($gray-3);
+    border: 0;
+  }
+}
+.tag {
+  @extend .pos-relative;
+  @extend .font-ss;
+  @include padding(4px 12px);
+  @include radius(10px);
+  border : 1px solid;
+  &.orange {
+    @extend .blod;
+    @include bgc($brand);
+    @include color($white);
+    @include padding(4px 16px);
+    border: 0;
+
+  }
+}
+.pd16 {
+  padding: 32px;
+}
+.tmb {
+  margin-bottom: 20px
+}
+body {
+  font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif
+}
+.touch-layer {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

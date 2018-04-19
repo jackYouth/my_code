@@ -1,0 +1,35 @@
+{
+  "name": "oto_saas_dianying",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kpboluome/oto_saas_dianying.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kpboluome/oto_saas_dianying/issues"
+  },
+  "homepage": "https://github.com/kpboluome/oto_saas_dianying#readme",
+  "dependencies": {
+    "@boluome/consul": "^1.0.8",
+    "@boluome/log": "^1.0.4",
+    "@boluome/mongo": "^3.0.1",
+    "@boluome/redis": "^2.0.4",
+    "amqplib": "^0.5.1",
+    "async": "^2.0.1",
+    "body-parser": "^1.15.2",
+    "bunyan": "^1.8.1",
+    "express": "^4.14.0",
+    "express-validator": "^2.21.0",
+    "lodash": "^4.17.4",
+    "moment": "^2.15.0",
+    "querystring": "^0.2.0",
+    "request": "^2.75.0"
+  }
+}

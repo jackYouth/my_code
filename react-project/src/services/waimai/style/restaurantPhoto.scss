@@ -1,0 +1,14 @@
+@import "./app.scss";
+
+.RestaurantPhoto-container{}
+.RestaurantPhoto-layer-container{
+  position: absolute;z-index: 20;width: 100%;margin-top: -250px;top: 50%;
+  ul{height: 500px !important;}
+  .RestaurantPhoto-box{
+    width: 100%;
+    img{width: 100%;position: absolute;z-index: 50;}
+  }
+}
+.mask-container .mask.fade-in{
+  opacity: .8 !important;
+}

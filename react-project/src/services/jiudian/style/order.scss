@@ -1,0 +1,110 @@
+@import "./app.scss";
+
+.orderPage-container{
+  position: relative;min-height: 100%;
+  .room-info-container{
+    padding: 21px 10px;
+    .room-info-box{
+      width: 100%;box-sizing: border-box;height: 233px;background-color: #fff;border-radius: 4px;box-shadow: 0 0 7px 0 rgba(199,199,199,0.50);
+      padding: 0 20px;
+      .room-info-line-one{
+        background-image: url('../image/hotel.png');background-repeat: no-repeat;background-size: 25px 30px;background-position: left center;
+        height: 86px;border-bottom: 1px solid #e5e5e5;box-sizing: border-box;
+        span{font-size: 30px;height: 100%;vertical-align: middle;line-height: 85px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
+        span:nth-child(1){text-indent: 35px;display: inline-block;box-sizing: border-box;width: 35%;font-size: 32px;color: #333;}
+        span:nth-child(2){display: inline-block;width: 65%;}
+      }
+      .room-info-line-two{
+        display: inline-block;height: 75px;box-sizing: border-box;width: 100%;border-bottom: 1px solid #e5e5e5;
+        span{font-size: 24px;color: #333;margin-right: 20px;height: 100%;line-height: 76px;display: inline-block;}
+        .room-detail-btn{color: #ffab00;float: right;}
+      }
+      .room-info-line-three{
+        width: 100%;height: 69px;line-height: 69px;
+        span{font-size: 24px;color: #666;height: 100%;display: inline-block;margin-right: 15px;}
+      }
+    }
+  }
+  .order-main-container{
+    .room-quantity-box{}
+    .customer-name, .customer-phone, .show-price-container{
+      background-color: #fff;height: 89px;border-bottom: 1px solid #e5e5e5;display: inline-block;box-sizing: border-box;
+      width: 100%;line-height: 90px;padding: 0 30px;font-size: 28px;
+      span{display: inline-block;height: 100%;width: 187px;}
+      input{display: inline-block;height: 97%;width: calc(100% - 187px);}
+    }
+    .customer-phone{}
+    .show-price-container{
+      span:nth-child(2){
+        float: right;text-align: right;
+      }
+    }
+    .show-cancel-container{
+      display: inline-block;padding: 20px 30px;box-sizing: border-box;width: 100%;margin-bottom: 100px;
+      span{
+        color: #ffab00;font-size: 24px;display: inline-block;
+      }
+      span:nth-child(1){width: 21%;vertical-align: top;}
+      span:nth-child(2){width: 79%;letter-spacing: 4px;}
+    }
+  }
+  .bottom-btn-container{
+    box-sizing: border-box;display: inline-block;width: 100%;height: 100px;background-color: #fff;position: fixed;bottom: 0;
+    .price-box{
+      display: inline-block;box-sizing: border-box;width: 73%;padding: 0px 20px 0px 30px;height: 100%;line-height: 100px;
+      .discount-box{font-size: 28px;color: #999;float: left;}
+      .sumPrice-box{
+        display: inline-block;float: right;
+        span{font-size: 28px;color: #ff4848;}
+        span:nth-child(1){
+
+        }
+        span:nth-child(2){
+          font-size: 34px;
+        }
+      }
+    }
+    button{
+      width: 27%;text-align: center;background-color: #ffab00;color: #fff;line-height: 100px;height: 100px;
+      float: right;font-size: 34px;
+    }
+  }
+}
+
+.price-detail-container{
+  padding: 50px 100px;height: 100%;box-sizing: border-box;overflow-y: scroll;
+  .cross{
+    width: 100%;height: 1px;background-color: #e5e5e5;display: inline-block;position: relative;
+  }
+  h3{
+    font-size: 32px;color: #333;text-align: center;position: relative;width: 200px;left: 50%;margin-left: -100px;
+    background-color: #f3f3f4;
+  }
+  .price-detail-box{
+    font-size: 44px;color: #ff4848;text-align: center;margin: 40px 0;
+  }
+  .main-box{
+    margin-top: 40px;
+    span{
+      display: inline-block;width: 50%;font-size: 28px;color: #999;
+    }
+    span:nth-child(1){
+      text-align: left;
+    }
+    span:nth-child(2){
+      text-align: right;
+    }
+  }
+  .closeMe{
+    width: 100%;height: 100px;background-image: url('../image/orangeclose.png');background-repeat: no-repeat;
+    background-position: center;background-size: 70px;position: absolute;bottom: 100px;left: 0;
+  }
+}
+
+.arrive-time-box, .room-quantity-box{
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.am-modal-button-group-v .am-modal-button{
+  color: #ffab00;
+}

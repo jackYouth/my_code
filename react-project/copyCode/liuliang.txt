@@ -1,0 +1,960 @@
+         
+ 
+ 
+ 
+ liuliang/actions/Liuliang.js 
+ 
+import { setStore, getStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { get, send, afterOrdering } from 'business'
+
+// 定义一个函数用去除空格
+const phoneTrim = phone => {
+  const phoneREP = /^(\d{3})[\s](\d{4})[\s](\d{4})$/
+  const matches = phoneREP.exec(phone)
+  if (matches) {
+    const newNum = matches[1] + matches[2] + matches[3]
+    return newNum
+  }
+  return false
+}
+
+export const queryLiuliangList = content => dispatch => {
+  const sPhone = phoneTrim(content)
+  dispatch({ type: 'SET_LL_CURPHONE', curPhone: content })  // 将当前的输入框中内容合并到Liuliang分支中
+  dispatch({ type: 'SET_LL_FOCUS_CONDITION', isFocus: true })    // 改变字体颜色
+  dispatch({ type: 'SELECTED_LL', selectedHf: { index: '', list: ['', '', '', '', '', ''] } })        // 清空当前选中的信息
+  if (content.length === 13) {
+    const closeLoading = Loading()  // 开启一个loading图
+    get(`/liuliang/v1/${ sPhone }/prices`, { channel: 'dhst' }).then(({ code, data, message }) => {
+      if (code === 0) {
+        data.number = content
+        dispatch({ type: 'SET_LL_NUMBER_INFO', hfInfo: data }) // 将当前选中的栏目信息合并到Liuliang分支中
+        dispatch({ type: 'SHOW_LL_HISTORY', visibilityHistory: '' }) // 隐藏历史记录
+        dispatch({ type: 'SET_LL_FOCUS_CONDITION', isFocus: false })    // 改变字体颜色
+        closeLoading() // 关闭loading图
+      } else {
+        dispatch({ type: 'SET_LL_NUMBER_INFO', hfInfo: '' })
+        closeLoading() // 关闭loading图
+        Toast.fail(message, 1)
+        document.activeElement.blur()
+      }
+    }).catch(({ message }) => {
+      closeLoading() // 关闭loading图
+      console.log(message)
+    })
+  } else if (content.length === 0) {
+    dispatch({ type: 'SET_LL_NUMBER_INFO', hfInfo: '' })    // 清除store中的hfInfo，使提交按钮和话费列表恢复初始情况
+  } else {
+    dispatch({ type: 'SET_LL_NUMBER_INFO', hfInfo: '' })    // 清除store中的hfInfo，使提交按钮和话费列表恢复初始情况
+  }
+}
+
+
+export const changeSubmit = (selectedHf, resultPrice, activityId, couponId) => {
+  const { number, list, isp, area } = selectedHf
+  const userId    = sessionStorage.customerUserId
+  const phone = phoneTrim(number)
+  // 从客户配置文件中看是否有手机号传过来，如果没有，就使用充值的手机号码，作为默认手机号码
+  const noCustomerUserPhone = getStore('noCustomerUserPhone', 'session')
+  let userPhone
+  if (noCustomerUserPhone === true) {
+    userPhone = phone
+  } else {
+    userPhone = getStore('userPhone', 'session')
+  }
+  // const userPhone = getStore('userPhone', 'session') || phone
+  const paras = {
+    customerUserId: userId,
+    customerId:     userId,
+    flow:           list.flow,
+    channel:        'dhst',
+    phone,
+    couponId,
+    activityId,
+    userPhone,
+    isp,
+    area,
+  }
+
+  /* **************以下是把当前充值号码保存到本地中************** */
+  const phoneHistorys = getStore('phoneHistorys') ? getStore('phoneHistorys').phoneHistorys : []
+  phoneHistorys.filter(item => item !== selectedHf.number)  // 过滤掉当前历史中和当前号码相同的号码，再将当前号码插进去
+  let exist = true
+  for (let i = 0; i < phoneHistorys.length; i++) {
+    if (phoneHistorys[i] === selectedHf.number) {
+      exist = false
+    }
+  }
+  if (exist) phoneHistorys.unshift(selectedHf.number)
+  setStore('phoneHistorys', { phoneHistorys })
+  /* **************以上是把当前充值号码保存到本地中************** */
+
+  const closeLoading = Loading()  // 开启一个loading图
+  send('/liuliang/v1/order', paras, 'POST', { 'Content-Type': 'application/json' }).then(({ code, data, message }) => {
+    if (code === 0) {
+      afterOrdering(data)
+      setTimeout(closeLoading, 1000)
+    } else {
+      closeLoading()       // 关闭loading图
+      Toast.fail(message, 1)
+    }
+  }).catch(({ message }) => {
+    closeLoading()          // 关闭loading图
+    console.log(message)
+  })
+}
+         
+ 
+ 
+ 
+ liuliang/components/Liuliang.js 
+ 
+// 问题：价格列表中没有price项目，暂用price代替
+
+import React from 'react'
+import { InputItem, WhiteSpace, Icon } from 'antd-mobile'
+import { UserCenter, PayTips, ExchangeActivePopup } from '@boluome/oto_saas_web_app_component'
+// import vconsole from 'vconsole'
+
+import '../styles/common.scss'
+import '../styles/liuliang.scss'
+
+const Liuliang = ({ hfInfo = { isp: '' }, isFirstIptClick, handleIptClick,
+ handleHfClick, handleIptChange, changeFocus, changeBlur, isFocus = false,
+ selectedHf = { index: '', list: ['', '', '', '', '', ''] },
+ handleSubmit,
+ phoneHistorys, handlePhoneHistory, curPhone, visibilityHistory, handleClearHistory, handleClearPhone,
+ handlePromotionChange, curDiscountData,
+}) => {
+  let hfList = [['20M'], ['50M'], ['100M'], ['200M'], ['500M']].map(item => ({ title: `${ item[0] }`, discPrice: '' }))
+  let curHfIndex = '100'
+  let curHfArea = ''
+  let curHfPrice = ''
+  let isSubmit = false
+  let price = ''   // 设置市场价
+  const { isp, area, list } = hfInfo
+  if (isp) {   // 当请求回数据后
+    hfList = list.map(item => ({ title: item.flow, discPrice: `售价 ${ item.price }元` }))
+    curHfIndex = 0
+    curHfArea = area + isp
+    curHfPrice = list[0].price
+    isSubmit = 'true'
+  } else {    // 当没有数据
+    selectedHf = { index: '', list: ['', '', '', '', '', ''] }     // 清空当前选中的所有信息
+  }
+  if (selectedHf.index) {             // 当已经选择过某个话费后
+    curHfIndex = selectedHf.index
+    curHfPrice = selectedHf.list.price
+    price = selectedHf.list.price
+  } else {  // 当没有选择某个话费时，设置初始值
+    selectedHf = { index: 0, number: curPhone, isp, area, list: list ? list[0] : '' }
+    price = list ? list[0].price : ''
+  }
+
+  // 平台活动
+  if (!curDiscountData) curDiscountData = {}
+  const { discount = 0, activities, coupon } = curDiscountData
+  let [activityId, couponId] = ['', '']
+  if (activities) activityId = activities.id
+  if (coupon) couponId = coupon.id
+
+  let resultPrice = Math.round((curHfPrice - discount) * 100) / 100
+  if (resultPrice < 0) resultPrice = 0.01
+  const resultPriceL = String(resultPrice).split('.')[0]
+  const resultPriceR = String(resultPrice).split('.')[1]
+
+  // 定义价格文字的颜色
+  let priceColor = '#333'
+  if (isFocus && !isSubmit) priceColor = '#999'
+
+  return (
+    <div className='hf'>
+      {
+        location.pathname.indexOf('chongzhi') <= 0 &&
+        (
+          <div>
+            <UserCenter categoryCode='liuliang' />
+          </div>
+        )
+      }
+      <div className='header'>
+        <LiuliangItem { ...{ curPhone, handleIptChange, isFirstIptClick, handleIptClick, phoneHistorys, visibilityHistory, handlePhoneHistory, handleClearHistory, handleClearPhone, changeFocus, changeBlur, curHfArea } } />
+      </div>
+      <WhiteSpace />
+      <div className='container'>
+        {
+          hfList.map((item, index) => (
+            <div
+              key={ item.title }
+              className={ index === curHfIndex ? 'inline active' : 'inline' }
+              style={{ WebkitJustifyContent: 'center', WebkitAlignItems: 'center', WebkitFlexDirection: 'column', border: '1px solid #ccc' }}
+              onClick={ () => handleHfClick(isp ? { index, number: curPhone, isp, area, list: list[index] } : '', curPhone) }
+            >
+              <h1 style={{ color: index === curHfIndex ? '#ffab00' : priceColor }}>{ item.title }</h1>
+              <p>{ item.discPrice }</p>
+            </div>)
+          )
+        }
+      </div>
+      <PayTips title='话费流量充值' content={ <PayTipsContent /> } />
+      <div className='footer'>
+        <p className='pay-price'>
+          { curHfPrice && '实付：' }
+          {
+            curHfPrice && (<span className='cur-price'>{ `¥ ${ resultPriceL }` }<span style={{ fontSize: '.28rem', display: resultPriceR ? 'inline-block' : 'none' }}>{ `.${ resultPriceR }` }</span></span>)
+          }
+          { curHfPrice && !discount && <del className='real-price'>{ `¥ ${ price }` }</del> }
+          { curHfPrice && Boolean(discount) && <span className='real-price'>{ `优惠¥ ${ discount }` }</span> }
+        </p>
+        <p className={ isSubmit ? 'button active' : 'button' } onClick={ () => { selectedHf.number = curPhone; handleSubmit(selectedHf, isSubmit, curPhone, resultPrice, activityId, couponId) } }>立即充值</p>
+        {
+          curHfPrice &&
+          <ExchangeActivePopup orderType='liuliang' channel='dhst' amount={ curHfPrice } popupStyle={{ top: '-1.16rem' }} promotionCallback={ handlePromotionChange } />
+        }
+      </div>
+    </div>
+  )
+}
+
+export default Liuliang
+
+class LiuliangItem extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { value: '' }   // 给input框设置一个state
+    this.handleChange = this.handleChange.bind(this)
+    this.handleFocus = this.handleFocus.bind(this)
+    this.handleBlur = this.handleBlur.bind(this)
+    this.handleIconClick = this.handleIconClick.bind(this)
+  }
+
+  handleChange(value) {
+    const prePhone = this.state.value
+    setTimeout(() => {
+      this.setState({ value })
+      this.props.handleIptChange(value, prePhone) // 调用父组件传过来的参数
+    }, 0)
+  }
+
+  handleFocus() {
+    this.setState({ showClear: true })
+    this.props.changeFocus(this.state.value)
+  }
+
+  handleBlur() {
+    // 如果不加seTimeout会造成，点击历史，不触发onclick事件
+    setTimeout(() => {
+      this.setState({ showClear: false })
+      this.props.changeBlur()
+    }, 0)
+  }
+
+  handleIconClick() {
+    this.props.handleClearPhone()
+    document.querySelector('.input input').focus()
+  }
+
+  handleIptClickMid() {
+    const { isFirstIptClick = true, handleIptClick } = this.props
+    if (isFirstIptClick) handleIptClick()
+    document.querySelector('.input input').focus()
+  }
+
+  componentWillReceiveProps({ curPhone }) {
+    this.setState({ value: curPhone })
+  }
+
+  render() {
+    const { curPhone, phoneHistorys, visibilityHistory, handlePhoneHistory, handleClearHistory, curHfArea } = this.props
+
+    const { value, showClear = false } = this.state
+
+    return (
+      <div className='number'>
+        <InputItem
+          type='phone'
+          value={ value }
+          onChange={ this.handleChange }
+          placeholder='请输入要充值的手机号'
+          onClick={ () => this.handleIptClickMid() }
+          onFocus={ this.handleFocus }
+          onBlur={ this.handleBlur }
+          className='input'
+        />
+        {
+          showClear && <Icon className='clear-phone' type='cross-circle-o' color='rgb(176, 176, 176)' />
+        }
+        <div className='icon-container' onClick={ this.handleIconClick } />
+        <span className='area'>{curHfArea}</span>
+        <PhoneHistory curPhone={ curPhone } phoneHistorys={ phoneHistorys } handlePhoneHistory={ handlePhoneHistory } visibilityHistory={ visibilityHistory } handleClearHistory={ handleClearHistory } />
+      </div>
+    )
+  }
+}
+
+const PhoneHistory = ({ curPhone, phoneHistorys = [], handlePhoneHistory, visibilityHistory = '', handleClearHistory }) => {
+  // 模拟历史记录，测试时可以打开
+  // phoneHistorys = ['182 5500 2974', '182 5510 2974', '182 5200 2974', '182 1500 2974', '182 5566 2974', '182 5591 2974']
+  // phoneHistorys = phoneHistorys ? phoneHistorys : []
+  const historyREG = new RegExp(`^${ curPhone }`, 'i')
+  phoneHistorys = phoneHistorys.filter(item => historyREG.test(item))
+  if (phoneHistorys.length > 5) phoneHistorys.splice(5)
+  if (phoneHistorys.length > 0) {
+    return (
+      <ul className='phone-history' style={{ display: visibilityHistory ? 'block' : 'none' }}>
+        { phoneHistorys.map(item => (<li key={ item } onClick={ () => handlePhoneHistory(item) }>{ item }</li>)) }
+        <li className='clearHistory' onClick={ handleClearHistory } >
+          <Icon className='del-icon' type={ require('svg/chongzhi/del.svg') } />
+          <span>清空历史记录</span>
+        </li>
+      </ul>
+    )
+  }
+  return (<div />)
+}
+
+const PayTipsContent = () => (
+  <div>
+    <h5>如何查充值流量的使用情况？</h5>
+    <p>请登录当地运营商的网上营业厅或者拨打当地运营商的客服电话（移动10086，联通10010，电信10000）来查询流量使用详情。</p>
+    <h5>充值的流量月底是否清零？</h5>
+    <p>是的。</p>
+    <h5>流量充值是全国流量还是本地流量</h5>
+    <p>全国流量。</p>
+    <h5>话费充错号码怎么办</h5>
+    <p>
+      1）优先自行联系充错的号码，和对方协商能否将资金转回；
+      1）若对方号码处于销户状态，请及时联系运营商或联系客服进行处理。若核实充值失败，将为您进行退款。客服热线：<a style={{ fontSize: '.24rem', color: '#666' }} href='tel:4009910008'>4009910008</a>。
+    </p>
+    <h5>可以给朋友充话费吗</h5>
+    <p>可以。个别支付方式会根据您使用环境及历史交易情况综合判定并随时调整您的单笔/日/月充值次数及金额，若您如果发生充值失败的情况，请联系客服咨询具体原因。</p>
+  </div>
+)
+         
+ 
+ 
+ 
+ liuliang/components/order-details.js 
+ 
+import React from 'react'
+import { moment } from '@boluome/common-lib'
+import { OrderDetail as OrderDetailDemo, Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast, List, WhiteSpace } from 'antd-mobile'
+import { get, afterOrdering, login } from 'business'
+// import vconsole from 'vconsole'
+
+import '../styles/order-details.scss'
+
+const LItem = List.Item
+
+export default class OrderDetails extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      orderData: '',
+    }
+  }
+  componentWillMount() {
+    const closeLoading = Loading()
+    const id = location.pathname.split('/')[3]
+    const orderType = location.pathname.split('/')[1]
+    get(`/order/v1/${ orderType }/${ id }/info`).then(({ code, data, message }) => {
+      if (code === 0) {
+        this.setState({ orderData: data })
+      } else {
+        Toast.fail(message)
+      }
+      closeLoading()
+    })
+  }
+  render() {
+    const { orderData } = this.state
+    if (!orderData) return <div />
+    const { id, orderType } = orderData
+    return (
+      <div className='haufei-order'>
+        <OrderDetailDemo { ...{ id, login, orderType, goPay: () => afterOrdering(orderData), content: <Content { ...orderData } /> } } />
+      </div>
+    )
+  }
+}
+
+const Content = ({ phone, price, orderPrice, flow, id, createdAt, area, platformActivity, coupon }) => {
+  phone = `${ phone.slice(0, 3) } ${ phone.slice(3, 7) } ${ phone.slice(7, 11) }`
+  return (
+    <List className='huafei-order-content'>
+      <LItem extra={ `${ phone } ${ area }` } className='phone-number'>充值号码</LItem>
+      <LItem extra={ `¥${ orderPrice }` } className='face-price'>{ `流量 面值${ flow }` }</LItem>
+      {
+        platformActivity &&
+        <LItem extra={ `- ¥${ platformActivity.price }` } className='activity-price'>
+          <div>
+            <span>减</span>
+            <span>{ platformActivity.title }</span>
+          </div>
+        </LItem>
+      }
+      {
+        coupon &&
+        <LItem extra={ `- ¥${ coupon.price }` } className='coupon-price'>
+          <div>
+            <span>红</span>
+            <span>{ coupon.title }</span>
+          </div>
+        </LItem>
+      }
+      <LItem extra={ `实付 ¥${ price }` } className='order-price' />
+      <WhiteSpace size='md' />
+      <LItem extra={ id } >订单编号</LItem>
+      <LItem extra={ moment('YYYY-MM-DD HH:mm')(createdAt) }>下单时间</LItem>
+    </List>
+  )
+}
+         
+ 
+ 
+ 
+ liuliang/components/rooter.js 
+ 
+// 加载父路由组件
+import React from 'react'
+import customize from 'customize'
+
+const root = ({ children }) => (
+  <div>
+    { children }
+  </div>
+)
+
+export default customize(root)
+         
+ 
+ 
+ 
+ liuliang/containers/Liuliang.js 
+ 
+// 引入react创建组件，connect为组件注入属性，方法，wrap方法为组件注入生命周期,子组件Liuliang
+import { connect } from  'react-redux'
+import { getStore, removeStore, setStore } from '@boluome/common-lib'
+import { wrap, Loading } from '@boluome/oto_saas_web_app_component'
+import { login } from 'business'
+import { Toast } from 'antd-mobile'
+
+import Liuliang from '../components/Liuliang.js'
+import { queryLiuliangList, changeSubmit } from '../actions/liuliang.js'
+
+const mapStateToProps = state => {
+  const { liuliang } = state
+  const phoneHistorys = getStore('phoneHistorys') ? getStore('phoneHistorys').phoneHistorys : []
+  return {
+    ...liuliang,
+    phoneHistorys,
+  }
+}
+
+const clearPhone = () => dispatch => {
+  dispatch({ type: 'SET_LL_CURPHONE', curPhone: '' })
+  dispatch({ type: 'SET_LL_NUMBER_INFO', hfInfo: '' })              // 清除store中的hfInfo，使提交按钮和话费列表恢复初始情况
+  dispatch({ type: 'SHOW_LL_HISTORY', visibilityHistory: 'true' })  // 显示号码历史记录
+  dispatch({ type: 'SET_LL_IPT_CLICK', isFirstIptClick: false })
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleHfClick: (selectedHf, curPhone) => {
+      dispatch({ type: 'SELECTED_LL', selectedHf })
+      document.activeElement.blur()
+      if (!selectedHf) {  // 当输入手机号码错误时
+        if (curPhone.length === 0 || !curPhone) {
+          Toast.fail('请先输入手机号码', 1)
+        } else if (curPhone.length < 13) {
+          Toast.fail('请输入完整的手机号码', 1)
+        } else if (curPhone.length === 13) {  // 当输入手机号码完整
+          Toast.fail('请输入正确的手机号码', 1)
+        }
+      }
+    },
+    handleClear: () => {
+      dispatch({ type: 'SET_LL_CURPHONE', curPhone: '' })
+    },
+    handleIptChange: (content, prePhone) => {
+      if (prePhone && prePhone.length === 13 && content && content.length === 13) return
+      dispatch({ type: 'SHOW_LL_HISTORY', visibilityHistory: 'true' })
+      dispatch(queryLiuliangList(content))
+    },
+    handlePhoneHistory: curPhone => {
+      dispatch({ type: 'SET_LL_CURPHONE', curPhone, visibilityHistory: '' })
+      dispatch(queryLiuliangList(curPhone))
+    },
+    handleSubmit: (selectedHf, isSubmit, curPhone, resultPrice, activityId, couponId) => {
+      if (isSubmit) {
+        // 将充值历史记录放倒store中
+        changeSubmit(selectedHf, resultPrice, activityId, couponId)
+      } else if (!curPhone || curPhone.length === 0) {
+        Toast.fail('请先输入手机号码', 1)
+      } else if (curPhone.length < 13) {
+        Toast.fail('请输入完整的手机号码', 1)
+      } else if (curPhone.length === 13) {  // 当输入手机号码完整
+        Toast.fail('请输入正确的手机号码', 1)
+      }
+    },
+    handleClearHistory: () => {
+      dispatch({ type: 'PHONE_LL_HISTORY', phoneHistorys: [] })
+      removeStore('phoneHistorys')
+    },
+    handleClearPhone: () => {
+      dispatch(clearPhone())
+    },
+    handleIptClick: () => {
+      dispatch(clearPhone())
+      dispatch({ type: 'SET_LL_IPT_CLICK', isFirstIptClick: false })
+    },
+    changeFocus: curPhone => {
+      dispatch({ type: 'SET_LL_FOCUS_CONDITION', isFocus: true })
+      if (curPhone.length !== 13) {
+        dispatch({ type: 'SHOW_LL_HISTORY', visibilityHistory: 'true' })
+      }
+    },
+    changeBlur: () => {
+      dispatch({ type: 'SET_LL_FOCUS_CONDITION', isFocus: false })
+      dispatch({ type: 'SHOW_LL_HISTORY', visibilityHistory: '' })
+    },
+    handlePromotionChange: curDiscountData => dispatch({ type: 'SET_LL_CURRENT_DISCOUNT', curDiscountData }),
+  }
+}
+
+
+const mapFuncToComponent = dispatch => {
+  return {
+    componentDidMount() {
+      // 改变font-size和scale的值
+      document.documentElement.style.fontSize = '13.33vw'
+
+      // 获取配置中的noCustomerUserPhone
+      const { OTO_SAAS = {} } = window
+      const { customer = {} } = OTO_SAAS
+      const { noCustomerUserPhone = false } = customer
+      setStore('noCustomerUserPhone', noCustomerUserPhone, 'session')
+
+      if (location.pathname.indexOf('chongzhi') < 0) {
+        const closeLoading = Loading()
+        const myLogin = () => login((err, { userPhone }) => {       //   登陆
+          if (err) {
+            setTimeout(myLogin, 3000)
+            return
+          }
+          closeLoading()
+          // 将充值历史记录放倒store中
+          const phoneHistorys = getStore('phoneHistory') ? getStore('phoneHistory').phoneHistorys : []
+          dispatch({ type: 'PHONE_LL_HISTORY', phoneHistorys })
+
+          // 如果客户没有传userPhone过来，就不执行将userPhone作为默认充值号码的操作
+          if (noCustomerUserPhone) {
+            return
+          }
+          userPhone = `${ userPhone.substr(0, 3) } ${ userPhone.substr(3, 4) } ${ userPhone.substr(7, 4) }`
+          dispatch(queryLiuliangList(userPhone))
+        })
+        myLogin()
+      } else {
+        const chongzhiPhone = getStore('chongzhiPhone', 'session') ? getStore('chongzhiPhone', 'session') : ''
+        if (chongzhiPhone.length === 13) {
+          dispatch(queryLiuliangList(chongzhiPhone))
+        }
+        dispatch({ type: 'SET_LL_CURPHONE', curPhone: chongzhiPhone })  // 将当前的输入框中内容合并到huafei分支中
+        const phoneHistorys = getStore('phoneHistory') ? getStore('phoneHistory').phoneHistorys : []
+        dispatch({ type: 'PHONE_LL_HISTORY', phoneHistorys })
+      }
+    },
+  }
+}
+
+
+export default connect(mapStateToProps, mapDispatchToProps)(wrap(mapFuncToComponent)(Liuliang))
+         
+ 
+ 
+ 
+ liuliang/index.js 
+ 
+
+import React      from 'react'
+import { render } from 'react-dom'
+import Root       from './root'
+
+// 加载全局公共样式
+import '../../styles/index.scss'
+
+// var FastClick = require('../../fastclick.js');
+// FastClick.attach(document.body);
+
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ liuliang/reducers/Liuliang.js 
+ 
+import { mergeState, setStore } from '@boluome/common-lib'
+
+const liuliang = (state = {}, action) => {
+  switch (action.type) {
+    case 'SET_CZ':    // 充值页面使用
+      return {}
+    case 'SET_LL_CURPHONE':
+      setStore('chongzhiPhone', action.curPhone, 'session')
+      return mergeState(state, action)
+    case 'QUERY_Liuliang':
+    case 'SET_LL_NUMBER_INFO':
+    case 'SELECTED_LL':
+    case 'SHOW_LL_HISTORY':
+    case 'PHONE_LL_HISTORY':
+    case 'SET_LL_IPT_CLICK':
+    case 'SET_LL_FOCUS_CONDITION':
+    case 'SET_LL_CURRENT_DISCOUNT':
+      return mergeState(state, action)
+    default :
+      return state
+  }
+}
+
+export default liuliang
+         
+ 
+ 
+ 
+ liuliang/reducers/index.js 
+ 
+// 引入combineReducers来合并多个reducers为一个主reducers
+import { combineReducers } from 'redux'
+import liuliang from './liuliang'
+
+const reducers = combineReducers({ liuliang })
+export default reducers
+         
+ 
+ 
+ 
+ liuliang/root.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+import { createStore, applyMiddleware } from 'redux'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+
+// 由Reducers创建状态树
+const store = createStore(reducers, applyMiddleware(thunk))
+// 定义根组件
+const Root = () => (<Provider store={ store }><Routes /></Provider>)
+
+export default Root
+
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+
+    <Route path='/liuliang' component={ require('react-router?name=root!./components/rooter') }>
+      <IndexRoute component={ require('react-router?name=liuliang!./containers/Liuliang') } />
+      <Route path='orderDetails/:orderId' component={ require('react-router?name=order-details!./components/order-details') } />
+    </Route>
+
+  </Router>
+)
+         
+ 
+ 
+ 
+ liuliang/styles/Liuliang.scss 
+ 
+@mixin allCenter{position: absolute; left: 50%; top: 50%; -webkit-transform: translateX(-50%) translateY(-50%); transform: translateX(-50%) translateY(-50%);}
+@mixin center{position: absolute; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%);}
+@mixin middle{position: absolute; top: 50%; -webkit-transform: translateY(-50%); transform: translateY(-50%);}
+$grey000:rgb(109,109,109);
+$grey555:rgb(153,153,153);
+$grey111:rgb(219,219,219);
+$grey222:rgb(229,229,229);
+$grey777:rgb(170,170,170);
+$black111:rgb(17,17,17);
+$orange570: #ffab00;
+$orange542:rgb(255,247,229);
+
+@mixin blockDemo($wid, $hei){width:$wid; height:$hei;}
+@mixin fontDemo($size, $color, $lineH){font-size: $size; color: $color; line-height: $lineH;}
+@mixin allZero{margin:0; padding: 0;}
+
+
+/* 默认样式修改*/
+/* 输入框样式修改*/
+.am-list-item.am-input-item:after { border-bottom: none; }
+.am-list-item.am-input-item { padding-right: 0; padding-left: 0; }     /* 使清除图标右移*/
+
+/* 自定义样式*/
+body{
+  overflow-x: hidden;
+  background-color: #fff;
+  font-family: PingFangSC-Regular !important;
+  #root{
+    overflow: hidden;
+    .hf{
+      position: relative;
+      min-height: 7rem;
+      padding-bottom: 1.12rem;
+      .header{
+        background-color: #fff;
+        border-bottom: 1px solid $grey222;
+        height: 119px;
+        position: relative;
+        .number{
+          @include middle;
+          padding-left: 30px;
+          width: 100%;
+          .am-input-item{
+            font-size:40px;
+            height: auto;
+            min-height: 0;
+            .am-input-control input{
+              font-size: .40rem;
+              height: 56px;
+              color:#333333;
+              &::-webkit-input-placeholder { /* WebKit browsers */
+                font-size: .34rem;
+              }
+              &:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+                font-size: .34rem;
+              }
+              &::-moz-placeholder { /* Mozilla Firefox 19+ */
+                font-size: .34rem;
+              }
+              &:-ms-input-placeholder { /* Internet Explorer 10+ */
+                font-size: .34rem;
+              }
+            }
+          }
+          .clear-phone, .icon-container{
+            width: 44px;
+            height: 44px;
+            @include middle;
+            right: 60px;
+          }
+          .icon-container{
+            z-index: 100;
+            width: 60px;
+            height: 60px;
+          }
+          .area{
+            font-size:24px;
+            color:#999999;
+          }
+        }
+      }
+
+
+      .phone-history{
+        overflow: hidden;
+        position: absolute;
+        width: 100%;
+        top: .9rem;
+        left: 0;
+        background: #fff;
+        z-index:10;
+        padding-bottom: .88rem;
+        li{
+          background-color: #fff;
+          height: .88rem;
+          line-height: .88rem;
+          padding-left: .3rem;
+          font-size: .4rem;
+          color: $black111;
+          border-bottom: 1px solid $grey222;
+          &.clearHistory{
+            width: 100%;
+            color: #999;
+            text-align: center;
+            font-size: .28rem;
+            position: absolute;
+            bottom: 0;
+            z-index: 20;
+            // border-top: 1px solid $grey222;
+            .del-icon{
+              @include middle;
+              left: 280px;
+            }
+            span {
+              padding-left: .5rem;
+            }
+          }
+        }
+      }
+
+      .container{
+        margin: 0 29px;
+        .inline {
+          width: 215px!important;
+          height: 1.4rem;
+          margin: 0.2rem 0 0.2rem;
+          float: left;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          display: -moz-flex;
+          -webkit-box-align: center;
+              -ms-flex-align: center;
+                  align-items: center;
+          -webkit-box-pack: center;
+              -ms-flex-pack: center;
+                  justify-content: center;
+          -webkit-box-orient: vertical;
+          -webkit-box-direction: normal;
+              -ms-flex-flow: column;
+                  flex-flow: column;
+          background: #fff;
+          // border: 1px solid #ccc;
+          border-radius: .06rem;
+          margin-right: 20px;
+          @for $i from 1 to 10{
+            &:nth-of-type(#{$i*3}){margin-right:0;}
+          }
+          h1{
+            @include fontDemo(0.4rem, #333333, .56rem)
+            font-weight: normal;
+            margin-bottom: 4px;
+          }
+          p{
+            @include fontDemo(.2rem, #333333, .28rem)
+            margin-top: 0;
+          }
+          &.active{
+            border-color: $orange570 !important;
+            h1, p{
+              color: $orange570 !important;
+            }
+
+          }
+        }
+      }
+
+      .footer{
+        padding-left: .3rem;
+        position: fixed;
+        border-top: 1px solid $grey222;
+        bottom: 0;
+        width: 100%;
+        background: #fff;
+        z-index: 20;
+        .pay-price{
+          float: left;
+          @include fontDemo(.28rem, #ff4848, 1.12rem);
+          .cur-price{
+            font-size: 36px;
+            margin-right: 10px;
+          }
+          .real-price{
+            font-size:20px;
+            color:#999999;
+            line-height: 36px;
+          }
+        }
+        .active-popup-icon{
+          left: 395px;
+          width: 41px;
+          height: 41px;
+          position: absolute;
+          top: 50%;
+          -webkit-transform: translateY(-50%) rotate(180deg);
+                  transform: translateY(-50%) rotate(180deg);
+          &.active{
+            -webkit-transform: translateY(-50%) rotate(0deg);
+                    transform: translateY(-50%) rotate(0deg);
+          }
+        }
+        .active-popup-container {
+          top: -115px;
+        }
+        .button{
+          float: right;
+          @include blockDemo(280px, 112px);
+          @include fontDemo(34px, #fff, 112px);
+          text-align:center;
+          background-color: $grey111;
+          &.active{
+            background-color: $orange570;
+            color: #fff;
+          }
+        }
+      }
+    }
+  }
+}
+         
+ 
+ 
+ 
+ liuliang/styles/common.scss 
+ 
+
+html, body, ul, li, ol, dl, dd, dt, p, h1, h2, h3, h4, h5, h6, form, fieldset, legend, img { margin:0; padding:0; }
+fieldset, img { border:none; }
+address, caption, cite, code, dfn, th, var { font-style:normal; font-weight:normal; }
+ul, ol { list-style:none; }
+input{outline: none; border:none;}
+body,html{width:100%; height:100%; margin: 0; background: rgb(245,245,246);}
+html{font-size: 26.67vw; overflow-x:hidden;}
+body { color:#606060; font-size:0.17rem; font-family: '微软雅黑';  position: relative;}
+a{font-size:0.17rem; font-family: '微软雅黑'; line-height:0.16rem; color:#f97e19; text-decoration:none; }
+         
+ 
+ 
+ 
+ liuliang/styles/order-details.scss 
+ 
+@import "../../../styles/s_common.scss";
+
+.huafei-order-content {
+  .am-list-item .am-list-line .am-list-content, .am-list-item .am-list-line .am-list-extra {
+    font-size: 28px;
+    color: $font-33;
+  }
+  .am-list-item.am-list-item-middle {
+    @include s_border_b;
+    &.activity-price, &.coupon-price {
+      border-bottom: none;
+      .am-list-line {
+        @include s_border_b;
+        .am-list-content {
+          span {
+            float: left;
+            &:nth-of-type(1) {
+              display: inline-block;
+              @include s_blockDemo(32px, 32px);
+              background: #ff6e19;
+              border-radius:6px;
+              @include s_fontDemo(20px, 32px, #fff);
+              text-align: center;
+              margin-right: 10px;
+            }
+          }
+        }
+        .am-list-extra {
+          color: $font-f48;
+        }
+      }
+    }
+    &.coupon-price .am-list-line .am-list-content span:nth-of-type(1) {
+      background: $font-f48;
+    }
+    &.order-price .am-list-line {
+      justify-content: flex-end;
+    }
+  }
+  .am-list-body div:not(:last-child) .am-list-line:after {
+    border-bottom: none;
+  }
+  .am-whitespace.am-whitespace-md {
+    background: #f4f4f5;
+  }
+}

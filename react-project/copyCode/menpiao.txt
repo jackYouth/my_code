@@ -1,0 +1,5466 @@
+
+
+
+
+ menpiao/actions/app.js
+
+import { get, send } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+
+const filterdata = {
+  categoryCode: [
+    {
+      code: 0,
+      text: '全部分类',
+    },
+  ],
+  timeRange: [
+    {
+      code: 0,
+      text: '景区级别',
+    },
+    {
+      code: 'A',
+      text: '1A景区',
+    },
+    {
+      code: 'AA',
+      text: '2A景区',
+    },
+    {
+      code: 'AAA',
+      text: '3A景区',
+    },
+    {
+      code: 'AAAA',
+      text: '4A景区',
+    },
+    {
+      code: 'AAAAA',
+      text: '5A景区',
+    },
+  ],
+  sort: [
+    {
+      code: 0,
+      text: '默认排序',
+    },
+    {
+      code: 'DistanceAsc',
+      text: '距离从近到远',
+    },
+    {
+      code: 'PriceAsc',
+      text: '价格升序',
+    },
+    {
+      code: 'PriceDesc',
+      text: '价格降序',
+    },
+  ],
+}
+const defiltered = {
+  categoryCode: 0,
+  sort:         0,
+  timeRange:    0,
+}
+// 城市地址的请求
+export const CityData = () => dispatch => {
+  const handleClose = Loading()
+  const cityUrl = '/menpiao/v1/city'
+  const sendData = {
+    channel: 'lvmama',
+  }
+  get(cityUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) { // console.log('datacity-----',data);
+      const cityarr = []
+      for (let i = 0; i < data.length; i++) {
+        const obj = {}
+        obj.name = data[i].city
+        obj.py = data[i].pinyin
+        obj.prov = data[i].province
+        cityarr.push(obj)
+      }
+      dispatch({
+        type:     'KJIN_CITY_DATA',
+        citydata: cityarr,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+export const fetchScenics = (datas, cb) => {
+  const handleClose = Loading()
+  send('/menpiao/v1/scenics', datas).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      cb(data)
+    } else {
+      console.log(message)
+    }
+    handleClose()
+  })
+}
+
+// 主题的数据请求
+export const ThemeData = city => dispatch => {
+  const handleClose = Loading()
+  const themeUrl = `/menpiao/v1/${ city }/themes`
+  const sendData = {
+    channel: 'lvmama',
+    city,
+  }
+  get(themeUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) { // console.log('data--主题---',data);
+      const theme = data.reduce((a, e) => {
+        a.push({
+          code: e,
+          text: e,
+        })
+        return a
+      }, [])
+      filterdata.categoryCode = [
+        {
+          code: 0,
+          text: '全部分类',
+        },
+        ...theme,
+      ]
+      console.log('test---', filterdata.categoryCode)
+      dispatch({
+        type:       'KJIN_THEMEDATA',
+        themeDatas: filterdata,
+        filtered:   defiltered,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+
+
+
+ menpiao/actions/details.js
+
+import { get, getStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+
+export const DetailsListData = () => dispatch => {
+  const handleClose = Loading()
+  const id = getStore('itemId', 'session')
+  const detailsUrl = `/menpiao/v1/scenic/${ id }`
+  const sendData = {
+    channel: 'lvmama',
+    id,
+  }
+  get(detailsUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) { // console.log('详情数据',data)
+      dispatch({
+        type:             'KJIN_DETAILSLISTDATA',
+        DetailsListDatas: data,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+// 根据ID获取商品列表
+export const DetailsListFn = () => dispatch => {
+  const handleClose = Loading()
+  const id = getStore('itemId', 'session')
+  const detailsUrl = `/menpiao/v1/scenic/${ id }/goods`
+  const sendData = {
+    channel: 'lvmama',
+    placeId: id,
+  }
+  get(detailsUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) {
+      dispatch({
+        type:        'KJIN_DETAILSLIS',
+        DetailsList: data.goodsGroups,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+// 根据Id获取商品详情
+export const DetailsIntroducedFn = () => dispatch => {
+  const handleClose = Loading()
+  const id = getStore('itemId', 'session')
+  const detailsUrl = `/menpiao/v1/scenic/${ id }/intro`
+  const sendData = {
+    channel: 'lvmama',
+    id,
+  }
+  get(detailsUrl, sendData).then(reply => {
+    const { code, data, message } = reply
+    if (code === 0) { // console.log('DetailsIntroduced------',data)
+      dispatch({
+        type:              'KJIN_DETAILSINTRODUCED',
+        DetailsIntroduced: data,
+      })
+    } else {
+      console.log('数据请求失败', message)
+    }
+    handleClose()
+  })
+}
+
+
+
+
+ menpiao/actions/order.js
+
+import { Toast } from 'antd-mobile'
+import { get, send, getStore, setStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { afterOrdering } from 'business'
+
+// 根据点击选中商品的ID  请求订单页面的商品信息数据
+export const OrderDataList = () => dispatch => {
+  const handleClose = Loading()
+  const id = getStore('goOrderId', 'session')
+  const listUrl = `/menpiao/v1/goods/${ id }`
+  get(listUrl, { channel: 'lvmama' })
+  .then(({ code, data, message }) => {
+    if (code === 0) { // console.log('数据order-----',data ,id);
+      dispatch({
+        type:          'kJIN_ORDERLISTDATA',
+        OrderListData: data,
+      })
+      dispatch({
+        type:         'kJIN_ORDERTIMEDATA',
+        TimeListData: data.prices,
+      })
+      dispatch({
+        type:       'COUNTPTICES',
+        countPrice: data.prices[0].sellPrice,
+      })
+      const pricesData = {}
+      const chooseTime = getStore('chooseTime', 'session')
+      if (chooseTime && chooseTime.price) {
+        dispatch({ type: 'CHOOSE_TYPE', chooseType: 2 })
+        pricesData.date = chooseTime.date
+        pricesData.price = chooseTime.price
+        dispatch({ type: 'COUNTPTICES', countPrice: chooseTime.price })
+      } else {
+        // if (data.prices) {
+        pricesData.date = data.prices[0].date
+        pricesData.price = data.prices[0].sellPrice
+        dispatch({ type: 'KJIN_MORENPRICE', morenPrice: pricesData })
+        // }
+      }
+      setStore('priceDate', data.prices, 'session')
+    } else {
+      console.log('数据加载失败-数据order', message)
+    }
+    handleClose()
+  })
+}
+// 根据userid 查询出常用旅客信息
+export const GetTouristList = () => dispatch => {
+  const handleClose = Loading()
+  const userId = getStore('customerUserId', 'session')
+  get('/user/v1/identities', { userId })
+  .then(({ code, data, message }) => {
+    // code = 0
+    // data = [{'name':'tst','phone':'13812345678','gender':0,'longitude':121.48789949,'latitude':31.24916171,'province':'上海市','provinceId':'310000','city':'上海市','cityId':'310000','county':'闸北区','countyId':'310108','address':'新荟城','detail':'上海市闵行区莲花南路1388号','isDefault':0,'tag':'','status':0,'contactId':'1483087753105','userId':'blm_test'}]
+    if (code === 0) {
+      // console.log('data----',data);
+      dispatch({ type: 'kJIN_TOURISTLISTDATA', TouristData: data })
+    } else {
+      console.log('数据加载失败-旅客', message)
+    }
+    handleClose()
+  })
+}
+// 提交订单
+export const SaveOrder = (OrderListData, goodsCardata, countPrice, sum, morenPrice, curDiscountData = { discount: 0, coupon: '', activities: '' }) => { // console.log('goodsCardata',goodsCardata);
+  const handleClose = Loading()
+  const orderUrl = '/menpiao/v2/order/save'
+  const userId = getStore('customerUserId', 'session')
+  const name = getStore('userSelfName', 'session')
+  const phone = getStore('userSelfPhone', 'session')
+  const travellerList = []
+  const couponId = curDiscountData.coupon ? curDiscountData.coupon.id : ''
+  const activityId = curDiscountData.activities ? curDiscountData.activities.id : ''
+  console.log('test数据', OrderListData)
+  for (let i = 0; i < goodsCardata.length; i++) {
+    const obj = {
+      count:      goodsCardata[i].count,
+      identityId: goodsCardata[i].id,
+    }
+    travellerList.push(obj)
+  }
+  const { id } = OrderListData
+  const { date } = morenPrice
+  const sendData = {
+    channel:        'lvmama',
+    customerUserId: userId,
+    price:          countPrice,
+    userPhone:      phone,
+    couponId,
+    activityId,
+    product:        {
+      goodsId:   id,
+      quantity:  sum,
+      visitDate: date,
+    },
+    booker: {
+      name,
+      mobile: phone,
+    },
+    travellers: travellerList,
+  }
+  send(orderUrl, sendData)
+  .then(({ code, data, message }) => {
+    if (code === 0) {
+      console.log('下单成功')
+      setStore('userSelfPhone', '', 'session')
+      setStore('userSelfName', '', 'session')
+      // window.location.href = `/cashier/${ data.id }`
+      afterOrdering(data)
+    } else {
+      console.log('数据加载失败-下单', message)
+      Toast.info(`${ message }`)
+    }
+    handleClose()
+  })
+}
+
+
+
+
+ menpiao/actions/search.js
+
+import { get ,send ,getStore } from '@boluome/common-lib'
+import { Loading } from '@boluome/oto_saas_web_app_component'
+
+
+// 城市地址的请求
+
+export const CityData = () => dispatch => {
+  const handleClose = Loading()
+  const cityUrl = '/menpiao/v1/city'
+  const sendData = {
+    channel : 'lvmama'
+  }
+  get( cityUrl , sendData ).then( reply => {
+     const { code , data , message } = reply
+     if( code == 0 ){//console.log('datacity-----',data);
+          let cityarr = [];
+          for(let i = 0 ; i < data.length ; i++){
+              let obj = {};
+              obj.name = data[i].city
+              obj.py = data[i].pinyin
+              obj.prov = data[i].province
+
+              cityarr.push(obj);
+          }
+         dispatch({
+             type: 'KJIN_CITY_DATA',
+             citydata: cityarr
+         })
+     } else{
+         console.log('数据请求失败');
+     }
+     handleClose()
+  } )
+
+}
+
+export const fetchScenics = (data, cb) => {
+  const handleClose = Loading()
+  send('/menpiao/v1/scenics', data).then(reply => {
+    const { code, data, message } = reply
+    if(0 === code) {console.log('app_data1',data);
+      cb(data)
+    } else {
+      console.log(message)
+    }
+    handleClose()
+  })
+}
+
+
+// 主题的数据请求
+
+export const ThemeData = (city, item) => dispatch => {
+     const handleClose = Loading()
+     const themeUrl = '/menpiao/v1/'+ city +'/themes'
+     const sendData = {
+         channel : 'lvmama',
+         city : city
+     }
+     get( themeUrl ,sendData ).then( reply => {
+         const { code , data , message } = reply
+         if( code == 0 ){// console.log('data-----',data);
+             dispatch({
+                 type: 'KJIN_THEMEDATA',
+                 themeDatas: data
+             })
+         } else{
+             console.log('数据请求失败');
+         }
+         handleClose()
+     } )
+}
+
+
+
+
+ menpiao/components/AddTouristUse.js
+
+import React from 'react'
+import { browserHistory } from 'react-router'
+// import { Toast } from 'antd-mobile'
+import { getStore, setStore } from '@boluome/common-lib'
+import { Tourist, SlidePage } from '@boluome/oto_saas_web_app_component'
+import '../style/moreDate.scss'
+
+// const alert = Modal.alert
+class AddTouristUse extends React.Component {
+  static defaultProps = {
+    localCity: getStore('localCity', 'session'),
+  }
+  constructor(props) {
+    super(props)
+    const minimum = getStore('Orderminimum', 'session')
+    if (minimum) {
+      this.state = {
+        minimum,
+      }
+    } else {
+      this.state = {
+        minimum: 1,
+      }
+    }
+    this.handleCityData = this.handleCityData.bind(this)
+  }
+  handleBackgoorder(contact) {
+    // console.log('handleBackgoorder---', contact)
+    const { minimum } = this.state
+    const goodsCardata = getStore('goodsCardata', 'session')
+    if (contact) {
+      contact.count = minimum
+      setStore('userSelfPhone', contact.userPhone, 'session')
+      if (goodsCardata.length > 0) {
+        goodsCardata.length = 0
+        goodsCardata.push(contact)
+        window.history.back()
+      } else {
+        goodsCardata.push(contact)
+        window.history.back()
+      }
+      setStore('goodsCardata', goodsCardata, 'session')
+    } else {
+      setStore('goodsCardata', [], 'session')
+    }
+  }
+  handleCityData(res) {
+    console.log('res-cityData', res)
+    browserHistory.push('/menpiao')
+  }
+  componentWillUnmount() {
+    SlidePage.closeAll()
+  }
+  render() {
+    return (
+      <div className='addtouristWrap'>
+        <Tourist handleChange={ contact => this.handleBackgoorder(contact) } />
+      </div>
+    )
+  }
+}
+
+export default AddTouristUse
+
+
+
+
+ menpiao/components/addrBumap.js
+
+import React from 'react'
+import { browserHistory } from 'react-router'
+import { MapShowGaode } from '@boluome/oto_saas_web_app_component'
+import { getStore } from '@boluome/common-lib'
+// import '../style/addrBumap.scss'
+
+class AddrBumap extends React.Component {
+  static defaultProps = {
+    localCity: getStore('localCity', 'session'),
+  }
+  constructor(props) {
+    super(props)
+    const geoPoint = getStore('myaddrPoint', 'session')
+    const addrnameStr = getStore('goodsNameAddr', 'session')
+    const addrTitlename = getStore('addrTitlename', 'session')
+
+    this.state = {
+      geoPoint,
+      addrnameStr,
+      addrTitlename,
+    }
+  }
+  componentDidMount() {
+    // alert('componentDidMount')
+  }
+  handleCityData(res) {
+    console.log('res-cityData', res)
+
+    browserHistory.push('/menpiao')
+  }
+  render() {
+    const { geoPoint, addrTitlename, addrnameStr } = this.state
+
+    const { longitude, latitude } = geoPoint
+    // 百度地图API功能
+    return (
+      <MapShowGaode longitude={ longitude } latitude={ latitude } addrnameStr={ addrnameStr } addrTitlename={ addrTitlename } />
+    )
+  }
+}
+
+export default AddrBumap
+
+
+
+
+ menpiao/components/app.js
+
+import React from 'react'
+import { Icon, WhiteSpace } from 'antd-mobile'
+import { Listview, Search, Mask, SlidePage, CitySearch, Evaluation, PicHandle, UserCenter } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+
+import SelectTab from './selectTab'
+import '../style/index.scss'
+import icNouse from '../img/nouse.png'
+
+const App = props => {
+  const { lat, lng, city, level, theme, prov, sort,
+    handleGoDetails, handleSearch,
+    handleCityname, citydata, selectedCIty, handleSearchOnclick, // goOrderDetails,
+    // Gocity,
+  } = props
+
+  const fetchData = {
+    lat, lng, prov, city, level, theme, sort,
+  }
+  return (
+    <div className='indexWrap'>
+      <UserCenter categoryCode='menpiao' />
+      <Search
+        inputPlaceholder={ '请输入景点名称／主题' }
+        leftComponent={ <Citylocation citydata={ citydata } handleCityname={ handleCityname } selectedCIty={ selectedCIty } /> }
+        content={ <IndexShowList props={ props } fetchData={ fetchData } /> }
+        listItem={ <ListItem handleGoDetails={ handleGoDetails } /> }
+        onFeach={ (keyword, cb) => handleSearch(fetchData, keyword, cb) }
+        handleResult={ result => { handleGoDetails(result.id) } }
+        noResult={ <NoOneComponent /> }
+        handleClick={ () => handleSearchOnclick() }
+      />
+    </div>
+  )
+}
+
+export default App
+
+// 地点定为
+const Citylocation = ({ citydata, selectedCIty, handleCityname }) => {
+  // console.log('citydata---',citydata);
+  return (
+    <div className='citylocation' onClick={ () => {
+      Mask.closeAll()
+      Mask(
+        <SlidePage target='left' showClose={ false } >
+          <CitySearch localCity='上海' categoryCode='menpiao' api={ citydata } handleCityData={ result => handleCityname(result) } />
+        </SlidePage>
+        , { mask: false, style: { position: 'absolute' } }
+      )
+    } }
+    >
+      <span className='cityNameshow'>{ selectedCIty }</span>
+      <span>{ selectedCIty ? <img alt='加载中' className='jiaoPic' src={ require('../img/jiao.png') } /> : '' }</span>
+    </div>
+  )
+}
+
+// 列表的展示 和主题的选择
+const IndexShowList = ({ props, fetchData }) => {
+  const { // themeDatas,
+    handleGoDetails, handleFetchMore,
+    offset, width, height, filtering, themeDatas,
+  } = props
+  console.log('test-props---', props, 'filtering', filtering)
+  if (fetchData.lat && fetchData.lng) {
+    return (
+      <div className='indexListWrap'>
+        { themeDatas ? (<Seltab app={ props } />) : ('') }
+        <WhiteSpace />
+        <div className='tabs' ref={ node => { if (node) { node.style.height = window.getComputedStyle(node).height } } }>
+          { filtering && <SelectTab { ...props } /> }
+          <Listview className='ListMain'
+            offset={ offset } limit={ 10 } fetchData={ fetchData }
+            onFetch={ handleFetchMore } listItem={ <ListItem handleGoDetails={ handleGoDetails } width={ width } height={ height } /> }
+            noOneComponent={ <NoOneComponent /> }
+          />
+          <div className='clear' />
+        </div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+const Seltab = ({ app }) => {
+  const { themeDatas, filtered, filtering, handlePush } = app
+  const categoryCodearr = themeDatas.categoryCode.filter(o => o.code === filtered.categoryCode)
+  const sortarr = themeDatas.sort.filter(o => o.code === filtered.sort)
+  const timeRangearr = themeDatas.timeRange.filter(o => o.code === filtered.timeRange)
+  return (
+    <div className='themeWrap'>
+      <span style={ categoryCodearr[0].code ? { color: '#ffab00' } : {} } onClick={ () => handlePush(filtering, 'categoryCode') }>
+        { categoryCodearr[0].text }
+        <Icon style={ filtering === 'categoryCode' ? { transform: 'rotate(180deg)' } : { transform: 'rotate(0deg)' } } type={ categoryCodearr[0].code ? require('../img/arrowdowning.svg') : require('../img/arrowdown.svg') } />
+      </span>
+      <span style={ sortarr[0].code ? { color: '#ffab00' } : {} } onClick={ () => handlePush(filtering, 'sort') }>
+        { sortarr[0].text }
+        <Icon style={ filtering === 'sort' ? { transform: 'rotate(180deg)' } : { transform: 'rotate(0deg)' } } type={ sortarr[0].code ? require('../img/arrowdowning.svg') : require('../img/arrowdown.svg') } />
+      </span>
+      <span style={ timeRangearr[0].code ? { color: '#ffab00' } : {} } onClick={ () => handlePush(filtering, 'timeRange') }>
+        { timeRangearr[0].text }
+        <Icon style={ filtering === 'timeRange' ? { transform: 'rotate(180deg)' } : { transform: 'rotate(0deg)' } } type={ timeRangearr[0].code ? require('../img/arrowdowning.svg') : require('../img/arrowdown.svg') } />
+      </span>
+    </div>
+  )
+}
+
+// 列表的展示
+const ListItem = ({ data, handleGoDetails, width, height }) => {
+  const { image, name, level, city, marketPrice, openTime, price, id, disName } = data
+  let stararr = []
+  let levelstr = 3
+  if (level === 'AAAAA') {
+    stararr = '92%'; levelstr = 5
+  } else if (level === 'AAAA') {
+    stararr = '82%'; levelstr = 4
+  } else if (level === 'AAA') {
+    stararr = '72%'; levelstr = 3
+  } else if (level === 'AA') {
+    stararr = '56%'; levelstr = 2
+  } else if (level === 'A') {
+    stararr = '30%'; levelstr = 1
+  } else {
+    stararr = '65%'; levelstr = 3
+  }
+  const bodyfontSize = document.documentElement.style.fontSize
+  const viewportScale = window.viewportScale
+  if (bodyfontSize === '50px' && viewportScale === 1) {
+    if (width && height) {
+      width = 92
+      height = 105
+      // console.log('wwwww---------obj1.clientWidth=', width, height)
+    }
+  }
+  return (
+    <div>
+      <li className='listItem' onClick={ () => { setStore('itemId', id, 'session'); handleGoDetails(id) } }>
+        <div className='itemPic'><PicHandle picSrc={ image } sw={ width } sh={ height } /></div>
+        <div className='itemMain'>
+          <div className='itemTitle oto'><span className='otoS1'>{ name }</span><span className={ price === -1 ? 'otoS2 otoS4' : 'otoS2' }>{ price === -1 ? '已售完' : `￥${ price }` }<i>起</i></span></div>
+          <div className='itemTime oto'><span className='otoS1'>开放时间：{ openTime }</span><span className='otoS2'>￥{ marketPrice }</span></div>
+          <div className='itemStar oto'>
+            <span className='otoS1'>
+              <Evaluation defaultValue={ stararr } width={ '1.36rem' } />
+            </span>
+            <span className='otoS2'>{ disName }</span>
+          </div>
+          <div className='itemAddr oto'><span className='otoS1'>{ city }</span><span className='otoS2 otoS3'>{ levelstr }A景区</span></div>
+        </div>
+        <div className='clear' />
+      </li>
+    </div>
+  )
+}
+// 当没有对应景点是的展示
+const NoOneComponent = () => {
+  return (
+    <div className='noOneComponent'>
+      <div className='noOneMain'>
+        <img alt='加载中' src={ icNouse } />
+        <div>哎呀，没有找到您想要的景区搜搜其他景区吧</div>
+      </div>
+    </div>
+  )
+}
+
+
+
+
+ menpiao/components/app0.js
+
+import React from 'react'
+import { List } from 'antd-mobile'
+import { Listview, Search, Mask, SlidePage, CitySearch, Evaluation, PicHandle, UserCenter } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+import '../style/index.scss'
+
+// import icNojiao from '../img/on_jiao.png'
+import icJiao from '../img/jiao.png'
+import icUpdown from '../img/updown.png'
+import icNouse from '../img/nouse.png'
+
+const Item = List.Item
+
+const App = props => {
+  const { lat, lng, city, level, theme, prov, sort,
+    handleGoDetails, handleSearch, handleMarkChange,
+    handleCityname, citydata, selectedCIty, handleSearchOnclick, // goOrderDetails,
+    // Gocity,
+  } = props
+
+  const fetchData = {
+    lat, lng, prov, city, level, theme, sort,
+  }
+  // const handlePopupMask = () => {
+  //   handleMarkChange(3, false)
+  // }
+  // 这里注释的为 2017-10-31 antd组件暂不更新，组件IOSbug修改，暂时用mask
+  const handleTheme = (themeDatas, handleThemeChange, themeMark, t) => {
+    if (!themeMark) {
+      Mask.closeAll()
+      Mask(<ThemeChoose themeDatas={ themeDatas } handleThemeChange={ handleThemeChange } />, { mask: true, style: { position: 'absolute', top: '180px' }, maskClosable: false })
+      handleMarkChange(0, true)
+    } else if (t === '主题') {
+      Mask.closeAll()
+      handleMarkChange(0, false)
+    }
+  }
+  const handleStar = (handleStarChange, levelMark, l) => {
+    if (!levelMark) {
+      Mask.closeAll()
+      Mask(<StarChoose handleStarChange={ handleStarChange } />, { mask: true, style: { position: 'absolute', top: '180px' }, maskClosable: false })
+      handleMarkChange(1, true)
+    } else if (l === '星级') {
+      Mask.closeAll()
+      handleMarkChange(1, false)
+    }
+  }
+  const handleDefault = (handleDefaultChange, sortMark, s) => {
+    if (!sortMark) {
+      Mask.closeAll()
+      Mask(<DefaultChoose handleDefaultChange={ handleDefaultChange } />, { mask: true, style: { position: 'absolute', top: '180px' }, maskClosable: false })
+      handleMarkChange(2, true)
+    } else if (s === '排序') {
+      Mask.closeAll()
+      handleMarkChange(2, false)
+    }
+  }
+  return (
+    <div className='indexWrap'>
+      <UserCenter categoryCode='menpiao' />
+      <Search
+        inputPlaceholder={ '请输入景点名称／主题' }
+        leftComponent={ <Citylocation citydata={ citydata } handleCityname={ handleCityname } selectedCIty={ selectedCIty } /> }
+        content={ <IndexShowList props={ props } fetchData={ fetchData } handleTheme={ handleTheme } handleStar={ handleStar } handleDefault={ handleDefault } /> }
+        listItem={ <ListItem handleGoDetails={ handleGoDetails } /> }
+        onFeach={ (keyword, cb) => handleSearch(fetchData, keyword, cb) }
+        handleResult={ result => { handleGoDetails(result.id) } }
+        noResult={ <NoOneComponent /> }
+        handleClick={ () => handleSearchOnclick() }
+      />
+    </div>
+  )
+}
+
+export default App
+
+// 地点定为
+const Citylocation = ({ citydata, selectedCIty, handleCityname }) => {
+  // console.log('citydata---',citydata);
+  return (
+    <div className='citylocation' onClick={ () => {
+      Mask.closeAll()
+      Mask(
+        <SlidePage target='left' showClose={ false } >
+          <CitySearch localCity='上海' categoryCode='menpiao' api={ citydata } handleCityData={ result => handleCityname(result) } />
+        </SlidePage>
+        , { mask: false, style: { position: 'absolute' } }
+      )
+    } }
+    >
+      <span className='cityNameshow'>{ selectedCIty }</span>
+      <span>{ selectedCIty ? <img alt='加载中' className='jiaoPic' src={ require('../img/jiao.png') } /> : '' }</span>
+    </div>
+  )
+}
+
+// 列表的展示 和主题的选择
+const IndexShowList = ({ props, fetchData, handleTheme, handleStar, handleDefault }) => {
+  const { themeDatas,
+    handleGoDetails, showPopup, handleFetchMore,
+    handleThemeChange, handleStarChange, handleDefaultChange,
+    offset, city, level, theme, sort,
+    themeMark, levelMark, sortMark,
+    themePic, levelPic, sortPic, width, height,
+  } = props
+  if (fetchData.lat && fetchData.lng) {
+    return (
+      <div className='indexListWrap'>
+        <ThemeTitle city={ city } themeDatas={ themeDatas } theme={ theme } level={ level } sort={ sort }
+          themePic={ themePic } levelPic={ levelPic } sortPic={ sortPic }
+          showPopup={ showPopup } handleDefaultChange={ handleDefaultChange }
+          handleStarChange={ handleStarChange } handleThemeChange={ handleThemeChange }
+          themeMark={ themeMark } levelMark={ levelMark } sortMark={ sortMark }
+          handleTheme={ handleTheme } handleStar={ handleStar } handleDefault={ handleDefault }
+        />
+        <Listview className='ListMain'
+          offset={ offset } limit={ 10 } fetchData={ fetchData }
+          onFetch={ handleFetchMore } listItem={ <ListItem handleGoDetails={ handleGoDetails } width={ width } height={ height } /> }
+          noOneComponent={ <NoOneComponent /> }
+        />
+        <div className='clear' />
+      </div>
+    )
+  }
+  return (<div />)
+}
+// 主题的选择  和  景区级别的选择
+const ThemeTitle = ({ themeDatas, handleTheme, handleStar, theme, level, sort,
+  handleDefault, handleThemeChange, handleStarChange,
+  handleDefaultChange, themeMark, levelMark, sortMark,
+  themePic, levelPic, sortPic,
+}) => {
+  let levelStr = ''
+  let sortStr = ''
+  if (level && level !== '') {
+    if (level === 'AAAAA') {
+      levelStr = '5A景区'
+    } else if (level === 'AAAA') {
+      levelStr = '4A景区'
+    } else if (level === 'AAA') {
+      levelStr = '3A景区'
+    } else if (level === 'AA') {
+      levelStr = '2A景区'
+    } else if (level === 'A') {
+      levelStr = '1A景区'
+    }
+  }
+  if (sort && sort !== '') {
+    if (sort === 'Default') {
+      sortStr = ''
+    } else if (sort === 'DistanceAsc') {
+      sortStr = '距离升序'
+    } else if (sort === 'PriceAsc') {
+      sortStr = '价格升序'
+    } else if (sort === 'PriceDesc') {
+      sortStr = '价格降序'
+    }
+  }
+  return (
+    <div className='themeWrap'>
+      <span className={ `headerleft headeroto ${ theme !== '' ? 'headrecheck' : '' }` } onClick={ () => { handleTheme(themeDatas, handleThemeChange, themeMark, '主题') } }>{ theme && theme !== '' ? theme : '全部主题' }<img alt='加载中' className={ themePic === true ? 'animatePic_up' : 'animatePic_down' } src={ theme !== '' ? icJiao : icUpdown } /></span>
+      <span className={ `headercen headeroto ${ levelStr !== '' ? 'headrecheck' : '' }` } onClick={ () => { handleStar(handleStarChange, levelMark, '星级') } }>{ levelStr !== '' ? levelStr : '景点级别'}<img alt='加载中' className={ `${ levelPic === true ? 'animatePic_up' : 'animatePic_down' }` } src={ levelStr !== '' ? icJiao : icUpdown } /></span>
+      <span className={ `headerright headeroto ${ sortStr !== '' ? 'headrecheck' : '' }` } onClick={ () => { handleDefault(handleDefaultChange, sortMark, '排序') } }>{ sortStr !== '' ? sortStr : '默认排序' }<img alt='加载中' className={ `${ sortPic === true ? 'animatePic_up' : 'animatePic_down' }` } src={ sortStr !== '' ? icJiao : icUpdown } /></span>
+    </div>
+  )
+}
+const ThemeChoose = ({ themeDatas, handleThemeChange }) => {
+  // console.log('themeDatas', themeDatas)
+  if (themeDatas) {
+    return (
+      <List className='themeMaskCom' style={{ height: '5.4rem', overflowY: 'scroll' }}>
+        <Item key={ -1 } onClick={ () => handleThemeChange('') } >
+          <div>全部主题</div>
+        </Item>
+        {
+          (themeDatas).map((item, index) => (
+            <Item key={ `${ index + 1 }` } onClick={ () => handleThemeChange(item) } >
+              <div>{ item }</div>
+            </Item>
+          ))
+        }
+      </List>
+    )
+  }
+  return (<div />)
+}
+
+const StarChoose = ({ handleStarChange }) => {
+  const arr = ['不限', '1A景区', '2A景区', '3A景区', '4A景区', '5A景区']
+  return (
+    <List className='starMaskCom' style={{ height: '100%', overflowY: 'scroll' }}>
+      {
+        arr.map((item, index) => (
+          <Item key={ `${ index + 1 }` } onClick={ () => { handleStarChange(item) } }>
+            <div>{ item }</div>
+          </Item>
+        ))
+      }
+    </List>
+  )
+}
+const DefaultChoose = ({ handleDefaultChange }) => {
+  const sortarr = ['默认排序', '距离从近到远', '价格升序', '价格降序']
+  return (
+    <List className='defaultMaskCom' style={{ height: '100%', overflowY: 'scroll' }}>
+      {
+        sortarr.map((item, index) => (
+          <Item key={ `${ index + 1 }` } onClick={ () => { handleDefaultChange(item) } }>
+            <div>{ item }</div>
+          </Item>
+      ))
+      }
+    </List>
+  )
+}
+
+// 列表的展示
+const ListItem = ({ data, handleGoDetails, width, height }) => {
+  const { image, name, level, city, marketPrice, openTime, price, id, disName } = data
+  let stararr = []
+  let levelstr = 3
+  if (level === 'AAAAA') {
+    stararr = '92%'; levelstr = 5
+  } else if (level === 'AAAA') {
+    stararr = '82%'; levelstr = 4
+  } else if (level === 'AAA') {
+    stararr = '72%'; levelstr = 3
+  } else if (level === 'AA') {
+    stararr = '56%'; levelstr = 2
+  } else if (level === 'A') {
+    stararr = '30%'; levelstr = 1
+  } else {
+    stararr = '65%'; levelstr = 3
+  }
+  const bodyfontSize = document.documentElement.style.fontSize
+  const viewportScale = window.viewportScale
+  if (bodyfontSize === '50px' && viewportScale === 1) {
+    if (width && height) {
+      width = 92
+      height = 105
+      // console.log('wwwww---------obj1.clientWidth=', width, height)
+    }
+  }
+  return (
+    <div>
+      <li className='listItem' onClick={ () => { setStore('itemId', id, 'session'); handleGoDetails(id) } }>
+        <div className='itemPic'><PicHandle picSrc={ image } sw={ width } sh={ height } /></div>
+        <div className='itemMain'>
+          <div className='itemTitle oto'><span className='otoS1'>{ name }</span><span className={ price === -1 ? 'otoS2 otoS4' : 'otoS2' }>{ price === -1 ? '已售完' : `￥${ price }` }<i>起</i></span></div>
+          <div className='itemTime oto'><span className='otoS1'>开放时间：{ openTime }</span><span className='otoS2'>￥{ marketPrice }</span></div>
+          <div className='itemStar oto'>
+            <span className='otoS1'>
+              <Evaluation defaultValue={ stararr } width={ '1.36rem' } />
+            </span>
+            <span className='otoS2'>{ disName }</span>
+          </div>
+          <div className='itemAddr oto'><span className='otoS1'>{ city }</span><span className='otoS2 otoS3'>{ levelstr }A景区</span></div>
+        </div>
+        <div className='clear' />
+      </li>
+    </div>
+  )
+}
+// 当没有对应景点是的展示
+const NoOneComponent = () => {
+  return (
+    <div className='noOneComponent'>
+      <div className='noOneMain'>
+        <img alt='加载中' src={ icNouse } />
+        <div>哎呀，没有找到您想要的景区搜搜其他景区吧</div>
+      </div>
+    </div>
+  )
+}
+
+
+
+
+ menpiao/components/details.js
+
+import React from 'react'
+import { List, WhiteSpace, Tabs, Accordion, Icon } from 'antd-mobile'
+import { Mask, Evaluation } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+import '../style/details.scss'
+
+import svgCheng from '../img/svg_cheng.svg'
+import svgEr from '../img/svg_er.svg'
+import svgOld from '../img/svg_old.svg'
+import svgXue from '../img/svg_xue.svg'
+import svgOther from '../img/svg_you.svg'
+import svgHuo from '../img/svg_huo.svg'
+
+const Item = List.Item
+const TabPane = Tabs.TabPane
+
+const Details = props => {
+  const { DetailsListDatas, DetailsList, DetailsIntroduced,
+    handlePicShow, handleGoOrder, handleSuccess, handleGoaddrMap,
+    close,
+  } = props
+  const handleOrdertrick = data => {
+    Mask(<Ordertrick data={ data } handleGoOrder={ handleGoOrder } />)
+  }
+  // 开放时间弹窗
+  const handleTimeToast = openTime => {
+    const handleContainerClose = ''
+    // Toast.info( <OtimeToast openTime = { openTime }/>, 100 );
+    Mask(<OtimeToast openTime={ openTime } />, close === 1 ? handleContainerClose() : '')
+    // Mask(<OtimeToast openTime={ openTime } />)
+  }
+  return (
+    <div className='detailsWrap' >
+      <ItemPic DetailsListDatas={ DetailsListDatas } handlePicShow={ handlePicShow } />
+      <ItemNote DetailsListDatas={ DetailsListDatas } handleSuccess={ handleSuccess }
+        handleGoaddrMap={ handleGoaddrMap } handleTimeToast={ handleTimeToast }
+        close={ close }
+      />
+      <WhiteSpace size='lg' />
+      <ItemTrick DetailsListDatas={ DetailsListDatas } DetailsList={ DetailsList }
+        DetailsIntroduced={ DetailsIntroduced } handleOrdertrick={ handleOrdertrick }
+        handleGoOrder={ handleGoOrder }
+      />
+    </div>
+  )
+}
+
+export default Details
+
+const ItemPic = ({ DetailsListDatas, handlePicShow }) => {
+  if (DetailsListDatas) {
+    const { name, level, images } = DetailsListDatas
+    setStore('addrTitlename', name, 'session')
+    let stararr = []
+    let levelstr = 3
+    let score = 7.5
+    if (level === 'AAAAA') {
+      stararr = '92%'; levelstr = 5; score = 9.2
+    } else if (level === 'AAAA') {
+      stararr = '82%'; levelstr = 4; score = 8.2
+    } else if (level === 'AAA') {
+      stararr = '72%'; levelstr = 3; score = 7.8
+    } else if (level === 'AA') {
+      stararr = '56%'; levelstr = 2; score = 7.2
+    } else if (level === 'A') {
+      stararr = '30%'; levelstr = 1; score = 6.9
+    } else {
+      stararr = '65%'; levelstr = 3
+    }
+    return (
+      <div className='ItempicWrap'>
+        <div className='picMeng' />
+        <div className='itemPic'>
+          <img alt='加载中' src={ images[0] } />
+        </div>
+        <div className='itemMain'>
+          <div className='itemTitle'>
+            <span className='title'>{ name }</span>
+            <span className='level'>{ levelstr }A景区</span>
+          </div>
+          <div className='itemgount'>
+            <span className='Star'>
+              <Evaluation defaultValue={ stararr } width={ '1.36rem' } />
+            </span>
+            <span className='fenshu'>{ score }分</span>
+            <span className='picshow' onClick={ () => { handlePicShow(images) } }>{ images.length }张图片</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+const ItemNote = ({ DetailsListDatas, handleGoaddrMap, handleTimeToast, close }) => {
+  const arr = []
+  if (DetailsListDatas) {
+    const { serviceGuarantee } = DetailsListDatas
+
+    for (let i = 0; i < serviceGuarantee.length; i++) {
+      if (serviceGuarantee[i] === 'ENSURING_THE_GARDEN') {
+        arr[i] = '保证入园'
+      } else if (serviceGuarantee[i] === 'FAST_INTO_THE_GARDEN') {
+        arr[i] = '快速入园'
+      } else if (serviceGuarantee[i] === 'BACK_AT_ANY_TIME') {
+        arr[i] = '随时退'
+      } else if (serviceGuarantee[i] === 'YOU_WILL_LOSE') {
+        arr[i] = '贵就赔'
+      }
+    }
+    // console.log(arr)
+  }
+  if (DetailsListDatas) {
+    const { addr, latitude, longitude } = DetailsListDatas
+    let { openTime } = DetailsListDatas
+    const myaddrPoint = { latitude, longitude }
+    setStore('myaddrPoint', myaddrPoint, 'session')
+    if (!openTime) {
+      openTime = '暂无具体营业时间请联系10106060'
+    }
+    // console.log('close---====---',close);
+    return (
+      <List className='itemnoteWrap'>
+        <Item arrow='horizontal' onClick={ () => { handleGoaddrMap(addr, latitude, longitude) } } >景区地址：{ addr }</Item>
+        <Item arrow='horizontal' onClick={ () => { handleTimeToast(openTime, close) } }>{ `开放时间:${ openTime }` }</Item>
+        {
+          arr.length > 0 ?
+            <Item>
+              {
+                arr.map((item, index) => (
+                  <span key={ `${ index + item }` } className='serviceSpan'>{ item }</span>
+                ))
+              }
+            </Item> : ('')
+        }
+      </List>
+    )
+  }
+  return (<div />)
+}
+// 开放时间弹窗
+const OtimeToast = ({ openTime }) => {
+  return (
+    <div className='openTimeWrap'>
+      <div className='openTimeHeader'>开放时间：</div>
+      <div className='openTime'>{ openTime }</div>
+    </div>
+  )
+}
+
+const ItemTrick = ({ DetailsListDatas, DetailsList, DetailsIntroduced, handleOrdertrick, handleGoOrder }) => {
+  if (DetailsListDatas && DetailsList) {
+    return (
+      <div className='itemTabs'>
+        <Tabs defaultActiveKey='1' tabBarPosition='top' swipeable={ false } >
+          <TabPane tab='订票' key='1'>
+            <TabItem1 itemData={ DetailsList } handleOrdertrick={ handleOrdertrick } handleGoOrder={ handleGoOrder } />
+          </TabPane>
+          <TabPane tab='景点特色' key='2'>
+            <div className='tabItem' style={{ backgroundColor: '#fff' }}>
+              <TabItem2 DetailsIntroduced={ DetailsIntroduced } />
+            </div>
+          </TabPane>
+        </Tabs>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+const TabItem1 = ({ itemData, handleOrdertrick, handleGoOrder }) => {
+  if (itemData && itemData.length > 0) {
+    return (
+      <div className='tabItem' style={{ backgroundColor: '#f3f3f4' }}>
+        <Accordion defaultActiveKey='1' >
+          {
+            (itemData).map((item, index) => (
+              <Accordion.Panel header={ <TabTitle item={ item.name } /> } className='header' key={ `${ index + 1 }` }>
+                <List>
+                  {
+                    (item.goodsList).map((items, indexs) => (
+                      <Item data-Id={ items.id } key={ `${ indexs + items.id }` }>
+                        <div className='title'>{ items.name }</div>
+                        <div className='time'>
+                          <div className='timeS1'>
+                            <span className='s1a'>{ items.aheadHourDesc }</span>
+                            <span className='s1b' onClick={ () => { handleOrdertrick(items, handleGoOrder) } }>订票须知</span>
+                          </div>
+                          <div className='timeS2'>
+                            <span className='s2b' onClick={ () => { handleGoOrder(items.id, items.sellPrice) } }>预定</span>
+                            <span className='s2a'>￥{ items.sellPrice }<i>起</i></span>
+                          </div>
+                          <div className='clear' />
+                        </div>
+                      </Item>
+                    ))
+                  }
+                </List>
+              </Accordion.Panel>
+          ))
+        }
+        </Accordion>
+      </div>
+    )
+  }
+  return (
+    <div className='no_trickWrap'>
+      <div className='no_main'>
+        <img alt='加载中' src={ require('../img/huangniu.png') } />
+        <p>出游的人太多啦~门票已被抢光！</p>
+      </div>
+    </div>
+  )
+}
+// 分类显示
+const TabTitle = ({ item }) => {
+  let srcStr = ''
+  if (item === '成人票') {
+    // srcStr = icCheng
+    srcStr = svgCheng
+  } else if (item === '儿童票') {
+    // srcStr = icEr
+    srcStr = svgEr
+  } else if (item === '老人票') {
+    // srcStr = icOld
+    srcStr = svgOld
+  } else if (item === '其他') {
+    // srcStr = icOther
+    srcStr = svgOther
+  } else if (item === '学生票') {
+    // srcStr = icXue
+    srcStr = svgXue
+  } else if (item === '活动票') {
+    srcStr = svgHuo
+  }
+  return (
+    <div className='tabtitle'>
+      <span><Icon type={ srcStr } /></span>
+      <span>{ item }</span>
+    </div>
+  )
+}
+const TabItem2 = ({ DetailsIntroduced }) => {
+  if (DetailsIntroduced) {
+    const { name, intro, character, playAttractions } = DetailsIntroduced
+    return (
+      <div className='tabIntro'>
+        <div className='introMain'>
+          <p style={{ paddingTop: '20px' }}>{ name }</p>
+          {
+            playAttractions && playAttractions.length === 0 ? (<div dangerouslySetInnerHTML={{ __html: intro }} />) : (<p>{ intro }</p>)
+          }
+          {
+            character ? (character.map((items, index) => (
+              <p key={ `${ index + 3 }` }>{ items }</p>
+            ))) : ('')
+          }
+          {
+            playAttractions ? (playAttractions.map((item, indexs) => (
+              <div key={ `${ indexs + 1 }` }>
+                <p>{ item.playName }</p>
+                {
+                  (item.playImages.length > 0) ? ((item.playImages).map((item2, index) => (
+                    <div key={ `${ index + 2 }` }>
+                      <img alt='加载中' src={ item2 } />
+                      <WhiteSpace size='lg' />
+                    </div>
+                  ))) : ('')
+                }
+                <p>{ item.playInfo }</p>
+              </div>
+            ))) : ('')
+          }
+        </div>
+      </div>
+    )
+  }
+}
+
+// 订票须知
+
+const Ordertrick = ({ data, handleGoOrder, handleContainerClose }) => {
+  if (data) {
+    const { name, importentPoint, id, costInclude, importantNotice, sellPrice } = data
+    return (
+      <div className='orderinfoWrap'>
+        <div className='orderinfoMian'>
+          <div className='orderinfoHeader'>
+            <span className='infoclose' /><span className='infortitle'>订票须知</span>
+          </div>
+          <div className='orderinfo'>
+            <div className='info'>
+              <p className='infotop'>{ name }</p>
+              <p>费用包含：{ costInclude }</p>
+              <p>入园须知：</p>
+              <p>{ importantNotice }</p>
+              <p>重要须知：{ importentPoint }</p>
+            </div>
+          </div>
+          <div className='infoFooter'>
+            <span className='infof1'>{ `¥${ sellPrice }` }</span><span className='infof2' onClick={ () => { handleContainerClose(); handleGoOrder(id) } }>立即下单</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+}
+
+
+
+
+ menpiao/components/moreDate.js
+
+import React from 'react'
+// import { browserHistory } from 'react-router'
+import { setStore, getStore } from '@boluome/common-lib'
+import { Calendar } from '@boluome/oto_saas_web_app_component'
+import '../style/moreDate.scss'
+
+class MoreDate extends React.Component {
+  static defaultProps = {
+    localCity: getStore('localCity', 'session'),
+  }
+  constructor(props) {
+    super(props)
+    // const { TimeListData } = props;console.log('ptops---more', props)
+    const pricearr = getStore('priceDate', 'session')
+    if (pricearr && pricearr.length > 0) {
+      this.state = {
+        pricearr,
+      }
+    } else {
+      this.state = {
+        pricearr: [],
+      }
+    }
+    this.handleChooseTime = this.handleChooseTime.bind(this)
+  }
+  handleChooseTime(res) {
+    setStore('chooseTime', res, 'session')
+    // browserHistory.push('/menpiao/order')
+    window.history.back()
+  }
+
+  render() {
+    const { pricearr } = this.state
+    console.log('pricearr---', pricearr)
+    if (pricearr) {
+      return (
+        <div className='moreDateWrap'>
+          <div className='moreDateMain'>
+            <Calendar pricearr={ pricearr } isShow={ 'menpiao' } onChange={ e => this.handleChooseTime(e) } DefaultnoUse='nouse' />
+          </div>
+        </div>
+      )
+    }
+  }
+}
+
+export default MoreDate
+
+
+
+
+ menpiao/components/order.js
+
+import React from 'react'
+import moment from 'moment'
+import { List, WhiteSpace, Toast, Icon } from 'antd-mobile' // InputItem
+import { Mask, NewPromotion } from '@boluome/oto_saas_web_app_component'
+import { getStore, setStore } from '@boluome/common-lib'
+
+import '../style/order.scss'
+import svgAdd from '../img/svg_add.svg'
+import down from '../img/down.svg'
+import eedown from '../img/ee_down.svg'
+import add from '../img/add.svg'
+import eeadd from '../img/ee_add.svg'
+
+const Item = List.Item
+
+// 主体部分
+const Order = props => {
+  const { handleGoMoreDate, handleAddTourist,
+    handleSumUP, handleNumDown, OrderListData, TimeListData, goodsCardata,
+    sum, countPrice, chooseType, handleGetprice, morenPrice, discount,
+    handleSaveOrder, handleReliefChange, curDiscountData, orderHeight,
+    handleMinimum,
+  } = props
+  let minimumProm // 这里只是为了首次进入的时候传入红包活动的值展示正确，可(待)优化
+  if (OrderListData) {
+    minimumProm = OrderListData.minimum
+  }
+  // console.log('props----', props)
+  // 入园须知部分
+  const handleShowNotice = () => {
+    Mask(<NoticeCom OrderListData={ OrderListData } />)
+  }
+  // 当超出限制的时候
+  const handleLimiteNumber = (lim, limiteNum) => {
+    if (goodsCardata.length <= 0) {
+      Toast.info('请添加取票人', 2)
+      return
+    }
+    if (lim === 0) {
+      if (sum <= limiteNum) {
+        Toast.info(`最少购买 ${ limiteNum } 张票`, 2)
+        // Toast.info('最少购买' + `${ limiteNum }` + '张票')
+        return
+      }
+      handleNumDown(limiteNum)
+    } else if (lim === 1) {
+      if (sum >= limiteNum) {
+        Toast.info(`最多购买 ${ limiteNum } 张票`, 2)
+        // Toast.info('最多购买' + `${ limiteNum }` + '张票')
+        return
+      }
+      handleSumUP(limiteNum)
+    }
+  }
+  // 姓名 + 电话
+  const handlePhoneChange = phone => {
+    const tel = phone.replace(/\s+/g, '')
+    setStore('userSelfPhone', tel, 'session')
+  }
+  // 验证填写信息是否正确--点击提交订单
+  const handleTestMessage = () => {
+    const phone = getStore('userSelfPhone', 'session')
+    if (goodsCardata.length <= 0) {
+      Toast.info('请添加取票人', 2)
+      return
+    }
+    if (!(/^(((13[0-9]{1})|(15[0-9]{1})|(18[0-9]{1})|(17[0-9]{1}))+\d{8})$/.test(phone))) {
+      Toast.info('请填写正确手机', 2)
+      return
+    }
+    handleSaveOrder(OrderListData, goodsCardata, countPrice, sum, morenPrice, curDiscountData)
+  }
+  if (OrderListData) {
+    return (
+      <div className='orderWrap' style={{ height: orderHeight }}>
+        <div className='orderMain'>
+          <Visitcard morenPrice={ morenPrice } OrderListData={ OrderListData } />
+          <Message chooseType={ chooseType }
+            countPrice={ countPrice } handleGoMoreDate={ handleGoMoreDate }
+            handleShowNotice={ handleShowNotice } TimeListData={ TimeListData }
+            handleLimiteNumber={ handleLimiteNumber } sum={ sum } OrderListData={ OrderListData }
+            handleMinimum={ handleMinimum } handleGetprice={ handleGetprice }
+          />
+          <WhiteSpace size='lg' />
+          <Tourist goodsCardata={ goodsCardata }
+            handleAddTourist={ handleAddTourist }
+            handlePhoneChange={ handlePhoneChange }
+          />
+          <WhiteSpace size='lg' />
+          <TrickShow OrderListData={ OrderListData } sum={ sum } morenPrice={ morenPrice } />
+          <WhiteSpace size='lg' />
+          {
+            goodsCardata && goodsCardata.length > 0 ? (<NewPromotion orderType='menpiao' channel='lvmama' count={ minimumProm && sum < minimumProm ? minimumProm : sum }
+              amount={ minimumProm && sum < minimumProm ? minimumProm * countPrice : sum * countPrice } handleChange={ reply => handleReliefChange(reply) }
+            />) : ('')
+          }
+        </div>
+        <OrderFooter OrderListData={ OrderListData } sum={ sum }
+          goodsCardata={ goodsCardata } countPrice={ countPrice }
+          handleTestMessage={ handleTestMessage } morenPrice={ morenPrice }
+          discount={ discount } curDiscountData={ curDiscountData }
+        />
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+export default Order
+
+const Visitcard = ({ OrderListData, morenPrice }) => {
+  if (OrderListData && morenPrice) {
+    const { name } = OrderListData
+    // console.log(name, address, openTime, ticketType)
+    return (
+      <div className='orderCard'>
+        <Item className='ordertitle' extra={
+          <div className='orderTrickPrice'>{ `¥ ${ morenPrice.price }` }</div>
+        }
+        >{ name }</Item>
+      </div>
+    )
+  }
+  return (<div />)
+}
+// 填写信息部分
+const Message = ({ handleGoMoreDate, handleShowNotice, TimeListData,
+                  handleGetprice, chooseType, handleLimiteNumber,
+                  OrderListData, sum, handleMinimum }) => { // console.log('TimeListData----',TimeListData);
+  // 日期选择部分
+  const todayDate =  moment().format('YYYY-MM-DD')
+  const tomorrowDate = moment().add(1, 'days').format('YYYY-MM-DD')
+  // const phone = getStore('userSelfPhone', 'session') ? getStore('userSelfPhone', 'session') : ''
+  // const name = getStore('userSelfName', 'session') ? getStore('userSelfName', 'session') : ''
+  const moreChoose = getStore('chooseTime', 'session')
+  let todayPrice
+  let tomorrowPrice
+  let morePrice
+  let minimum
+  let maximum
+  if (OrderListData) {
+    maximum = OrderListData.maximum
+    minimum = OrderListData.minimum
+    handleMinimum(minimum)
+  } else {
+    minimum = 1
+    maximum = 1000
+  }
+  if (TimeListData) {
+    todayPrice = TimeListData.filter(p => p.date === todayDate)[0]
+    tomorrowPrice = TimeListData.filter(p => p.date === tomorrowDate)[0]
+    morePrice = TimeListData.filter(p => p.date !== todayDate && p.date !== tomorrowDate)[0]
+    // console.log('todayPrice---', todayPrice, 'tomorrowPrice---', tomorrowPrice, 'morePrice---', morePrice, 'moreChoose---', moreChoose)
+    if (moreChoose && moreChoose.prices) {
+      morePrice = moreChoose
+    }
+    let todayClass = ''
+    let tomorrowClass = ''
+    let moreClass = ''
+    if (chooseType === 0) {
+      if (todayPrice) {
+        todayClass = 'orderOrg'
+        tomorrowClass = ''
+        moreClass = ''
+      } else {
+        todayClass = 'noOrder'
+        if (tomorrowPrice) {
+          tomorrowClass = 'orderOrg'
+          moreClass = ''
+        } else {
+          tomorrowClass = 'noOrder'
+          moreClass = 'orderOrg'
+        }
+      }
+    } else if (chooseType === 1) {
+      if (tomorrowPrice) {
+        tomorrowClass = 'orderOrg'
+        moreClass = ''
+        if (todayPrice) {
+          todayClass = ''
+        } else {
+          todayClass = 'noOrder'
+        }
+      } else {
+        tomorrowClass = 'noOrder'
+      }
+    } else if (chooseType === 2) {
+      if (morePrice) {
+        moreClass = 'orderOrg'
+        if (todayPrice) {
+          todayClass = ''
+        } else {
+          todayClass = 'noOrder'
+        }
+      } else {
+        moreClass = 'noOrder'
+      }
+    } else {
+      todayClass = 'noOrder'
+    }
+    return (
+      <div className='MessageWrap'>
+        <div className='noticText' onClick={ () => { handleShowNotice() } }>入园须知，退票说明 </div>
+        <List>
+          <Item className='datewrap'>
+            <div className='dateTip'>游玩日期</div>
+            <div className='date'>
+              <div className={ `today dateoto ${ todayClass }` }>
+                {
+                  todayPrice ? (<span onClick={ () => { handleGetprice(0, todayPrice) } }><span>今日</span><span>¥{ todayPrice.date.substring(5) }</span></span>) : (<span><span>今日</span><span>不可订</span></span>)
+                }
+              </div>
+              <div className={ `tomorrow dateoto ${ tomorrowClass }` }>
+                {
+                  tomorrowPrice ? (<span onClick={ () => { handleGetprice(1, tomorrowPrice) } }><span>明天</span><span>{ tomorrowPrice.date.substring(5) }</span></span>) : (<span><span>明天</span><span>不可订</span></span>)
+                }
+              </div>
+              <div className={ `moredate dateoto ${ moreClass }` } onClick={ () => { handleGoMoreDate() } }>
+                {
+                  morePrice ? (<span onClick={ () => { handleGetprice(2, moreChoose && moreChoose.price ? moreChoose : morePrice) } } ><span className='moredateSpan'>更多日期</span><span>{ moreChoose && moreChoose.price ? moreChoose.date.substring(5) : morePrice.date.substring(5) }</span></span>) : (<span><span>更多日期</span><span>不可订</span></span>)
+                }
+              </div>
+            </div>
+            <div style={{ clear: 'both' }} />
+          </Item>
+          <Item className='addnumbel' extra={
+            <div className='sumbox'>
+              <span onClick={ () => { handleLimiteNumber(0, minimum) } }><Icon type={ `${ minimum && sum > minimum ? eedown : down }` } /></span>
+              <span className='Sum'>{ `${ minimum && sum < minimum ? minimum : sum }` }</span>
+              <span onClick={ () => { handleLimiteNumber(1, maximum) } }><Icon type={ `${ maximum && sum < maximum ? eeadd : add }` } /></span>
+            </div> }
+          >门票数量 { OrderListData.minimum > 1 ? (<span>({ OrderListData.minimum }张起购)</span>) : ('') }</Item>
+        </List>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+// 入园须知部分
+const NoticeCom = ({ OrderListData }) => {
+  if (OrderListData) {
+    const { name, importentPoint, notice, costInclude } = OrderListData
+    // console.log('notice------', notice)
+    return (
+      <div className='noticeWrap'>
+        <div className='orderinfoMian'>
+          <div className='orderinfoHeader'>
+            <span className='infoclose' /><span className='infortitle'>入园须知</span>
+          </div>
+          <div className='orderinfo'>
+            <div className='info'>
+              <p className='infotop'>{ name }</p>
+              <p>费用包含：</p>
+              <p>{ costInclude }</p>
+              <p>入园须知：</p>
+              <p>{ notice.effectiveDesc }</p>
+              <p>重要须知：</p>
+              <p>{ importentPoint }</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+// 添加游客部分
+const Tourist = ({ handleAddTourist, goodsCardata, handlePhoneChange }) => {
+  console.log(handlePhoneChange)
+  if (goodsCardata && goodsCardata.length > 0) {
+    // const { bornDate , cardType , id , idCard , name , phone , status , type } = TouristData
+    const booker = goodsCardata.map(item => { return item })[0]
+    setStore('userSelfName', booker.name, 'session')
+    setStore('userSelfPhone', booker.phone.replace(/\s+/g, ''), 'session')
+    return (
+      <div className='addtouristWrap'>
+        {
+        goodsCardata.map((item, index) => (
+          <div key={ `${ index + item }` }>
+            <List>
+              <Item>取票信息</Item>
+              <Item className='addmessage oto' extra={ item.name } arrow='horizontal' onClick={ () => handleAddTourist() }>
+                取票人
+              </Item>
+              <Item className='addnumbel oto' extra={ item.idCard }>
+                身份证
+              </Item>
+              <Item className='addnumbel oto' extra={ item.phone.replace(/\s+/g, '') }>
+                手机号
+              </Item>
+            </List>
+          </div>
+        ))
+        }
+      </div>
+    )
+  }
+  return (
+    <div className='addtouristWrap'>
+      <Item className='addpeople'>
+        <div className='addpeoplediv' onClick={ () => { handleAddTourist() } }>
+          <Icon type={ svgAdd } /><span>添加取票人</span>
+        </div>
+      </Item>
+    </div>
+  )
+}
+
+// <InputItem className='messageint' type='phone' placeholder='请输入联系人手机号' defaultValue={ item.phone.replace(/\s+/g, '') } value={ item.phone.replace(/\s+/g, '') } onChange={ handlePhoneChange } maxLength='11'>手机号</InputItem>
+// 驴妈妈出票展示
+const TrickShow = ({ OrderListData, sum, morenPrice }) => {
+  if (OrderListData && morenPrice) {
+    // console.log('OrderListData---', OrderListData)
+    const { name, minimum } = OrderListData
+    return (
+      <div className='tricekShow'>
+        <List>
+          <Item>驴妈妈出票</Item>
+          <Item>{ name }</Item>
+          <Item extra={ <div>{ `${ minimum && sum < minimum ? minimum : sum } 张` }</div> }>数量</Item>
+          <Item extra={ <div>{ `¥ ${ minimum && sum < minimum ? (minimum * morenPrice.price).toFixed(2) : (sum * morenPrice.price).toFixed(2) }` }</div> }>票价</Item>
+        </List>
+      </div>
+    )
+  }
+  return (<div />)
+}
+// 底部下单部分
+const OrderFooter = ({ OrderListData, goodsCardata, countPrice, sum, handleTestMessage, morenPrice, discount, curDiscountData }) => {
+  // console.log('curDiscountData', curDiscountData)
+  if (OrderListData && morenPrice) {
+    const { minimum } = OrderListData
+    return (
+      <div className='orderFooter'>
+        <div className='orderfootPrice'>
+          <span>实付：¥</span>
+          <span className='price'>{ minimum && sum < minimum ? ((minimum * morenPrice.price) - discount).toFixed(2) : ((sum * morenPrice.price) - discount).toFixed(2) }</span>
+          {
+            discount && discount !== 0 ? (<span className='downprice'>{ `优惠¥ ${ discount }` }</span>) : ''
+          }
+        </div>
+        <div className={ `orderfooterOn ${ sum && sum !== 0 ? '' : 'orderNouse' }` } onClick={ () => { return sum && sum !== 0 ? handleTestMessage(OrderListData, goodsCardata, countPrice, sum, morenPrice, curDiscountData) : '' } }>
+          立即下单
+        </div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+
+
+
+ menpiao/components/orderDetails.js
+
+import React from 'react'
+import { afterOrdering, login } from 'business'
+import { List, WhiteSpace } from 'antd-mobile'
+import { moment } from '@boluome/common-lib'
+import { OrderDetail, OrderPreferential, Mask, SlidePage, MapShowGaode } from '@boluome/oto_saas_web_app_component'
+
+import '../style/orderDetails.scss'
+import '../style/details.scss'   // 这里是为了引入景点详情页的一些样式
+import daohang from '../img/daohang.png'
+import shijian from '../img/shijian.png'
+import xiangqing from '../img/xiangqing.png'
+
+const Item = List.Item
+const orderDetails = props => {
+  console.log('od---', props)
+  const { params } = props
+  const orderId = params ? params.id : ''
+  return (
+    <div className='orderDetailsWrap'>
+      <OrderDetail
+        content={ <OrderComponent /> }
+        login={ login }
+        id={ orderId }
+        orderType='menpiao'
+        goPay={ () => afterOrdering({ id: orderId }) }
+      />
+    </div>
+  )
+}
+
+export default orderDetails
+
+// 订单详情页面的主要内容
+const OrderComponent = ({ orderDetailInfo }) => {
+  console.log('test--orderDetailInfo--', orderDetailInfo)
+  const { travellers, createdAt, platformActivity = {}, coupon = {},
+    realPayPrice = 0, product = {}, orderPrice = 0, id,
+  } = orderDetailInfo
+  const { title, price } = platformActivity
+  const { ticketCount, travellerType } = travellers && travellers[0] ? travellers[0] : {}
+  const { sellPrice = 0 } = product
+  const propsObj = {
+    topTitle:              travellerType,
+    platformActivityPrice: price,
+    couponPrice:           coupon.price,
+    realPayPrice:          realPayPrice.toFixed(2),
+    sumPrice:              `${ sellPrice.toFixed(2) } x ${ ticketCount }`,
+    atitle:                title,
+    ctitle:                coupon.title,
+  }
+  return (
+    <div className='menpiaoOrderDetails'>
+      <WhiteSpace size='lg' />
+      {
+        orderDetailInfo && orderDetailInfo.map ? (<Detailsinfo orderDetailInfo={ orderDetailInfo } />) : ''
+      }
+      <WhiteSpace size='lg' />
+      {
+        realPayPrice && orderPrice ? (<OrderPreferential propsObj={ propsObj } />) : ('')
+      }
+      {
+        travellers ? (<PersonalInfo travellers={ travellers } />) : ''
+      }
+      <WhiteSpace size='lg' />
+      {
+        id ? (<OrderTimeCom id={ id } createdAt={ createdAt } />) : ''
+      }
+    </div>
+  )
+}
+
+// 门票详情展示部分
+const Detailsinfo = ({ orderDetailInfo }) => {
+  // 点击景点详情 ------ showClose={ false }
+  const { visitDate, addr, map, scenicName, ways, scenicDetail, rule, name, openTime } = orderDetailInfo
+  const { latitude = '', longitude = '' } = map
+  const handleDetailsShow = () => {
+    Mask(
+      <SlidePage target='left'>
+        <DetailsMain scenicDetail={ scenicDetail } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  // 点击开放时间
+  const handleOpenTime = () => {
+    Mask(<OpenTimeCom openTime={ openTime } />, { mask: true, style: { position: 'absolute' } })
+  }
+  // 点击地图导航部分
+  const handleMapnavigation = () => {
+    Mask(
+      <SlidePage target='left'>
+        <MapShowGaode longitude={ longitude } latitude={ latitude } addrnameStr={ addr } addrTitlename={ scenicName } />
+      </SlidePage>
+      , { mask: false, style: { position: 'absolute' } }
+    )
+  }
+  // 点击预订须知
+  const handleOrderInfo = () => {
+    Mask(
+      <OrderInfoCom data={ rule } name={ name } />
+      , { mask: true, style: { position: 'absolute' } }
+    )
+  }
+  return (
+    <div className='orderDetailsinfo'>
+      <List>
+        <Item arrow='horizontal' extra={ <span className='orderInfo' onClick={ () => { handleOrderInfo() } }>入园须知、退改签说明</span> }>{ scenicName }</Item>
+        <div className='main'>
+          <div className='item'><span>入园日期：</span><span>{ visitDate }</span></div>
+          <div className='item'><span>入园方式：</span><span>{ ways }</span></div>
+          <div className='item' style={{ display: 'none' }}><span>取票码：</span><span className='itemSs'>8912748921738</span></div>
+        </div>
+        <div className='infoBtn'>
+          <div className='oto' onClick={ () => handleDetailsShow() }><span><img src={ xiangqing } alt='' /></span><span>景点详情</span></div>
+          <div className='oto cbtn' onClick={ () => handleOpenTime() }><span><img src={ shijian } alt='' /></span><span>开放时间</span></div>
+          <div className='oto' onClick={ () => handleMapnavigation() }><span><img src={ daohang } alt='' /></span><span>地图导航</span></div>
+        </div>
+      </List>
+    </div>
+  )
+}
+
+// 取票人信息展示
+const PersonalInfo = ({ travellers }) => {
+  const { name, idCard, phone } = travellers[0]
+  const tel = phone.replace(/\s/g, '')
+  console.log(tel)
+  return (
+    <div className='PersonalInfoWrap'>
+      <List>
+        <Item>取票信息</Item>
+        <Item extra={ name }>取票人</Item>
+        <Item extra={ `${ tel.slice(0, 4) } **** ${ tel.slice(-3) }` }>手机号</Item>
+        <Item extra={ `${ idCard.slice(0, 4) } ******** ${ idCard.slice(-3) }` }>身份证</Item>
+      </List>
+    </div>
+  )
+}
+
+// 订单编号和下单时间
+const OrderTimeCom = ({ id, createdAt }) => {
+  return (
+    <List>
+      <Item extra={ id }>订单编号</Item>
+      <Item extra={ moment('YYYY-MM-DD HH:mm:ss')(createdAt) }>下单时间</Item>
+    </List>
+  )
+}
+// 景点详情展示
+const DetailsMain = ({ scenicDetail }) => {
+  if (scenicDetail) {
+    const { name, intro, character, playAttractions } = scenicDetail
+    return (
+      <div className='tabIntro'>
+        <div className='introMain'>
+          <p style={{ paddingTop: '20px' }}>{ name }</p>
+          {
+            playAttractions && playAttractions.length === 0 ? (<div dangerouslySetInnerHTML={{ __html: intro }} />) : (<p>{ intro }</p>)
+          }
+          {
+            character ? (character.map((items, index) => (
+              <p key={ `${ index + 3 }` }>{ items }</p>
+            ))) : ('')
+          }
+          {
+            playAttractions ? (playAttractions.map((item, indexs) => (
+              <div key={ `${ indexs + 1 }` }>
+                <p>{ item.playName }</p>
+                {
+                  (item.playImages.length > 0) ? ((item.playImages).map((item2, index) => (
+                    <div key={ `${ index + 2 }` }>
+                      <img alt='加载中' src={ item2 } />
+                      <WhiteSpace size='lg' />
+                    </div>
+                  ))) : ('')
+                }
+                <p>{ item.playInfo }</p>
+              </div>
+            ))) : ('')
+          }
+        </div>
+      </div>
+    )
+  }
+}
+// 景区开放时间
+const OpenTimeCom = ({ openTime }) => {
+  return (
+    <div className='openTimeWrap'>
+      <div className='openTimeHeader'>开放时间：</div>
+      <div className='openTime'>{ openTime }</div>
+    </div>
+  )
+}
+// 入园须知，改签须知
+const OrderInfoCom = ({ data, name }) => {
+  if (data) {
+    const { effectiveDesc, importentPoint, addr, getTicketTime } = data
+    return (
+      <div className='orderinfoWrap'>
+        <div className='orderinfoMian'>
+          <div className='orderinfoHeader'>
+            <span className='infoclose' /><span className='infortitle'>入园须知</span>
+          </div>
+          <div className='orderinfo'>
+            <div className='info'>
+              <p className='infotop'>{ name }</p>
+              <p>有效时间：{ effectiveDesc }</p>
+              <p>景点地址：{ addr }</p>
+              <p>入园须知：{ getTicketTime }</p>
+              <p>重要须知：{ importentPoint }</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+}
+
+
+
+
+ menpiao/components/picshow.js
+
+import React from 'react'
+import { Carousel } from 'antd-mobile'
+import { Mask, PicHandle } from '@boluome/oto_saas_web_app_component'
+
+import '../style/picshow.scss'
+
+const PicshowCom = props => {
+  // const { children } = props
+  const { PicshowData, width, height } = props
+  const maskStyle = {
+    opacity: '0.8',
+  }
+  const handleShowImg = index => {
+    Mask(<CarouselImg PicshowData={ PicshowData } PicshowIndex={ index } />, { maskStyle })
+  }
+  if (PicshowData) {
+    return (
+      <div className='picWrap'>
+        <div className='picShow'>
+          {
+            PicshowData.map((item, index) => (
+              <div className='picitemDemo' key={ `${ index + item }` } onClick={ () => { handleShowImg(index) } }>
+                <PicHandle picSrc={ item } sw={ width } sh={ height } />
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    )
+  }
+  return (<div />)
+}
+
+export default PicshowCom
+
+const CarouselImg = ({ PicshowData, PicshowIndex }) => {
+  return (
+    <div className='pic'>
+      <div className='carouselWrap'>
+        <Carousel
+          dots={ false }
+          className='my-carousel' autoplay={ false } infinite selectedIndex={ PicshowIndex }
+          beforeChange={ (from, to) => console.log(`slide from ${ from } to ${ to }`) }
+          afterChange={ index => console.log('slide to', index) }
+        >
+          {
+            PicshowData.map((item, index) => (
+              <div className='picitembig' key={ `${ index + item }` }>
+                <img alt='加载中' style={{ height: '6rem' }} src={ item }
+                  onLoad={ () => {
+                    // fire window resize event to change height
+                    window.dispatchEvent(new Event('resize'))
+                  } }
+                />
+              </div>
+            ))
+          }
+        </Carousel>
+      </div>
+    </div>
+  )
+}
+
+
+// handleContainerClose();
+
+
+
+
+ menpiao/components/root.js
+
+import React from 'react'
+import customize from 'customize'
+
+const Root = ({ children }) => (<div>{ children }</div>)
+
+export default customize(Root)
+
+
+
+
+ menpiao/components/search.js
+
+import { Popup, List } from 'antd-mobile'
+import React from 'react'
+import { Search, Mask, SlidePage, CitySearch, Evaluation, PicHandle } from '@boluome/oto_saas_web_app_component'
+import { setStore } from '@boluome/common-lib'
+
+import '../style/search.scss'
+import icDelete from '../img/delete_tong.png'
+import icNouse from '../img/nouse.png'
+
+const Item = List.Item
+
+const Searchcomponent = props => {
+  const { lat, lng, city, level, theme, prov, sort,
+    handleGoDetails, handleSearch,
+    handleCityname, citydata, selectedCIty,
+    handleSearchHistory, handleDeleteHistorry, keywordArr, width, height,
+  } = props
+
+  const fetchData = {
+    prov, city, lat, lng, level, theme, sort,
+  }
+  return (
+    <div className='searchWrap'>
+      <Search
+        inputPlaceholder={ '请输入景点名称／主题' }
+        leftComponent={ <Citylocation citydata={ citydata } handleCityname={ handleCityname } selectedCIty={ selectedCIty } /> }
+        rightComponent={ <CancelBtn /> }
+        content={ <SearchHistory handleDeleteHistorry={ handleDeleteHistorry } keywordArr={ keywordArr } /> }
+        listItem={ <ListItem handleGoDetails={ handleGoDetails } width={ width } height={ height } /> }
+        onFeach={ (keyword, cb) => handleSearch(fetchData, keyword, cb, handleSearchHistory) }
+        handleResult={ result => { handleGoDetails(result.id) } }
+        noResult={ <NoOneComponent /> }
+      />
+    </div>
+  )
+}
+export default Searchcomponent
+
+// 当进入搜索页面的时候有个历史记录的展示
+const SearchHistory = ({ handleDeleteHistorry, onKeywordChange, keywordArr }) => {
+  if (keywordArr && keywordArr.length > 0) {
+    return (
+      <div className='searchHistory'>
+        <div className='searchHistoryMain searchoto'>
+          <List>
+            <Item className='title_oto'><span className='span_oto'>搜索记录</span></Item>
+            {
+              (keywordArr.map((item, index) => (
+                <Item key={ `${ index + item }` } onClick={ () => { onKeywordChange(item) } }>{ item }</Item>
+              )))
+            }
+            <Item className='deleteBtn' onClick={ () => { handleDeleteHistorry() } }><span><img alt='加载中' src={ icDelete } /></span><span>清除搜索记录</span></Item>
+          </List>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className='searchHistory'>
+      <div className='searchHistoryMain searchoto'>
+        <List>
+          <Item className='title_oto'><span className='span_oto'>暂无搜索记录</span></Item>
+        </List>
+      </div>
+    </div>
+  )
+}
+
+// 地点定为
+const Citylocation = ({ citydata, selectedCIty, handleCityname }) => {
+// console.log('citydata---',citydata);
+  return (
+    <div className='citylocation' onClick={ () => {
+      Popup.hide()
+      Mask(
+        <SlidePage target='left' showClose={ false }>
+          <CitySearch localCity='上海' categoryCode='menpiao' api={ citydata } handleCityData={ result => handleCityname(result) } />
+        </SlidePage>
+        , { mask: false, style: { position: 'absolute' } }
+      )
+    } }
+    >
+      <span className='cityNameshow'>{ selectedCIty }</span>
+      <span>{ selectedCIty ? <img alt='加载中' className='jiaoPic' src={ require('../img/jiao.png') } /> : '' }</span>
+    </div>
+  )
+}
+// 搜索上的取消按钮
+const CancelBtn = () => {
+  return (
+    <div className='cancelBtn' onClick={ () => window.location.href = '/menpiao' }>取消</div>
+  )
+}
+
+// 列表的展示
+const ListItem = ({ data, handleGoDetails, width, height }) => {
+  const { image, name, level, city, marketPrice, openTime, price, id, disName } = data
+  let stararr = []
+  let levelstr = 3
+  if (level === 'AAAAA') {
+    stararr = '92%'; levelstr = 5
+  } else if (level === 'AAAA') {
+    stararr = '82%'; levelstr = 4
+  } else if (level === 'AAA') {
+    stararr = '72%'; levelstr = 3
+  } else if (level === 'AA') {
+    stararr = '56%'; levelstr = 2
+  } else if (level === 'A') {
+    stararr = '30%'; levelstr = 1
+  } else {
+    stararr = '65%'; levelstr = 3
+  }
+  return (
+    <div>
+      <li className='listItem' onClick={ () => { setStore('itemId', id, 'session'); handleGoDetails(id) } }>
+        <div className='itemPic'><PicHandle picSrc={ image } sw={ width } sh={ height } /></div>
+        <div className='itemMain'>
+          <div className='itemTitle oto'><span className='otoS1'>{ name }</span><span className={ price === -1 ? 'otoS2 otoS4' : 'otoS2' }>{ price === -1 ? '已售完' : `￥${ price }` }<i>起</i></span></div>
+          <div className='itemTime oto'><span className='otoS1'>开放时间：{ openTime }</span><span className='otoS2'>￥{ marketPrice }</span></div>
+          <div className='itemStar oto'>
+            <span className='otoS1'>
+              <Evaluation defaultValue={ stararr } width={ '1.36rem' } />
+            </span>
+            <span className='otoS2'>{ disName }</span>
+          </div>
+          <div className='itemAddr oto'><span className='otoS1'>{ city }</span><span className='otoS2 otoS3'>{ levelstr }A景区</span></div>
+        </div>
+        <div className='clear' />
+      </li>
+    </div>
+  )
+}
+// 当没有对应景点是的展示
+const NoOneComponent = () => {
+  return (
+    <div className='noOneComponent'>
+      <div className='noOneMain'>
+        <img alt='加载中' src={ icNouse } />
+        <div>哎呀，没有找到您想要的景区搜搜其他景区吧</div>
+      </div>
+    </div>
+  )
+}
+
+
+
+
+ menpiao/components/selectTab.js
+
+
+import React, { Component } from 'react'
+import { Icon } from 'antd-mobile'
+
+import '../style/selectTab.scss'
+
+export default class SelectTab extends Component {
+  static defaultProps = {
+  }
+  constructor(props) {
+    super(props)
+    this.state = {
+      filtering: this.props.filtering,
+    }
+  }
+
+  componentWillReceiveProps(nextProps) {
+    console.log(nextProps)
+    // 重置
+    const preData = this.state.filtering
+    const { filtering } = nextProps
+    if (preData !== filtering) this.setState({ filtering })
+  }
+
+  componentWillMount() {
+    // 数据还原
+  }
+
+  handleSelect(filtered, filtering, o) {
+    let { categoryCode, sort, timeRange } = filtered // wei
+    // console.log('ladaoba==========》', categoryCode, sort, timeRange, o, filtering)
+    const { handleSelct } = this.props
+    filtered[filtering] = o.code
+    if (categoryCode === 0) {
+      categoryCode = '全部分类'
+    } else if (sort === 0) {
+      sort = ''
+    } else if (timeRange === 0) {
+      timeRange = 'Default'
+    }
+    // console.log('log in handleSelct------->', filtered, sort, timeRange, categoryCode)
+    handleSelct(filtered.sort, filtered.timeRange, filtered.categoryCode) // dang
+  }
+
+  render() {
+    const { themeDatas, filtered, handlePush } = this.props
+    console.log('log in render filtered', filtered)
+    const { filtering } = this.state
+
+    const dataLi = themeDatas
+                  && filtering
+                  && themeDatas[filtering].map(o => {
+                    return (
+                      <p key={ `${ o.text }${ o.code }` }
+                        className='select_li'
+                        style={ o.code === filtered[filtering] ? { color: '#ffab00' } : {} }
+                        onClick={ () => this.handleSelect(filtered, filtering, o) }
+                      >
+                        { o.text }
+                        { o.code === filtered[filtering] && <Icon type={ require('../img/selected.svg') } /> }
+                      </p>
+                    )
+                  })
+    if (filtering) {
+      return (
+        <div className='select_shade' onClick={ () => handlePush(filtering, filtering) }>
+          <div className='select_wrap' style={ dataLi && dataLi.length > 6 ? { height: '50%', overflowY: 'scroll' } : { height: 'auto' } }>
+            { dataLi }
+          </div>
+        </div>
+      )
+    }
+    return <div />
+  }
+}
+
+
+
+
+ menpiao/components/slideTab.js
+
+
+import React, { Component } from 'react'
+// import { Icon } from 'antd-mobile'
+
+import '../style/slideTab.scss'
+
+let startX
+let preNode = 'undefined'
+let bool = true
+const dpr = document.documentElement.clientWidth / window.screen.width
+export default class SlideTab extends Component {
+  static defaultProps = {
+  }
+  constructor(props) {
+    super(props)
+    this.state = {
+      dataList: this.props.dataList,
+    }
+    this.tabWarp = null
+    this.tabCro = null
+    this.tabFoucs = null
+    this.tabSpan = []
+    this.translateX = 0
+  }
+
+  handleSelect(i, o) {
+    // const endAnchor = e.offsetLeft
+    if (preNode !== i) {
+      if (preNode === 'undefined') {
+        preNode = 0
+      }
+      if (this.props.selectSub) {
+        this.props.selectSub(o, this.props.dataList)
+      }
+      this.tabSpan[preNode].style.color = ''
+      this.tabSpan[i].style.color = '#333333'
+      this.tabFoucs.style.borderTop = '0.04rem solid #ffab00'
+      this.tabFoucs.style.width = this.tabSpan[i].offsetWidth
+      this.tabFoucs.style.WebkitTransform = `translateX(${ this.tabSpan[i].offsetLeft }px)`
+      if (this.tabWarp) {
+        let disX = (this.tabSpan[i].offsetLeft * (-1)) + 150
+        const warpWidth = parseFloat(window.getComputedStyle(this.tabWarp).width, 10) - parseFloat(window.getComputedStyle(this.tabCro).width, 10)
+        if (disX < (warpWidth * (-1))) {
+          disX = warpWidth * (-1)
+        }
+        if (disX > 0) {
+          disX = 0
+        }
+        this.translateX = disX
+        this.tabWarp.style.WebkitTransition = '.3s ease'
+        this.tabWarp.style.WebkitTransform = `translateX(${ this.translateX }px)`
+      }
+      preNode = i
+    }
+  }
+
+
+  handleTouchStart(e) {
+    // e.preventDefault()
+    this.tabWarp.style.WebkitTransition = ''
+    startX = e.touches ? e.touches[0].screenX : e.screenX
+  }
+
+
+  handleTouchMove(e) {
+    // e.preventDefault()
+    const { translateX } = this
+    const warpWidth = parseFloat(window.getComputedStyle(this.tabWarp).width, 10) - parseFloat(window.getComputedStyle(this.tabCro).width, 10)
+    const movedX = e.touches ? e.touches[0].screenX : e.screenX
+    let disX = translateX + ((movedX - startX) * dpr)
+
+    if (disX > 0) {
+      disX = 0
+    }
+    if (disX < (warpWidth * (-1))) {
+      disX = warpWidth * (-1)
+    }
+    if (warpWidth < 0) {
+      disX = 0
+    }
+    this.translateX = disX
+    startX = movedX
+    this.tabWarp.style.WebkitTransform = `translateX(${ this.translateX }px)`
+  }
+  handleTouchEnd() {
+    // e.preventDefault()
+  }
+
+  componentWillReceiveProps(nextProps) {
+    // 重置
+    const preData = this.state.dataList
+    const { dataList } = nextProps
+    if (preData !== dataList) {
+      // 状态还原
+      this.tabSpan[preNode].style.color = ''
+      this.tabWarp.style.WebkitTransform = `translateX(${ 0 }px)`
+      this.tabShade.style.height = 'auto'
+      // 数据还原
+      this.tabWarp = null
+      this.tabCro = null
+      this.tabFoucs = null
+      this.tabSpan = []
+      this.translateX = 0
+      preNode = 'undefined'
+      bool = true
+      this.setState({ dataList })
+    }
+  }
+
+  componentWillMount() {
+    // 数据还原
+    this.tabWarp = null
+    this.tabCro = null
+    this.tabFoucs = null
+    this.tabSpan = []
+    this.translateX = 0
+    preNode = 'undefined'
+    bool = true
+  }
+
+  render() {
+    const { dataList } = this.state
+    const { data } = this.props
+    let index = 0
+    if (dataList) {
+      for (let i = 0; i < dataList.length; i++) {
+        if (data && (dataList[i].id === data.id)) {
+          index = i
+        }
+      }
+    }
+    const dataLi = dataList && dataList.map((o, i) => <span ref={ node => { if (node) { this.tabSpan[i] = node } } } key={ `${ i + 1 }` } className='select_li' onClick={ () => this.handleSelect(i, o) }>{ o.eventDate }<br />{ o.eventWeekday }</span>)
+    return (
+      <div className='select_tabs'>
+        <div className='select_cro' ref={ node => { if (node) { this.tabCro = node } } }>
+          <p
+            ref={ node => { if (node) { this.tabWarp = node } } }
+            onTouchStart={ e => this.handleTouchStart(e) }
+            onTouchMove={ e => this.handleTouchMove(e) }
+            onTouchEnd={ e => this.handleTouchEnd(e) }
+          >
+            { dataLi }
+            <span className='select_foucs' ref={ node => { if (node && bool) { this.tabFoucs = node; this.handleSelect(index, dataList[index]); bool = false } } } />
+          </p>
+        </div>
+      </div>
+    )
+  }
+}
+
+
+
+
+ menpiao/containers/app.js
+
+import { connect } from 'react-redux'
+import { wrap, Mask, Loading } from '@boluome/oto_saas_web_app_component'
+import { setStore, getStore } from '@boluome/common-lib'
+import { browserHistory } from 'react-router'
+import { getLocationGaode, login, customerCode } from 'business'
+// import { Popup } from 'antd-mobile'
+
+import App from '../components/app'
+import { CityData, fetchScenics, ThemeData } from '../actions/app'
+
+const { AMap = '' } = window
+const mapStateToProps = ({ app }) => {
+  return {
+    ...app,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    // 测试 开个订单详情页面的入口
+    goOrderDetails: () => {
+      browserHistory.push('/menpiao/orderDetails')
+    },
+    handleGoDetails: id => {
+      setStore('itemId', id, 'session')
+      dispatch({ type: 'OFFSET', offset: 0 })
+      browserHistory.push('/menpiao/details')
+    },
+    handleCityname: res => {
+      console.log('res', res)
+      let latOrlng = getStore('geopoint', 'session')
+      const cityName = res.name
+      // 高德根据城市名获取坐标
+      AMap.service('AMap.Geocoder', () => { // 回调函数
+        // 实例化Geocoder
+        const geocoder = new AMap.Geocoder()
+        geocoder.getLocation(cityName, (status, result) => {
+          if (status === 'complete' && result.info === 'OK') {
+            // console.log('高德---', result)
+            const { geocodes } = result
+            const { lat, lng } = geocodes[0].location
+            setStore('mySelfpoint', { latitude: lat, longitude: lng }, 'session')
+            if (!latOrlng) {
+              latOrlng = { latitude: lat, longitude: lng }
+              setStore('geopoint', { latitude: lat, longitude: lng }, 'session')
+            }
+          } else {
+            // 获取经纬度失败
+            console.log('Amap getLocation fail')
+          }
+        })
+      })
+      // console.log('--test----', latOrlng)
+      if (latOrlng) {
+        const customerLocation = { localCity: res.name, latOrlng, province: res.prov }
+        setStore('customerLocation', customerLocation, 'session')
+        dispatch({
+          type:         'CHANGE_SELECTED_CITY',
+          selectedCIty: res.name,
+          city:         res.name,
+          prov:         res.prov,
+          offset:       0,
+          levelPic:     false,
+          sortPic:      false,
+          themePic:     false,
+          lat:          latOrlng.latitude,
+          lng:          latOrlng.longitude,
+        })
+      }
+      // 2017-10-31 发现城市切换没有重新请求主题
+      dispatch(ThemeData(cityName))
+    },
+    handleSearch: (fetchData, keyword, onSuccess) => {
+      Mask.closeAll()
+      // console.log('search', fetchData)
+      fetchScenics({
+        channel:     'lvmama',
+        ...fetchData,
+        queryText:   keyword,
+        pageSize:    100,
+        currentPage: 1,
+        mapType:     'gaode',
+      }, data => {
+        onSuccess(null, data.scenicList)
+      })
+    },
+    handleFetchMore: (limit, offset, fetchData, onSuccess) => {
+      // console.log('fetchmore', limit, offset, fetchData)
+      const { prov, city, lat, lng, level, theme, sort } = fetchData
+      fetchScenics({
+        channel:     'lvmama',
+        prov,
+        city,
+        lat,
+        lng,
+        level,
+        theme,
+        sort,
+        pageSize:    limit,
+        currentPage: Math.ceil((offset + 10) / limit),
+        mapType:     'gaode',
+      }, data => {
+        onSuccess(data.scenicList)
+        dispatch({ type: 'OFFSET', offset: offset + data.scenicList.length })
+      })
+    },
+   // 当点击搜索的时候应该关闭弹出窗口
+    handleSearchOnclick: () => {
+      Mask.closeAll()
+      dispatch({ type: 'FILTERING', filtering: false })
+      browserHistory.push('/menpiao/search')
+    },
+    handlePush: (pro, filtering) => {
+      console.log(pro, filtering)
+      if (pro === filtering) filtering = false
+      dispatch({ type: 'FILTERING', filtering })
+    },
+    handleSelct: (sort, level, theme) => {
+      // console.log('aaaaa---', sort, level, theme)
+      dispatch({ type: 'SORT', sort, offset: 0 })
+      dispatch({ type: 'LEVEL', level, offset: 0 })
+      dispatch({ type: 'THEME', theme, offset: 0 })
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    login(err => {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log('我是用户绑定')
+      }
+    })
+    if (getStore('customerHistory', 'session')) {
+      console.log('history')
+    } else {
+      const customerHistory = []
+      setStore('customerHistory', customerHistory, 'session')
+    }
+    if (getStore('customerLocation', 'session')) {
+      const customerLocation = getStore('customerLocation', 'session')
+      const latOrlng = getStore('geopoint', 'session')
+      dispatch({
+        type:         'CHANGE_SELECTED_CITY',
+        selectedCIty: customerLocation.localCity,
+        prov:         customerLocation.province,
+        lat:          latOrlng.latitude,
+        lng:          latOrlng.longitude,
+        city:         customerLocation.localCity,
+      })
+      dispatch(ThemeData(customerLocation.localCity, ''))
+      dispatch({ type: 'OFFSET', offset: 0 })
+      setStore('mySelfpoint', latOrlng, 'session')
+      Mask.closeAll()
+    } else {
+      const handleClose = Loading()
+      getLocationGaode(err => {
+        // 定位成功
+        if (err) {
+          dispatch({ type: 'GOCHOOSE_CIYTNAME', Gocity: false }) // 未启用失败补救方案
+          dispatch({
+            type:         'CHANGE_SELECTED_CITY',
+            selectedCIty: '上海',
+            prov:         '上海',
+            lat:          '31.2303700000',
+            lng:          '121.4737000000',
+            city:         '上海',
+          })
+          dispatch(ThemeData('上海', ''))
+          setStore('mySelfpoint', { latitude: '31.2303700000', longitude: '121.4737000000' }, 'session')
+          Mask.closeAll()
+        } else {
+          const city = getStore('currentPosition', 'session').city ? getStore('currentPosition', 'session').city : '上海'
+          const localCity = city.replace(/["省", "市", "县", "区"]/, '')
+          const latOrlng  = getStore('geopoint', 'session')
+          const province  = getStore('currentPosition', 'session').province.replace(/["省", "市", "县", "区"]/, '')
+          const customerLocation = { localCity, latOrlng, province }
+          setStore('customerLocation', customerLocation, 'session')
+          dispatch({
+            type:         'CHANGE_SELECTED_CITY',
+            selectedCIty: localCity,
+            prov:         province,
+            lat:          latOrlng.latitude,
+            lng:          latOrlng.longitude,
+            city:         localCity,
+          })
+          dispatch(ThemeData(localCity, ''))
+          setStore('mySelfpoint', { latitude: latOrlng.latitude, longitude: latOrlng.longitude }, 'session')
+        }
+        Mask.closeAll()
+        handleClose()
+      })
+    }
+  },
+  componentDidMount: () => {
+    // alert('componentDidMount')
+    dispatch(CityData())
+    const isIOS = () => /iPhone|iPad|iPod|iOS/.test(navigator.userAgent)
+    const Code = customerCode
+    if (!isIOS() && (Code === 'abchina')) {
+      require('../style/nonghang.scss')
+    } else if (isIOS() && (Code === 'abchina')) {
+      require('../style/Iosnonghang.scss')
+    }
+  },
+  componentWillUnmount: () => {
+    // alert('componentWillUnmount');
+    Mask.closeAll()
+  },
+  componentDidUpdate: () => {
+    const bodyfontSize = document.documentElement.style.fontSize
+    const viewportScale = window.viewportScale
+    const obj1 = document.getElementsByClassName('itemPic')[0]
+    if (bodyfontSize === '50px' && viewportScale === 1) {
+      if (obj1) {
+        dispatch({ type: 'DIV_WIDTH', width: obj1.clientWidth })
+        dispatch({ type: 'DIV_HEIGHT', height: obj1.clientHeight })
+        // console.log('wwwww---------obj1.clientWidth=', obj1.clientWidth, obj1)
+      }
+    }
+  },
+  componentWillReceiveProps(nextProps) {
+    const { width, height }   = nextProps
+    dispatch({ type: 'DIV_WIDTH', width })
+    dispatch({ type: 'DIV_HEIGHT', height })
+  },
+})
+
+export default
+  connect(mapStateToProps, mapDispatchToProps)(
+    wrap(mapFunToComponent)(App)
+  )
+
+
+
+
+ menpiao/containers/details.js
+
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Toast } from 'antd-mobile'
+import { setStore } from '@boluome/common-lib'
+import { wrap, Mask } from '@boluome/oto_saas_web_app_component'
+import { login } from 'business'
+
+import { DetailsListData, DetailsListFn, DetailsIntroducedFn } from '../actions/details.js'
+import { OrderDataList, GetTouristList } from '../actions/order.js'
+// import { OtimeToast } from '../components/details.js'
+import Details from '../components/details'
+
+const mapStateToProps = ({ details }) => {
+  // console.log('menpiao-------', details)
+  const { DetailsListDatas, DetailsList, DetailsIntroduced, close } = details
+  return {
+    DetailsListDatas,
+    DetailsListData,
+    DetailsList,
+    DetailsListFn,
+    DetailsIntroduced,
+    DetailsIntroducedFn,
+    close,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handlePicShow: data => {
+      dispatch({
+        type:         'CHOOSE_IMGINDEX',
+        PicshowIndex: 0,
+      })
+      dispatch({
+        type:        'KJIN_PICSHOWDATA',
+        PicshowData: data,
+      })
+      dispatch({
+        type:   'ISORNO_SHOWPIC',
+        isorno: 1,
+      })
+      browserHistory.push('/menpiao/picshow')
+      // window.location.href = '/menpiao/picshow'
+    },
+    handleGoOrder: (id, prices) => {
+      setStore('goOrderId', id, 'session')
+      dispatch(OrderDataList())
+      dispatch(GetTouristList())
+      setStore('countPrice', prices, 'session')
+      setStore('chooseTime', '', 'session')
+      const goodsCardata = []
+      setStore('goodsCardata', goodsCardata, 'session')
+      login(err => {
+        if (err) {
+          console.log(err)
+          Toast.info('用户登录失败，请重新登录', 2, null, false)
+        } else {
+          console.log('我是用户绑定')
+          browserHistory.push('/menpiao/order')
+        }
+      }, true)
+      // window.location.href = '/menpiao/order'
+    },
+    handleGoaddrMap: (res, latitude, longitude) => {
+      // console.log('asasas', latitude, longitude)
+      const myaddrPoint = { latitude, longitude }
+      setStore('goodsNameAddr', res, 'session')
+      setStore('myaddrPoint', myaddrPoint, 'session')
+      browserHistory.push('/menpiao/addrBumap?boluomeBmap')
+      // window.location.href = '/menpiao/addrBumap?boluomeBmap'
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  // 组件将被消除的周期
+  componentWillUnmount: () => {
+    dispatch({ type: 'KJIN_DETAILSLISTDATA', DetailsListDatas: '' })
+    dispatch({ type: 'MARKE_CLOSE', close: 1 })
+    Mask.closeAll()
+  },
+  componentDidMount: () => {
+    dispatch(DetailsListData())
+    dispatch(DetailsListFn())
+    dispatch(DetailsIntroducedFn())
+    dispatch({ type: 'MARKE_CLOSE', close: 0 })
+  },
+  componentDidUpdate: () => {
+    // const tabsoff = document.getElementsByClassName('itemTabs')[0]
+    // if (tabsoff) {
+      // dispatch({ type: 'DIV_WIDTH', width: obj1.clientWidth })
+      // dispatch({ type: 'DIV_HEIGHT', height: obj1.clientHeight })
+    //   console.log('wwwww---------tabsoff.clientWidth=', tabsoff.clientWidth)
+    // }
+  },
+  // 在组件挂载之后调用一次。这个时候，子主键也都挂载好了，可以在这里使用refs
+  componentWillReceiveProps: () => {
+    // alert('componentWillReceiveProps')
+  },
+})
+
+export default
+  connect(mapStateToProps, mapDispatchToProps)(
+    wrap(mapFunToComponent)(Details)
+)
+
+
+
+
+ menpiao/containers/order.js
+
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Modal }    from 'antd-mobile'
+import { wrap, Mask } from '@boluome/oto_saas_web_app_component'
+import { getStore, setStore } from '@boluome/common-lib'
+
+import Order from '../components/order'
+import { OrderDataList, GetTouristList, SaveOrder } from '../actions/order'
+
+const alert = Modal.alert
+const mapStateToProps = state => {
+  // console.log('menpiaoorder-------',order ,'-----',details);
+  // console.log('state----',state);
+  const { order, details } = state
+  const { TimeListData, TouristData } = details
+  const { OrderListData, goodsCardata,
+    sum, countPrice, chooseType, morenPrice,
+    name, phone, curDiscountData, discount,
+  } = order
+  return {
+    GetTouristList,
+    OrderDataList,
+    OrderListData,
+    TimeListData,
+    TouristData,
+    goodsCardata,
+    sum,
+    countPrice,
+    chooseType,
+    morenPrice,
+    name,
+    phone,
+    curDiscountData,
+    discount,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleGoaddrMap: res => {
+      setStore('goodsNameAddr', res, 'session')
+      browserHistory.push('/menpiao/addrBumap')
+      // window.location.href = '/menpiao/addrBumap'
+    },
+    handleGoMoreDate: () => {
+      browserHistory.push('/menpiao/moreDate')
+      // window.location.href = '/menpiao/moreDate'
+    },
+    // 当返回数据有最小值
+    handleMinimum: minimum => {
+      // dispatch({ type: 'SUM', sum: minimum })
+      setStore('Orderminimum', minimum, 'session')
+    },
+    handleSumUP: uplimite => {
+      const goodsCardata = getStore('goodsCardata', 'session')
+      let sums = 1
+      // 修改后的
+      for (let n = 0; n < goodsCardata.length; n++) {
+        sums += parseFloat(goodsCardata[n].count)
+      }
+      for (let k = 0; k < goodsCardata.length; k++) {
+        if (sums <= uplimite) {
+          goodsCardata[k].count++
+          setStore('goodsCardata', goodsCardata, 'session')
+        } else {
+          sums = uplimite
+          console.log('大于最大的了')
+        }
+      }
+      dispatch({ type: 'SUM', sum: sums })
+      dispatch({ type: 'GOODSCARDATA', goodsCardata })
+    },
+    handleNumDown: downlimite => { // console.log('2abc----',id,downlimite);
+      const goodsCardata = getStore('goodsCardata', 'session')
+      let sum = 0
+      // 这里数量的减
+      for (let j = 0; j < goodsCardata.length; j++) {
+        sum += (parseFloat(goodsCardata[j].count)) // console.log('adddown',sum);
+      }
+      for (let s = 0; s < goodsCardata.length; s++) {
+        if (sum > downlimite) {
+          if (goodsCardata[s].count === 1) {
+            goodsCardata[s].count = 1
+            setStore('goodsCardata', goodsCardata, 'session')
+          } else {
+            --goodsCardata[s].count
+            sum--
+            setStore('goodsCardata', goodsCardata, 'session')
+          }
+        } else {
+          sum = downlimite
+          console.log('小于最小的了')
+        }
+      }
+      dispatch({ type: 'SUM', sum })
+      dispatch({ type: 'GOODSCARDATA', goodsCardata })
+    },
+    handleAddTourist: () => {
+      browserHistory.push('/menpiao/AddTouristUse')
+      // window.location.href = '/menpiao/AddTouristUse'
+    },
+    handleDeleteTuorist: Markid => {
+      alert('删除', '确定删除么?', [
+        { text: '取消', onPress: () => console.log('cancel') },
+        { text:    '确定',
+          onPress: () => {
+            const goodsCardata = getStore('goodsCardata', 'session')
+            let countDelete = 0
+            for (let i = 0; i < goodsCardata.length; i++) {
+              if (goodsCardata[i].id === Markid) {
+                goodsCardata.splice(i, 1)
+                setStore('goodsCardata', goodsCardata, 'session')
+              }
+            }
+            const deleteCardata = getStore('goodsCardata', 'session')
+            if (deleteCardata.length !== 0) {
+              for (let j = 0; j < deleteCardata.length; j++) {
+                countDelete += deleteCardata[j].count
+              }
+            } else {
+              countDelete = 0
+            }
+            dispatch({ type: 'SUM', sum: countDelete })
+            dispatch({ type: 'GOODSCARDATA', goodsCardata })
+          },
+          style: { fontWeight: 'bold' } },
+      ])
+    },
+    handleGetprice: (type, PriceChoose) => {
+      setStore('countPrice', PriceChoose, 'session')
+      if (type === 0) {
+        dispatch({ type: 'CHOOSE_TYPE', chooseType: 0 })
+      } else if (type === 1) {
+        dispatch({ type: 'CHOOSE_TYPE', chooseType: 1 })
+      } else if (type === 2) {
+        dispatch({ type: 'CHOOSE_TYPE', chooseType: 2 })
+      }
+      if (PriceChoose) {
+        const pricesData = {}
+        pricesData.date = PriceChoose.date
+        pricesData.price = PriceChoose.sellPrice
+        setStore('chooseTime', '', 'session')
+        dispatch({ type: 'KJIN_MORENPRICE', morenPrice: pricesData })
+        dispatch({ type: 'COUNTPTICES', countPrice: PriceChoose.sellPrice })
+      }
+    },
+    handleChange: res => {
+      console.log(res)
+    },
+    // 优惠变更
+    handleReliefChange: reply => {
+      dispatch({ type: 'DISCOUNT', discount: reply.discount })
+      dispatch({ type: 'KJIN_PROMOTION', curDiscountData: reply })
+    },
+    // 提交订单
+    handleSaveOrder: (OrderListData, goodsCardata, countPrice, sum, morenPrice, curDiscountData) => {
+      dispatch(SaveOrder(OrderListData, goodsCardata, countPrice, sum, morenPrice, curDiscountData))
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillUnmount: () => {
+    dispatch({ type: 'CHOOSE_TYPE', chooseType: 0 })
+    dispatch({ type: 'COUNTPTICES', countPrice: 0 })
+    dispatch({ type: 'SUM', sum: 1 })
+    Mask.closeAll()
+  },
+  componentDidMount: () => {
+    const bodyHeight = document.body.clientHeight
+    dispatch({ type: 'ORDERHEIGHT', orderHeight: bodyHeight })
+    const goodsCardata = getStore('goodsCardata', 'session')
+    dispatch({ type: 'GOODSCARDATA', goodsCardata })
+    if (goodsCardata && goodsCardata.length > 0) {
+      let sum = 0
+      // 这里数量的减
+      for (let j = 0; j < goodsCardata.length; j++) {
+        sum += parseFloat(goodsCardata[j].count)
+      }
+      dispatch({ type: 'SUM', sum })
+    }
+    const chooseTime = getStore('chooseTime', 'session')
+    if (chooseTime && chooseTime.price) {
+      dispatch({ type: 'CHOOSE_TYPE', chooseType: 2 })
+      const pricesData = {}
+      pricesData.date = chooseTime.date
+      pricesData.price = chooseTime.price
+      dispatch({ type: 'KJIN_MORENPRICE', morenPrice: pricesData })
+      dispatch({ type: 'COUNTPTICES', countPrice: chooseTime.price })
+    }
+    dispatch(OrderDataList())
+    dispatch(GetTouristList())
+  },
+})
+
+export default
+  connect(mapStateToProps, mapDispatchToProps)(
+    wrap(mapFunToComponent)(Order)
+)
+
+
+
+
+ menpiao/containers/orderDetails.js
+
+import { connect } from 'react-redux'
+// import { browserHistory } from 'react-router'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+// import { getStore, setStore } from '@boluome/common-lib'
+import orderDetails         from '../components/orderDetails'
+
+const mapStateToProps = state => {
+  console.log(state.orderDetails)
+  return {
+    ...state.orderDetails,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    console.log(dispatch)
+  },
+  componentDidMount: () => console.log('root mounted', dispatch),
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(orderDetails)
+)
+
+
+
+
+ menpiao/containers/picshow.js
+
+import { connect } from 'react-redux'
+import { wrap, Mask } from '@boluome/oto_saas_web_app_component'
+import PicshowCom from '../components/picshow'
+
+const mapStateToProps = state => {
+  const { Picshow, details } = state
+  console.log('PIC----', state, Picshow)
+  const { PicshowData, PicshowIndex, isorno } = details
+  const { width, height } = Picshow
+  // console.log('width----', width)
+  return {
+    PicshowData,
+    PicshowIndex,
+    isorno,
+    width,
+    height,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleIndex: PicshowIndex => { // console.log(PicshowIndex)
+      dispatch({
+        type: 'CHOOSE_IMGINDEX',
+        PicshowIndex,
+      })
+    },
+
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillUnmount: () => {
+    Mask.closeAll()
+  },
+  componentDidMount: () => {
+    // console.log('dispatch', dispatch)
+  },
+  componentDidUpdate: () => {
+    const obj1 = document.getElementsByClassName('picitemDemo')[0]
+    if (obj1) {
+      dispatch({ type: 'DIV_WIDTH', width: obj1.clientWidth })
+      dispatch({ type: 'DIV_HEIGHT', height: obj1.clientHeight })
+      console.log('wwwww---------obj1.clientWidth=', obj1.clientWidth)
+    }
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(PicshowCom)
+)
+
+
+
+
+ menpiao/containers/search.js
+
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap } from '@boluome/oto_saas_web_app_component'
+import { setStore, getStore } from '@boluome/common-lib'
+import { getLocation } from 'business'
+
+
+import Searchcomponent from '../components/search'
+import { IndexListData, CityData, fetchScenics } from '../actions/app.js'
+
+const { BMap = '' } = window
+const mapStateToProps = state => {
+  // console.log('menpiao-------',app,'----state',state);
+  const { app, search } = state
+  const { IndexListDatas, selectedCIty,
+    city, citydata, lat, lng, offset, prov, theme,
+    level, sort, width, height,
+  } = app
+  const { keywordArr } = search
+  // const { offset } = state
+  return {
+    IndexListDatas,
+    IndexListData,
+    CityData,
+    citydata,
+    selectedCIty,
+    city,
+    lat,
+    lng,
+    prov,
+    theme,
+    offset,
+    sort,
+    level,
+    keywordArr,
+    width,
+    height,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handleGoDetails: id => {
+      setStore('itemId', id, 'session')
+      dispatch({ type: 'OFFSET', offset: 0 })
+      browserHistory.push('/menpiao/details')
+    },
+    handleCityname: res => {
+      const latOrlng  = getStore('geopoint', 'session')
+      const customerLocation = { localCity: res.name, latOrlng, province: res.prov }
+      setStore('customerLocation', customerLocation, 'session')
+      dispatch({
+        type:         'CHANGE_SELECTED_CITY',
+        selectedCIty: res.name,
+        city:         res.name,
+        prov:         res.prov,
+        offset:       0,
+        levelPic:     false,
+        sortPic:      false,
+        themePic:     false,
+        lat:          latOrlng.latitude,
+        lng:          latOrlng.longitude,
+      })
+      // 百度根据城市名获取坐标
+      const cityName = res.name
+      const myGeo = new BMap.Geocoder()
+      myGeo.getPoint(cityName, point => {
+        setStore('mySelfpoint', { latitude: point.lat, longitude: point.lng }, 'session')
+      })
+    },
+    handleSearch: (fetchData, keyword, onSuccess, handleSearchHistory) => {
+      console.log('search', fetchData, keyword)
+      fetchScenics({
+        channel:     'lvmama',
+        ...fetchData,
+        queryText:   keyword,
+        pageSize:    100,
+        currentPage: 1,
+      }, data => {
+        onSuccess(null, data.scenicList)
+      })
+      handleSearchHistory(keyword)
+    },
+    // 处理搜索记录
+    handleSearchHistory: keyword => {
+      const customerHistory = getStore('customerHistory', 'session')
+      if (customerHistory.length === 0) {
+        customerHistory.push(keyword)
+        setStore('customerHistory', customerHistory, 'session')
+        dispatch({ type: 'KEYWORD_ARR', keywordArr: customerHistory })
+      } else {
+        for (let i = 0; i < customerHistory.length; i++) {
+          if (keyword === customerHistory[i]) {
+            customerHistory.splice(i, 1)
+            customerHistory.unshift(keyword)
+            setStore('customerHistory', customerHistory, 'session')
+            dispatch({ type: 'KEYWORD_ARR', keywordArr: customerHistory })
+          } else {
+            const arr1 = getStore('customerHistory', 'session')
+            // arr1.push(keyword);
+            arr1.unshift(keyword)
+            setStore('customerHistory', arr1, 'session')
+            dispatch({ type: 'KEYWORD_ARR', keywordArr: arr1 })
+          }
+        }
+      }
+    },
+    // 当点击搜索的时候应该关闭弹出窗口
+    handleSearchOnclick: () => {
+      // Popup.hide();
+      // dispatch({ type: 'THEME_MARK', themeMark: false, levelMark: false, sortMark: false, levelPic: false, sortPic: false, themePic: false })
+    },
+    // 删除历史记录
+    handleDeleteHistorry: () => {
+      setStore('customerHistory', [], 'session')
+      dispatch({ type: 'KEYWORD_ARR', keywordArr: [] })
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => { // alert('componentWillMount')
+    if (getStore('customerLocation', 'session')) {
+      const customerLocation = getStore('customerLocation', 'session')
+      const latOrlng  = getStore('geopoint', 'session')
+      dispatch({
+        type:         'CHANGE_SELECTED_CITY',
+        selectedCIty: customerLocation.localCity,
+        prov:         customerLocation.province,
+        lat:          latOrlng.latitude,
+        lng:          latOrlng.longitude,
+        city:         customerLocation.localCity,
+      })
+      setStore('mySelfpoint', latOrlng, 'session')
+    } else {
+      getLocation(() => {
+        const localCity = getStore('currentPosition', 'session').city.replace(/["省", "市", "县", "区"]/, '')
+        const latOrlng  = getStore('geopoint', 'session')
+        const province  = getStore('currentPosition', 'session').province.replace(/["省", "市", "县", "区"]/, '')
+        const customerLocation = { localCity, latOrlng, province }
+        setStore('customerLocation', customerLocation, 'session')
+        dispatch({
+          type:         'CHANGE_SELECTED_CITY',
+          selectedCIty: localCity,
+          prov:         province,
+          lat:          latOrlng.latitude,
+          lng:          latOrlng.longitude,
+          city:         localCity,
+        })
+        setStore('mySelfpoint', { latitude: latOrlng.latitude, longitude: latOrlng.longitude }, 'session')
+      })
+    }
+    const customerHistory = getStore('customerHistory', 'session')
+    dispatch({ type: 'KEYWORD_ARR', keywordArr: customerHistory })
+  },
+  componentDidMount: () => { // alert('componentDidMount')
+    dispatch(CityData())
+  },
+  componentWillUnmount: () => {
+    //  alert('componentWillUnmount');
+  },
+  componentWillReceiveProps: () => {
+    // alert('componentWillReceiveProps')
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Searchcomponent)
+)
+
+
+
+
+ menpiao/img/add.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M511.559467 63.819514c-247.310595 0-447.802886 200.493314-447.802886 447.802886 0 247.281943 200.493314 447.775256 447.802886 447.775256 247.28092 0 447.775256-200.493314 447.775256-447.775256C959.334723 264.312828 758.84141 63.819514 511.559467 63.819514zM719.812511 542.80561 540.077987 542.80561l0 179.678242c0 16.386202-13.261025 29.647227-29.647227 29.647227-16.387225 0-29.647227-13.261025-29.647227-29.647227L480.783533 542.80561 301.076638 542.80561c-16.387225 0-29.647227-13.260002-29.647227-29.647227 0-16.387225 13.260002-29.647227 29.647227-29.647227l179.707918 0L480.784556 303.745932c0-16.387225 13.260002-29.647227 29.647227-29.647227 16.386202 0 29.647227 13.260002 29.647227 29.647227l0 179.765223 179.734524 0c16.388249 0 29.649274 13.260002 29.649274 29.647227C749.461785 529.545608 736.20076 542.80561 719.812511 542.80561z" /></svg>
+
+
+
+ menpiao/img/arrowdown.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#cccccc" d="M890.335385 330.911222c-12.576374-12.416396-32.800753-12.352748-45.248112 0.192662L517.248327 661.951458 184.831931 332.512727c-12.576374-12.447359-32.800753-12.352748-45.280796 0.192662-12.447359 12.576374-12.352748 32.831716 0.192662 45.280796l353.311652 350.112082c0.543583 0.543583 1.247144 0.672598 1.792447 1.183497 0.127295 0.127295 0.159978 0.287273 0.287273 0.416288 6.239161 6.175514 14.399785 9.280473 22.527725 9.280473 8.224271 0 16.479505-3.168606 22.720387-9.471415l350.112082-353.311652C902.975407 363.615643 902.880796 343.360301 890.335385 330.911222z" /></svg>
+
+
+
+ menpiao/img/arrowdowning.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M890.335385 330.911222c-12.576374-12.416396-32.800753-12.352748-45.248112 0.192662L517.248327 661.951458 184.831931 332.512727c-12.576374-12.447359-32.800753-12.352748-45.280796 0.192662-12.447359 12.576374-12.352748 32.831716 0.192662 45.280796l353.311652 350.112082c0.543583 0.543583 1.247144 0.672598 1.792447 1.183497 0.127295 0.127295 0.159978 0.287273 0.287273 0.416288 6.239161 6.175514 14.399785 9.280473 22.527725 9.280473 8.224271 0 16.479505-3.168606 22.720387-9.471415l350.112082-353.311652C902.975407 363.615643 902.880796 343.360301 890.335385 330.911222z" /></svg>
+
+
+
+ menpiao/img/down.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M678.143483 534.248723 344.448448 534.248723c-12.786211 0-23.163559-10.378371-23.163559-23.162536 0-12.732999 10.377348-23.060205 23.163559-23.060205l333.696058 0c12.734022 0 23.060205 10.327206 23.060205 23.060205C701.203688 523.870352 690.878528 534.248723 678.143483 534.248723zM511.295454 959.391517c-247.214405 0-448.305329-201.089901-448.305329-448.305329 0-247.164263 201.090924-448.279746 448.305329-448.279746 247.164263 0 448.255187 201.116507 448.255187 448.279746C959.550641 758.301616 758.46074 959.391517 511.295454 959.391517zM511.295454 109.032252c-221.747383 0-402.080541 180.360787-402.080541 402.054959 0 221.696218 180.333158 402.080541 402.080541 402.080541 221.695195 0 402.030399-180.3833 402.030399-402.080541C913.325853 289.39304 732.990648 109.032252 511.295454 109.032252z" /></svg>
+
+
+
+ menpiao/img/ee_add.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M511.559467 63.819514c-247.310595 0-447.802886 200.493314-447.802886 447.802886 0 247.281943 200.493314 447.775256 447.802886 447.775256 247.28092 0 447.775256-200.493314 447.775256-447.775256C959.334723 264.312828 758.84141 63.819514 511.559467 63.819514zM719.812511 542.80561 540.077987 542.80561l0 179.678242c0 16.386202-13.261025 29.647227-29.647227 29.647227-16.387225 0-29.647227-13.261025-29.647227-29.647227L480.783533 542.80561 301.076638 542.80561c-16.387225 0-29.647227-13.260002-29.647227-29.647227 0-16.387225 13.260002-29.647227 29.647227-29.647227l179.707918 0L480.784556 303.745932c0-16.387225 13.260002-29.647227 29.647227-29.647227 16.386202 0 29.647227 13.260002 29.647227 29.647227l0 179.765223 179.734524 0c16.388249 0 29.649274 13.260002 29.649274 29.647227C749.461785 529.545608 736.20076 542.80561 719.812511 542.80561z" /></svg>
+
+
+
+ menpiao/img/ee_down.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M678.143483 534.248723 344.448448 534.248723c-12.786211 0-23.163559-10.378371-23.163559-23.162536 0-12.732999 10.377348-23.060205 23.163559-23.060205l333.696058 0c12.734022 0 23.060205 10.327206 23.060205 23.060205C701.203688 523.870352 690.878528 534.248723 678.143483 534.248723zM511.295454 959.391517c-247.214405 0-448.305329-201.089901-448.305329-448.305329 0-247.164263 201.090924-448.279746 448.305329-448.279746 247.164263 0 448.255187 201.116507 448.255187 448.279746C959.550641 758.301616 758.46074 959.391517 511.295454 959.391517zM511.295454 109.032252c-221.747383 0-402.080541 180.360787-402.080541 402.054959 0 221.696218 180.333158 402.080541 402.080541 402.080541 221.695195 0 402.030399-180.3833 402.030399-402.080541C913.325853 289.39304 732.990648 109.032252 511.295454 109.032252z" /></svg>
+
+
+
+ menpiao/img/selected.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M943.616 223.616c-21.888-21.632-57.344-21.632-79.168 0L400 682.944 159.616 445.184c-21.888-21.632-57.344-21.632-79.168 0-21.888 21.632-21.888 56.704 0 78.336l280.064 276.992c10.88 10.752 25.28 16.256 39.552 16.256 14.336 0 28.736-5.504 39.616-16.256l504-498.56C965.504 280.256 965.504 245.248 943.616 223.616L943.616 223.616 943.616 223.616zM943.616 223.616" /></svg>
+
+
+
+ menpiao/img/svg_add.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#ffab00" d="M889.74632 489.447355 534.551622 489.447355 534.551622 134.25368c0-12.455683-10.096962-22.551622-22.551622-22.551622-12.455683 0-22.551622 10.095939-22.551622 22.551622l0 355.193675L134.25368 489.447355c-12.455683 0-22.551622 10.096962-22.551622 22.551622 0 12.45466 10.095939 22.551622 22.551622 22.551622l355.193675 0 0 355.193675c0 12.455683 10.096962 22.551622 22.551622 22.551622 12.45466 0 22.551622-10.095939 22.551622-22.551622L534.550599 534.551622l355.193675 0c12.455683 0 22.551622-10.096962 22.551622-22.551622C912.297942 499.544317 902.20098 489.447355 889.74632 489.447355z" /></svg>
+
+
+
+ menpiao/img/svg_cheng.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M511.841388 518.097882c-124.892475 0-226.498594-101.606119-226.498594-226.496548 0-124.892475 101.606119-226.498594 226.498594-226.498594 124.891452 0 226.497571 101.606119 226.49757 226.498594 0 124.890428-101.606119 226.496547-226.49757 226.496548z m0-412.788418c-102.721523 0-186.29187 83.570347-186.291871 186.29187s83.570347 186.289823 186.291871 186.289824 186.290847-83.568301 186.290846-186.289824S614.56291 105.309464 511.841388 105.309464zM832.42173 960.564225H191.262068c-58.234309 0-105.61134-47.376007-105.611339-105.611339v-16.757662c0-166.048827 135.090744-301.139571 301.140594-301.139572h250.099105c166.04985 0 301.141618 135.090744 301.141618 301.139572v16.757662c0.001023 58.235332-47.37703 105.61134-105.610316 105.611339zM386.791323 577.261353c-143.878898 0-260.933871 117.054973-260.93387 260.932847v16.757663c0 36.06438 29.340235 65.404616 65.404615 65.404615h641.159662c36.06438 0 65.404616-29.340235 65.404616-65.404615v-16.757663c0-143.878898-117.054973-260.932848-260.934894-260.932847H386.791323z"  /><path fill="#e5e5e5" d="M458.557834 636.479059l42.381249 42.38125c6.021134 6.021134 15.784498 6.021134 21.805632 0L565.124941 636.479059c9.713222-9.713222 2.833535-26.321482-10.903327-26.321482h-84.762499c-13.735839 0-20.615527 16.60826-10.901281 26.321482z"  /><path fill="#e5e5e5" d="M561.487088 846.180082l-23.384593-193.299471c-3.751441-31.011294-48.731888-31.011294-52.483329 0l-23.384593 193.299471a24.819269 24.819269 0 0 0 10.880815 23.63735l24.986067 16.643052a24.821315 24.821315 0 0 0 27.518751 0l24.986067-16.643052a24.821315 24.821315 0 0 0 10.880815-23.63735z"  /></svg>
+
+
+
+ menpiao/img/svg_er.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M512.183172 929.273569c-76.144214 0-149.309584-22.913872-211.588-66.268287-56.542784-39.358403-100.579743-92.90597-128.083143-155.526169-0.409322 0.00614-0.816598 0.008186-1.222851 0.008187-58.882062 0-106.786095-47.904033-106.786095-106.786095 0-49.66105 34.81083-92.393293 81.829703-103.754039 24.152073-144.480602 133.558855-263.517719 276.545431-298.873972 11.014868-2.723018 22.1423 3.994987 24.864294 15.006786 2.721994 11.009751-3.996011 22.1423-15.005763 24.865317C301.133432 270.485411 201.521736 382.756427 184.864358 517.314029a20.537755 20.537755 0 0 1-18.776645 17.950837c-33.93181 2.657526-60.513212 31.401174-60.513213 65.435315 0 36.234249 29.479405 65.714677 65.714678 65.714678 3.351328 0 6.943133-0.330528 10.981099-1.013073a20.530592 20.530592 0 0 1 22.547529 12.779047c23.896246 61.192687 65.129346 113.447818 119.242801 151.116743 55.358819 38.534642 120.410394 58.903551 188.122565 58.903552s132.764769-20.36891 188.122565-58.903552c54.113455-37.667901 95.346555-89.924055 119.242801-151.116743 3.539616-9.0624 12.94994-14.403035 22.547529-12.779047 4.037966 0.681522 7.629771 1.013073 10.981099 1.013073 36.235272 0 65.714677-29.480428 65.714677-65.714678 0-34.034141-26.581402-62.778812-60.513212-65.435315a20.536732 20.536732 0 0 1-18.776645-17.950837c-15.421224-124.570133-102.254895-231.165894-221.218334-271.564999-10.740622-3.64604-16.488533-15.309684-12.84147-26.048259 3.647063-10.737552 15.306614-16.492626 26.047236-12.840446 128.874159 43.762713 224.219691 156.627247 246.544139 290.087864 47.018873 11.360745 81.829703 54.090942 81.829704 103.754039 0 58.882062-47.904033 106.786095-106.786095 106.786095-0.407276 0-0.814552-0.002047-1.222851-0.008187-27.502377 62.6202-71.54036 116.167766-128.083144 155.52617-62.279439 43.352367-135.444808 66.267263-211.587999 66.267263z"  /><path fill="#e5e5e5" d="M515.940752 281.220916c-0.615007 0-1.232061-0.027629-1.856277-0.083911-11.295254-1.011027-19.633153-10.988262-18.621103-22.284539 0.496304-5.54325 13.549597-136.116097 134.942365-168.96525 10.956539-2.971681 22.225187 3.511987 25.187659 14.45727 2.963495 10.94733-3.510964 22.224164-14.458294 25.186636-94.073562 25.459858-104.668875 131.912355-104.765065 132.983757-0.954745 10.673084-9.915837 18.706037-20.429285 18.706037z"  /><path fill="#e5e5e5" d="M363.982852 540.461215m-44.494377 0a44.494377 44.494377 0 1 0 88.988753 0 44.494377 44.494377 0 1 0-88.988753 0Z"  /><path fill="#e5e5e5" d="M660.382469 540.461215m-44.494377 0a44.494377 44.494377 0 1 0 88.988753 0 44.494377 44.494377 0 1 0-88.988753 0Z"  /></svg>
+
+
+
+ menpiao/img/svg_help.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M510.022656 395.998208c16.329728 0 29.544448-13.27104 29.544448-29.544448 0-16.387072-13.213696-29.582336-29.544448-29.582336-16.330752 0-29.563904 13.195264-29.563904 29.582336C480.458752 382.726144 493.691904 395.998208 510.022656 395.998208zM512.234496 128.072704c-212.194304 0-384.227328 172.022784-384.227328 384.265216 0 212.155392 172.032 384.188416 384.227328 384.188416 212.194304 0 384.206848-172.033024 384.206848-384.188416C896.441344 300.095488 724.4288 128.072704 512.234496 128.072704zM756.395008 756.473856c-31.72352 31.724544-68.656128 56.628224-109.76768 74.017792-42.545152 17.995776-87.76192 27.12064-134.392832 27.12064-46.631936 0-91.848704-9.124864-134.396928-27.12064-41.114624-17.389568-78.04928-42.294272-109.775872-74.018816-31.725568-31.72352-56.630272-68.65408-74.021888-109.763584-17.995776-42.541056-27.12064-87.749632-27.12064-134.372352 0-46.644224 9.124864-91.870208 27.121664-134.423552 17.390592-41.119744 42.295296-78.057472 74.021888-109.785088 31.725568-31.726592 68.6592-56.63232 109.774848-74.022912 42.546176-17.9968 87.763968-27.12064 134.396928-27.12064 46.631936 0 91.848704 9.124864 134.391808 27.12064 41.112576 17.390592 78.04416 42.295296 109.76768 74.022912 31.72352 31.727616 56.626176 68.665344 74.015744 109.785088 17.994752 42.553344 27.118592 87.780352 27.118592 134.424576 0 46.62272-9.12384 91.833344-27.117568 134.373376C813.021184 687.819776 788.119552 724.750336 756.395008 756.473856zM521.889792 453.047296 502.213632 453.047296c-5.040128 0-10.079232 1.924096-13.9264 5.77024-3.847168 3.847168-5.77024 8.896512-5.77024 13.935616l0 196.922368c0 5.039104 1.923072 10.078208 5.77024 13.925376s8.886272 5.771264 13.9264 5.771264l19.67616 0c5.040128 0 10.079232-1.924096 13.9264-5.771264s5.77024-8.886272 5.77024-13.925376L541.586432 472.753152c0-5.039104-1.923072-10.088448-5.77024-13.935616C531.968 454.971392 526.92992 453.047296 521.889792 453.047296z" /></svg>
+
+
+
+ menpiao/img/svg_huo.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M875.2 312.3 704.6 312.3c-14 0-25.4-11.4-25.4-25.4 0-42.4-34.5-77-77-77L235.7 209.9l0-42.7c-0.1-14.1-11.7-25.5-25.8-25.5-14.1 0-25.6 11.4-25.8 25.7l0 690.7-25.4 0c-14.2 0-25.8 11.6-25.8 25.8s11.6 25.8 25.8 25.8l102.3 0c14.3 0 25.8-11.6 25.8-25.8s-11.6-25.8-25.8-25.8l-25.3 0 0-136 366.5 0c14 0 25.3 11.4 25.3 25.5 0.6 42.4 35.1 76.9 77 76.9l170.6 0c14.3 0 25.8-11.6 25.8-25.8l0-460.5C901 323.9 889.4 312.3 875.2 312.3zM627.6 674.8c-8.2-3-16.7-4.5-25.3-4.5L235.7 670.3 235.7 261.4l366.5 0c14 0 25.3 11.3 25.3 25.3L627.6 674.8zM849.3 772.7 704.6 772.7c-14 0-25.4-11.4-25.4-25.4l0-388c8.2 3 16.7 4.5 25.4 4.5l144.7 0L849.3 772.7z" /></svg>
+
+
+
+ menpiao/img/svg_jing.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="199.61px" viewBox="0 0 1026 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M1025.676929 532.514909 857.837899 532.514909l0 227.053899 0 56.767354 93.242182 0 0 75.681616 55.945051 0 0 75.688081L37.298424 967.705859l0-75.688081 55.943758 0 0-75.681616L205.136162 816.336162 205.136162 532.514909 0 532.514909l279.731717-170.303354-205.136162 0L503.510626 97.322667 503.510626 59.474747l37.297131 0 0 37.847919 428.924121 264.888889L781.54602 362.211556 1025.676929 532.514909 1025.676929 532.514909zM261.086384 532.514909l0 227.053899 93.242182 0L354.328566 532.514909 261.086384 532.514909 261.086384 532.514909zM503.510626 532.514909 410.272323 532.514909l0 227.053899 93.238303 0L503.510626 532.514909 503.510626 532.514909zM652.701737 532.514909l-93.247354 0 0 227.053899 93.247354 0L652.701737 532.514909 652.701737 532.514909zM708.646788 759.568808l93.242182 0L801.88897 532.514909l-93.242182 0L708.646788 759.568808 708.646788 759.568808zM708.646788 759.568808" /></svg>
+
+
+
+ menpiao/img/svg_old.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M630.831549 474.746056c-130.576494 0-236.809953-106.233459-236.809954-236.809953S500.255054 1.137525 630.831549 1.137525s236.809953 106.222084 236.809953 236.798578-106.233459 236.809953-236.809953 236.809953z m0-428.03928c-105.448567 0-191.229327 85.78076-191.229327 191.229327s85.792135 191.229327 191.229327 191.229327 191.229327-85.78076 191.229326-191.229327S736.280116 46.706776 630.831549 46.706776zM500.471184 1022.862475H154.333704a79.911131 79.911131 0 0 1-79.62675-87.828305c5.903755-58.821417 22.7505-174.132326 69.081893-285.666652 57.683892-138.778049 142.634259-230.803821 252.530549-273.392757 16.095979-6.245012 46.570273-9.213952 125.013997 36.889936a128.051189 128.051189 0 0 1 59.833814 82.811819l265.122951 106.68847c0.602888 0.23888 1.194401 0.511886 1.774539 0.807642a68.922639 68.922639 0 0 1 28.893135 95.426972 69.059142 69.059142 0 0 1-81.287537 31.645945L584.193024 669.774717v269.365918a83.812842 83.812842 0 0 1-83.710465 83.72184z m-84.176849-604.742413a11.454877 11.454877 0 0 0-3.412575 0.364008c-97.82715 37.925083-174.143701 121.499045-226.879361 248.389958-44.181471 106.096956-60.254699 216.380004-65.896822 272.710242a34.34188 34.34188 0 0 0 34.228127 37.697578H500.471184a38.175339 38.175339 0 0 0 38.129838-38.141213V639.562053a22.7505 22.7505 0 0 1 29.052388-21.908732l240.98467 68.888514 0.944146 0.295757a23.398889 23.398889 0 0 0 27.710109-10.613109 23.353388 23.353388 0 0 0-9.1002-31.941701l-275.963564-111.033815a22.7505 22.7505 0 0 1-14.162186-18.757787 82.368185 82.368185 0 0 0-39.813375-62.256743c-51.734637-30.406043-74.200755-34.057498-81.992801-34.057499zM926.861053 1022.862475a22.7505 22.7505 0 0 1-22.7505-22.7505V775.587292a46.979782 46.979782 0 1 0-93.959564 0 22.790313 22.790313 0 1 1-45.580627 0 92.560409 92.560409 0 0 1 185.120818 0v224.479182a22.7505 22.7505 0 0 1-22.7505 22.7505z" /></svg>
+
+
+
+ menpiao/img/svg_xue.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M929.700799 396.559804 513.30318 197.644429 94.296131 396.559804l419.007049 198.923562 327.341327-156.375513 0 231.733828 33.923624 0L874.568131 422.896636 929.700799 396.559804 929.700799 396.559804zM513.270435 544.57593 201.487456 396.559804l311.782979-148.012032 309.841767 148.012032L513.270435 544.57593 513.270435 544.57593zM735.479329 716.786083c-50.188053 29.78742-104.031355 48.527227-160.215982 55.727209-48.193629 6.179746-98.230232 3.957125-148.7263-6.622838-59.827597-12.533454-110.015649-35.170011-135.454018-49.312102L291.08303 564.476165l-33.924647 0 0 183.830819 10.016121 6.39771c2.51324 1.605567 62.542428 39.48427 153.287175 58.706053 33.93181 7.185656 67.694775 10.786671 100.919481 10.786671 18.939351 0 37.700647-1.171686 56.214303-3.515057 63.933101-8.095375 125.066437-30.27656 181.707458-65.927525l10.101055-6.357801L769.403976 564.476165l-33.923624 0L735.480352 716.786083 735.479329 716.786083zM735.479329 716.786083" /></svg>
+
+
+
+ menpiao/img/svg_you.svg
+
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#e5e5e5" d="M658.3 449l-56 56 35.6 35.6c3.9 3.9 3.5 10.7-0.9 15.1l-16 16c-4.4 4.4-11.2 4.8-15.1 0.9L570.3 537l-56 56c-4.4 4.4-11.2 4.8-15.1 0.9L485 579.7c-3.9-3.9-3.5-10.7 0.9-15.1l56-56-28.5-28.6-56 56c-4.4 4.4-11.2 4.8-15.1 0.9l-14.2-14.2c-3.9-3.9-3.5-10.7 0.9-15.1l44.1-44.1-97.2 1.2c-5.5 0.1-10-4.4-9.9-9.9l0.3-20.1c0.1-5.5 4.6-10.1 10.2-10.2l111.3-1.4 1.4-112.6c0.1-5.6 4.7-10.2 10.3-10.3l20.2-0.3c5.6-0.1 10.1 4.4 10 10l-1.3 98.2 44.6-44.6c4.4-4.4 11.2-4.8 15.1-0.9l14.2 14.2c3.9 3.9 3.5 10.7-0.9 15.1l-56 56 28.5 28.5 56-56c4.4-4.4 11.2-4.8 15.1-0.9l14.2 14.2c4 4.1 3.6 10.9-0.9 15.3zM575.5 116.7c1.7 0 3.1 0.6 4.3 1.8l66 66c-12.9 43-3.1 89.4 28.4 120.9 21.9 21.9 51.6 34 83.6 34 12.7 0 25.3-1.9 37.4-5.5l71.6 71.6c2.4 2.4 2.4 6.2 0 8.6L471.1 809.6c-1.2 1.2-2.6 1.8-4.3 1.8-1.7 0-3.1-0.6-4.3-1.8l-69.1-69.1c12.8-42.9 3-89.3-28.5-120.7-21.9-21.9-51.6-34-83.6-34-12.6 0-25.1 1.9-37.2 5.5l-68.6-68.6c-1.2-1.2-1.8-2.6-1.8-4.3s0.6-3.1 1.8-4.3l395.6-395.6c1.3-1.2 2.8-1.8 4.4-1.8m0-50c-14.4 0-28.7 5.5-39.7 16.4L140.2 478.8c-21.9 21.9-21.9 57.4 0 79.3l93.3 93.3c14.7-10.3 31.5-15.6 47.8-15.6 18 0 35.2 6.4 48.2 19.3 24.7 24.7 25.5 65.2 3.8 96l93.8 93.8c10.9 10.9 25.3 16.4 39.7 16.4 14.4 0 28.7-5.5 39.7-16.4l395.6-395.6c21.9-21.9 21.9-57.4 0-79.3l-96.4-96.4c-14.7 10.4-31.6 15.7-47.9 15.7-18 0-35.2-6.4-48.2-19.3-24.8-24.8-25.5-65.3-3.7-96.1l-90.7-90.7c-11-11-25.3-16.5-39.7-16.5zM469.1 961c-11.1 0-22.2-4.3-30.5-12.7L232.1 750.6c-4.8-4.6-7.6-10.9-7.7-17.6-0.1-6.7 2.4-13.1 7.1-17.9l91.6-94.3 35.9 34.8-74 76.2 184 176.3 412.6-406.3-42.1-42.7 35.6-35.1 59.6 60.5c9.7 9.8 9.6 25.7-0.3 35.4l-436 429.5-0.8 0.8c-8.1 7.2-18.3 10.8-28.5 10.8z" /></svg>
+
+
+
+ menpiao/index.js
+
+import React      from 'react'
+import { render } from 'react-dom'
+import { setServerUrl } from '@boluome/common-lib'
+import { customerCode } from 'business'
+import '../../styles/index.scss'
+import './style/self_common.scss'
+import Root       from './root'
+
+(() => {
+  // 是否是农行 并且 是否是安卓
+  const isIOS = () => /iPhone|iPad|iPod|iOS/.test(navigator.userAgent)
+  const Code = customerCode
+  if (!isIOS() && (Code === 'abchina')) {
+    require('./style/nonghang.scss')
+  } else if (isIOS() && (Code === 'abchina')) {
+    require('./style/Iosnonghang.scss')
+  }
+})()
+
+setServerUrl(/192.168.|localhost/.test(location.hostname)
+                ? 'https://dev-api.otosaas.com'
+                : `${ location.origin }/api`)
+
+render(<Root />, document.querySelector('#root'))
+
+
+
+
+ menpiao/reducers/app.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:     'menpiao',
+  offset:    0,
+  theme:     '',
+  level:     '',
+  sort:      '',
+  themeMark: false,
+  levelMark: false,
+  sortMark:  false,
+  themePic:  false,
+  levelPic:  false,
+  sortPic:   false,
+  width:     170,
+  height:    210,
+  Gocity:    false,
+  filtered:  {},
+  filtering: false,
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_INDEXLISTDATA' :
+    case 'KJIN_THEMEDATA' :
+    case 'CHANGE_SELECTED_CITY' :
+    case 'KJIN_CITY_DATA' :
+    case 'CITY' :
+    case 'PROV' :
+    case 'LAT' :
+    case 'LNG' :
+    case 'OFFSET' :
+    case 'THEME' :
+    case 'LEVEL' :
+    case 'SORT' :
+    case 'THEME_MARK' :
+    case 'LEVEL_MARK' :
+    case 'SORT_MARK' :
+    case 'THEME_PIC' :
+    case 'LEVEL_PIC' :
+    case 'SORT_PIC' :
+    case 'DIV_WIDTH' :
+    case 'DIV_HEIGHT' :
+    case 'GOCHOOSE_CIYTNAME' :
+    case 'FILTERING' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default app
+
+
+
+
+ menpiao/reducers/details.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title: 'menpiao',
+  close: 0,
+}
+
+const Details = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_DETAILSLISTDATA' :
+    case 'KJIN_DETAILSLIS' :
+    case 'KJIN_DETAILSINTRODUCED' :
+    case 'KJIN_PICSHOWDATA' :
+    case 'CHOOSE_IMGINDEX' :
+    case 'ISORNO_SHOWPIC' :
+    case 'kJIN_ORDERLISTDATA' :
+    case 'kJIN_TOURISTLISTDATA' :
+    case 'kJIN_ORDERTIMEDATA' :
+    case 'MARKE_CLOSE' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default Details
+
+
+
+
+ menpiao/reducers/index.js
+
+import { combineReducers } from 'redux'
+
+// 引入reducers
+import app  from './app'
+import details  from './details'
+import Picshow  from './picshow'
+import order from './order'
+import search from './search'
+// 组合reducers
+export default combineReducers({
+  app, details, Picshow, order, search,
+})
+
+
+
+
+ menpiao/reducers/order.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:           'menpiao',
+  goodsCardata:    [],
+  sum:             1,
+  chooseType:      0,
+  name:            '',
+  phone:           '',
+  curDiscountData: { coupon: {}, activity: {}, discount: 0 },
+  discount:        0,
+  orderHeight:     '100%',
+}
+
+const Order = (state = initialState, action) => {
+  switch (action.type) {
+    case 'kJIN_ORDERLISTDATA' :
+    case 'kJIN_TOURISTLISTDATA' :
+    case 'kJIN_ORDERTIMEDATA' :
+    case 'LINITE_UP' :
+    case 'SUM' :
+    case 'LINITE_DOWN' :
+    case 'GOODSCARDATA' :
+    case 'COUNTPTICES' :
+    case 'CHOOSE_TYPE' :
+    case 'KJIN_MORENPRICE' :
+    case 'ORDER_NAME' :
+    case 'ORDER_PHONE' :
+    case 'KJIN_PROMOTION' :
+    case 'DISCOUNT' :
+    case 'ORDERHEIGHT' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default Order
+
+
+
+
+ menpiao/reducers/picshow.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:  'menpiao',
+  width:  315,
+  height: 180,
+}
+
+const Picshow = (state = initialState, action) => {
+  switch (action.type) {
+    case 'CHOOSE_IMGINDEX' :
+    case 'ISORNO_SHOWPIC' :
+    case 'DIV_WIDTH' :
+    case 'DIV_HEIGHT' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default Picshow
+
+
+
+
+ menpiao/reducers/search.js
+
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  title:  'menpiao',
+  offset: 0,
+  theme:  '',
+  level:  '',
+  sort:   '',
+}
+
+const Search = (state = initialState, action) => {
+  switch (action.type) {
+    case 'KJIN_INDEXLISTDATA' :
+    case 'KJIN_THEMEDATA' :
+    case 'CHANGE_SELECTED_CITY' :
+    case 'KJIN_CITY_DATA' :
+    case 'CITY' :
+    case 'PROV' :
+    case 'LAT' :
+    case 'LNG' :
+    case 'OFFSET' :
+    case 'THEME' :
+    case 'LEVEL' :
+    case 'SORT' :
+    case 'KEYWORD_ARR' :
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default Search
+
+
+
+
+ menpiao/root.js
+
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+import { createStore, applyMiddleware } from 'redux'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+
+// 由Reducers创建状态树
+const store = createStore(reducers, applyMiddleware(thunk))
+// 定义根组件
+const Root = () => (<Provider store={ store }><Routes /></Provider>)
+
+export default Root
+
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/menpiao' component={ require('react-router?name=app!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+      <Route path='details' component={ require('react-router?name=details!./containers/details') } />
+      <Route path='picshow' component={ require('react-router?name=picshow!./containers/picshow') } />
+      <Route path='order' component={ require('react-router?name=order!./containers/order') } />
+      <Route path='addrBumap' component={ require('react-router?name=addrBumap!./components/addrBumap') } />
+      <Route path='moreDate' component={ require('react-router?name=moreDate!./components/moreDate') } />
+      <Route path='AddTouristUse' component={ require('react-router?name=AddTouristUse!./components/AddTouristUse') } />
+      <Route path='search' component={ require('react-router?name=search!./containers/search') } />
+      <Route path='orderDetails/:id' component={ require('react-router?name=orderDetails!./containers/orderDetails') } />
+    </Route>
+  </Router>
+)
+
+
+
+
+ menpiao/style/Iosnonghang.scss
+
+// 对农行样式的特别处理
+.am-popup-slide-down{
+    top:310px !important;
+    max-height:5.4rem;
+    transition: all 0s !important;
+    .test{
+        height:180px;
+    }
+}
+.myselfam-popup-mask{
+    top:310px !important;
+    // transition: all 0s !important;
+}
+
+
+
+
+ menpiao/style/_common.scss
+
+%touch-layer {
+  -webkit-overflow-srcolling: touch;
+  overflow: hidden;
+  overflow-y: scroll;
+}
+
+
+
+
+ menpiao/style/addTourist.scss
+
+
+
+
+
+ menpiao/style/addrBumap.scss
+
+.addrBumapMain{
+  width:100%;
+  height:100%;
+}
+.addrBumapWrap{
+  .addrBumapMain{
+    .pak{
+      transform: scale(2, 2);
+      transform-origin: center;
+      .anchorBL{
+        display:none !important;
+      }
+      .BMap_bubble_title{
+        padding:15px 5px 12px 5px;
+        font-weight: 600;
+        text-align: center;
+        .iw_poi_img{
+          display:inline-block;
+          background:url(../img/addressIcon.png) no-repeat;
+          background-size: cover;
+          border: 0;
+          margin-right: 10px;
+          position: relative;
+        }
+        .iw_poi_title {
+          vertical-align: top;
+          width: 70%;
+          display: inline-block;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+      .BMap_bubble_content{
+        // width:500px;
+        background:#fff;
+        padding:5px 5px 12px 5px;
+        .iw_poi_content {
+          width: 100%;
+          overflow: visible;
+          padding-top: 4px;
+          white-space: -moz-pre-wrap;
+          word-wrap: break-word;
+          color: #666;
+          display:inline-block;
+        }
+        .iw_poi_warp{
+           display:inline-block;
+           float: right;
+           margin-left:20px;
+           margin-top:8px;
+        }
+        .iw_poi_copy{
+          float: right;
+          display:inline-block;
+          font-size:24px;
+          color:#ff9a00;
+        }
+      }
+      .BMap_shadow{
+        img{
+          display:none;
+        }
+      }
+      .BMap_pop{
+        // transform: scale(.5);
+        // transform-origin: center;
+        // margin-top: 110px;
+        // margin-left: 80px;
+      }
+    }
+    // .my_pak1{
+    //   .BMap_pop{
+    //     transform: scale(.5);
+    //     transform-origin: center;
+    //     margin-top: 90px;
+    //     margin-left: 80px;
+    //   }
+    // }
+    // .my_pak2{
+    //   .BMap_pop{
+    //     transform: scale(.75);
+    //     transform-origin: center;
+    //     margin-top: 2px;
+    //     margin-left: 2px;
+    //   }
+    // }
+    // .my_pak3{
+    //   .BMap_pop{
+    //     transform: scale(.875);
+    //     transform-origin: center;
+    //   }
+    // }
+  }
+}
+
+
+
+
+ menpiao/style/details.scss
+
+@import 'common';
+
+.detailsWrap{
+    width: 100%;
+    height:100%;
+    // overflow:hidden;
+    @extend %touch-layer;
+    .ItempicWrap{
+        width: 100%;
+        height:34%;
+        position:relative;
+        .itemPic{
+            height: 100%;
+            width: 100%;
+            background:url(../img/nousebg.png) no-repeat;
+            background-size: cover;
+            img{
+                width: 100%;
+                height:100%;
+                color:#fff;
+            }
+        }
+        .picMeng{
+            width: 100%;
+            height:100%;
+            position:absolute;
+            top:0;
+            background: linear-gradient(transparent 60%, #000000);
+            opacity: 0.6;
+            z-index: 10;
+        }
+        .itemMain{
+            width:100%;
+            position:absolute;
+            bottom:0;
+            left:0;
+            color:#fff;
+            padding:32px;
+            font-size:36px;
+            z-index: 99;
+            .title{
+                max-width: 60%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .level{
+               font-size:24px;
+               margin-left:20px;
+            }
+            .itemgount{
+                padding-top:20px;
+                span{
+                    display:inline-block;
+                }
+                .Star{
+                  img{
+                     width: 24px;
+                     height:24px;
+                  }
+                }
+                .fenshu{
+                    font-size:24px;
+                    letter-spacing: 1px;
+                    margin-left: 14px;
+                }
+                .picshow{
+                    padding:12px 21px;
+                    background:rgba(0,0,0,0.6);
+                    border-radius: 4px;
+                    position:absolute;
+                    right:32px;
+                    bottom:32px;
+                    font-size:24px;
+                }
+            }
+        }
+    }
+    .itemnoteWrap{
+        width: 100%;
+        // height:auto;
+        // height:20%;
+        .serviceSpan{
+            display:inline-block;
+            padding:5px 10px;
+            border:1px solid #e5e5e5;
+            border-radius: 4px;
+            color:#999;
+            margin-right:10px;
+        }
+    }
+    .itemTabs{
+        width: 100%;
+        // height:46%;
+        // height:100%;
+        height:auto;
+        max-height: 100%;
+        overflow: hidden;
+        // overflow: scroll;
+        // overflow-x: hidden;
+        // padding-bottom:32px;//解决底部空条问题
+        .tabItem{
+            // height:auto;
+            height:100%; // 修改 8.0 的滑动问题
+            // @extend %touch-layer;
+            .am-accordion{
+                @extend %touch-layer;
+            }
+            .am-accordion-header {
+                color:#333;
+                font-size:28px;
+            }
+            .title{
+                width: 80%;
+                padding:20px 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color:#333;
+                font-size:30px;
+            }
+            .timeS1{
+                float: left;
+                width: 55%;
+                height:100px;
+                span{
+                    display:block;
+                    width: 100%;
+                }
+                .s1a{
+                    color:#999;
+                    font-size:24px;
+                }
+                .s1b{
+                    color:#ffab00;
+                    font-size:24px;
+                }
+            }
+            .timeS2{
+                width: 45%;
+                float:right;
+                span{
+                    display:inline-block;
+                    float: right;
+                }
+                .s2a{
+                    font-size:36px;
+                    color:#ff4848;
+                    letter-spacing:1px;
+                    i{
+                        font-style:normal;
+                        font-size:20px;
+                        color:#999;
+                    }
+                }
+                .s2b{
+                    background:#ffab00;
+                    border-radius:4px;
+                    width:110px;
+                    height:50px;
+                    line-height:50px;
+                    color:#fff;
+                    text-align: center;
+                    margin-left:15px;
+                }
+            }
+            // tab标题显示
+            .tabtitle{
+              display:flex;
+              align-items: center;
+              span{
+                  display:inline-block;
+                  margin-right:20px;
+              }
+                img{
+                    width: 44px;
+                    height:44px;
+                    display:inline-block;
+                }
+            }
+        }
+        .tabItem1{
+            width: 100%;
+            height:50px;
+        }
+        .tabItem1-accor{
+            width: 100%;
+            height:200px;
+            background:pink;
+        }
+        .am-tabs-content-animated{
+             height:100%;//这里修改使没有东西就不滚动了
+            padding-bottom:100px;
+        }
+        .am-list-item-middle{
+            background:#f3f3f4;
+        }
+        .tabIntro{
+            font-size:24px;
+            color:#999;
+            width: 100%;
+            .introMain{
+                width: 100%;
+                height:100%; // 修改 8.0 的滑动问题
+                padding:0 32px;
+                @extend %touch-layer;
+                img{
+                    width: 100%;
+                }
+                p{
+                    margin-bottom:32px;
+                    line-height:44px;
+                }
+            }
+        }
+
+    }
+    // .am-tabs{
+    //   overflow:scroll;
+    //   overflow-x: hidden;
+    // }
+    .am-tabs-tab-active{
+        color:#ffab00;
+    }
+    .am-tabs-ink-bar{
+        background:#ffab00;
+    }
+}
+// 无票展示
+.no_trickWrap{
+    width: 100%;
+    height:100%;
+    .no_main{
+       width: 42%;
+       height:60%;
+       position:absolute;
+      //  top:20%;
+       top:10%;
+       left:28%;
+       text-align: center;
+       p{
+          font-size:28px;
+          color:#999;
+          text-align: center;
+          line-height:42px;
+       }
+       img{
+          display:inline-block;
+          width: 170px;
+          height:170px;
+       }
+    }
+}
+
+// 开放时间
+.openTimeWrap{
+    width: 80%;
+    height:auto;
+    z-index: 99;
+    position:absolute;
+    top:50%;
+    left:10%;
+    transform: translateY(-50%);
+    background:red;
+    padding:32px;
+    background:#fff;
+    border-radius: 8px;
+    // text-align: center;
+    .openTimeHeader{
+        width: 100%;
+        height:60px;
+        text-align: center;
+        color:#ffab00;
+
+    }
+    .openTime{
+        line-height:40px;
+        color:#666;
+        text-align: center;
+    }
+}
+
+
+// 订单须知
+.orderinfoWrap{
+  width: 80%;
+  height:54%;
+  border-radius: 12px;
+  position:absolute;
+  top:23%;
+  left:10%;
+  background:#fff;
+  // transform: translate(-50%,-50%);
+  z-index: 10;
+
+
+  .orderinfoMian{
+      width: 100%;
+      height:100%;
+      overflow: hidden;
+  }
+  .orderinfoMian{
+     width: 100%;
+     height:100%;
+     .orderinfoHeader{
+        width: 100%;
+        height:14%;
+        padding:32px;
+        span{
+          width: 20%;
+          display:inline-block;
+        }
+        .infortitle{
+           width: 60%;
+           text-align: center;
+        }
+     }
+     .orderinfo{
+        @extend %touch-layer;
+        padding:10px 32px;
+        width: 100%;
+        height:72%;
+        .infotop{
+           width: 100%;
+           text-align: center;
+           color:#ffab00;
+        }
+        p{
+           line-height:50px;
+           color:#999;
+           padding-bottom:16px;
+        }
+     }
+     .infoFooter{
+        width: 100%;
+        border-top:1px solid #e5e5e5;
+        height:14%;
+        span{
+           display:inline-block;
+           height:100%;
+           vertical-align: middle;
+        }
+        .infof1{
+           width: 56%;
+           padding:3.5% 32px;
+           color:#ffab00;
+           font-size:36px;
+           vertical-align: middle;
+        }
+        .infof2{
+           width: 44%;
+           text-align: center;
+           background:#ffab00;
+           font-size:36px;
+           color:#fff;
+           padding:3.5% 32px;
+           border-radius: 0 0 12px 0px;
+        }
+     }
+  }
+}
+
+
+
+
+ menpiao/style/index.scss
+
+  .indexWrap{
+    width: 100%;
+    height:100%;
+    .searchBar{
+      background:#fff;
+      div{
+        background-color:#f3f3f4;
+      }
+      input{
+      background-color:#f3f3f4;
+      font-size:28px;
+      color:#adadad;
+      }
+    }
+    .am-popup-slide-down{
+      top:180px;
+    }
+    .indexListWrap{
+      width: 100%;
+      height:calc( 100% - 100px );
+      overflow: hidden;
+      -webkit-overflow-scrolling:touch;
+      .tabs{
+        height:calc(100% - 98px);
+      }
+      .ListMain{
+        width: 100%;
+        height:100%;
+        // padding-top:20px;
+        -webkit-overflow-scrolling:touch;
+        .list {
+          background:#fff;
+          -webkit-overflow-scrolling:touch;
+          //  position:relative;
+          //  z-index: 2;
+        }
+      }
+    }
+  }
+
+// 地址定位部分
+.indexWrap{
+  //  background:#fff;
+  .leftCom{
+    display:inline-block;
+    vertical-align: middle;
+    .citylocation{
+        width:100%;
+        height:99px;
+        // font-size:32px;
+        font-size:28px;
+        color:#333333;
+        background:#fff;
+        .cityNameshow{
+          width: 70%;
+          display:inline-block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          vertical-align: middle;
+        }
+        .jiaoPic{
+            width: 16px;
+            height:10px;
+            margin-left:6px;
+        }
+     }
+  }
+  .listItem{
+      width: 100%;
+      height:auto;
+      // background:pink;
+      padding:40px 32px 32px 32px;
+      border-bottom:1px solid #e5e5e5;
+      // background-color: #fff;
+  }
+  .itemPic{
+      width: 28%;
+      height:210px;
+      float:left;
+      overflow: hidden;
+      background:url(../img/nousebg.png) no-repeat;
+      background-size: cover;
+      img{
+          width: 100%;
+          height:100%;
+      }
+  }
+  .itemMain{
+      width: 72%;
+      height:auto;
+      padding-left:32px;
+      float:left;
+      .oto{
+          width:100%;
+          height:auto;
+          float:left;
+          margin-bottom:16px;
+          font-size:24px;
+          color:#999;
+          margin-top:5px;
+          .otoS1{
+              float:left;
+              display:inline-block;
+          }
+          .otoS2{
+              float:right;
+              display:inline-block;
+          }
+          .otoS3{
+              border:1px solid #e5e5e5;
+              border-radius:4px;
+          }
+          img{
+             width: 24px;
+             height:24px;
+          }
+      }
+      .itemTitle{
+          .otoS1{
+              font-size:28px;
+              color:#111;
+              width: 65%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow:ellipsis;
+          }
+          .otoS2{
+              font-size:36px;
+              color:#ff4848;
+              letter-spacing:2px;
+              i{
+                  font-style:normal;
+                  font-size:20px;
+                  color:#999;
+              }
+          }
+          .otoS4{
+              color: #999;
+              font-size:24px;
+              i{
+                  display:none;
+              }
+          }
+      }
+      .itemTime{
+          .otoS2{
+              text-decoration: line-through;
+          }
+          .otoS1{
+              width: 60%;
+              white-space: nowrap;
+              text-overflow: ellipsis;
+              overflow: hidden;
+          }
+      }
+      .itemAddr{
+        margin-bottom:0;
+          .otoS1{
+              margin-right: 20px;
+              margin-top:6px;
+          }
+          .otoS2{
+              float:left;
+              padding:6px 20px;
+
+              border-radius:4px;
+          }
+      }
+
+  }
+  .clear{
+      clear: both;
+  }
+}
+
+
+
+
+
+// 主题选择部分
+.themeWrap{
+    width: 100%;
+    height:80px;
+    border-bottom:1px solid #e5e5e5;
+    border-top:1px solid #e5e5e5;
+    background:#fff;
+    .headeroto{
+        width: 33%;
+        height:auto;
+        margin:22px 0;
+        display:inline-block;
+        font-size:28px;
+        color:#333333;
+        text-align: center;
+        img{
+           width: 22px;
+           height:14px;
+           margin-left:10px;
+        }
+        .animatePic_up{
+            transform: rotate(180deg);
+            transition: transform .4s;
+        }
+        .animatePic_down{
+          transform: rotate(360deg);
+          transition: transform .1s;
+        }
+    }
+    .headrecheck{
+        color:#ffab00;
+    }
+    .headercen{
+        border-left:1px solid #e5e5e5;
+        border-right:1px solid #e5e5e5;
+    }
+}
+// 主题选择部分
+.themeWrap{
+    width: 100%;
+    height: 80px;
+    border-bottom: 1px solid #e5e5e5;
+    border-top: 1px solid #e5e5e5;
+    background: #fff;
+    position: relative;
+    span{
+      width: 33%;
+      height:auto;
+      margin: 0.2rem 0;
+      display:inline-block;
+      font-size: 0.26rem;
+      color: #333333;
+      text-align: center;
+      &:nth-child(2){
+        border-left: .01rem solid #e5e5e5;
+        border-right: .01rem solid #e5e5e5;
+      }
+      .am-icon-md{
+        position: relative;
+        width: 0.3rem;
+        height: 0.3rem;
+        top: 0.05rem;
+        margin-left: 0.03rem;
+        transition: transform .2s;
+      }
+    }
+}
+.tabs{
+  flex: auto;
+  -webkit-flex: auto;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+// 没有景点对应时的展示
+.noOneComponent{
+     width: 100%;
+     height:100%;
+    //  background:pink;
+    //  position:relative;
+     z-index: 1;
+     .noOneMain{
+         width:320px;
+         height:320px;
+         position: absolute;
+         top:46%;
+         left:calc(50% - 160px);
+        //  transform: translateX(50%);
+         transform: translateY(-50%);
+         img{
+            width: 100%;
+         }
+         div{
+             width: 100%;
+             margin-top:10px;
+             line-height:40px;
+             font-size:28px;
+             text-align: center;
+             color:#999;
+         }
+     }
+}
+
+// 对搜索框的样式修改
+.searchBar{
+   overflow: hidden;
+}
+// 对引用的 组件里面的样式进行修改
+.am-popup-slide-down{
+    top:180px;
+    max-height:5.4rem;
+    transition: all 0s !important;
+    .test{
+        height:180px;
+    }
+}
+.myselfam-popup-mask{
+    top:180px;
+    // transition: all 0s !important;
+}
+.indexListWrap{
+    .am-list-item{
+        padding-left:0;
+        .am-list-line{
+           padding-right:0;
+        }
+        .am-list-content{
+           padding:0;
+        }
+    }
+}
+.test1Animation-appear-active {
+  overflow: hidden;
+  animation: test .5s ease forwards;
+}
+.test1Animation-leave-active {
+  animation: test 0s backwards reverse;
+  overflow: hidden;
+}
+@keyframes test {
+ 0% { top:180px;height:0px; }
+ 100%   { top:180px; height:5.4rem;}
+}
+.test2Animation-appear-active {
+  overflow: hidden;
+  animation: test2 .5s ease forwards;
+}
+.test2Animation-leave-active {
+  animation: test2 0s backwards reverse;
+  overflow: hidden;
+}
+@keyframes test2 {
+ 0% { top:180px;height:0px; }
+ 100%   { top:180px; height:3.6rem;}
+}
+
+// 对IOS的兼容处理---修改
+.themeMaskCom{
+  position:absolute;
+  z-index: 10;
+  width: 100%;
+}
+.starMaskCom{
+  position:absolute;
+  z-index: 10;
+  width: 100%;
+}
+.defaultMaskCom{
+  position:absolute;
+  z-index: 10;
+  width: 100%;
+}
+
+
+
+
+ menpiao/style/moreDate.scss
+
+
+
+
+
+ menpiao/style/nonghang.scss
+
+.indexWrap {
+  .listItem {
+    border-color: #f5f5f6 !important
+  }
+  .themeWrap{
+    border-color: #f5f5f6 !important
+  }
+  .itemMain .oto .otoS3{
+    border-color: #f5f5f6 !important
+  }
+}
+.detailsWrap{
+  .am-list-body .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+  .itemnoteWrap .serviceSpan{
+    border-color: #f5f5f6 !important
+  }
+  .am-whitespace{
+    background-color:#f5f5f6 !important
+  }
+}
+.orderWrap{
+  .am-list-body .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+  .line{
+    background-color: #f5f5f6 !important
+  }
+  .am-whitespace{
+    background-color:#f5f5f6 !important
+  }
+  .MessageWrap .noticText{
+    // background-color:#f5f5f6 !important
+  }
+  .addtouristWrap .addpeople{
+    border-color: #f5f5f6 !important
+  }
+  .am-list-body:after{
+    border-color: #f5f5f6 !important
+  }
+  .am-accordion .am-accordion-item .am-accordion-header:after{
+    border-color: #f5f5f6 !important
+  }
+  .s-promotion .am-list-body .s-order-price .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+  .orderFooter{
+    border-color: #f5f5f6 !important
+  }
+  .am-list-item.am-input-item:after{
+    border-color: #f5f5f6 !important
+  }
+  .am-list-body div:not(:last-child) .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+  .addtouristWrap .addnumbel .am-list-line{
+    border-color: #f5f5f6 !important
+  }
+  .s-promotion .am-list-item.s-order-price{
+    border-color: #f5f5f6 !important
+  }
+  .MessageWrap .date .dateoto{
+    border-color: #f5f5f6 !important
+  }
+  .MessageWrap .date .orderOrg{
+    border-color: #ffab00 !important
+  }
+  .orderMain{
+    background-color:#f5f5f6 !important
+  }
+}
+.addtouristWrap{
+  .contact-list .ListItemWrap{
+    border-color: #f5f5f6 !important
+  }
+  .contact-list .listItem .moreBtn{
+    border-color: #f5f5f6 !important
+  }
+  .am-list-body .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+}
+.tricekShow{
+  .am-list-body .am-list-line:after{
+    border-color: #f5f5f6 !important
+  }
+}
+.searchWrap .searchBar input{
+  font-size: .28rem  !important
+}
+// 对农行样式的特别处理
+.am-popup-slide-down{
+    top:270px !important;
+    max-height:5.4rem;
+    transition: all 0s !important;
+    .test{
+        height:180px;
+    }
+}
+.myselfam-popup-mask{
+    top:270px !important;
+    // transition: all 0s !important;
+}
+
+
+
+
+ menpiao/style/order.scss
+
+@import 'common';
+.orderWrap{
+    width: 100%;
+    height:100%;
+    overflow: hidden;
+}
+.orderMain{
+    width: 100%;
+    height:calc(100% - 100px);
+    @extend %touch-layer;
+    padding-bottom:32px;
+    .am-whitespace.am-whitespace-lg{
+      background:#f5f5f6;
+    }
+}
+.orderCard{
+  background:#fff;
+    .line{
+       width: calc(100% - 64px);
+       height:1px;
+       margin: 0 32px;
+       background:#e5e5e5;
+    }
+    .ordertitle{
+      font-size:24px;
+      color:#333333;
+    }
+    .orderTrickPrice{
+      color:#ff4848;
+    }
+}
+// 填写信息部分
+.MessageWrap{
+   width: 100%;
+   .noticText{
+       padding:2px 32px 20px 32px;
+       font-size:24px;
+       color:#ffab00;
+       background:#fff;
+   }
+   .addnumbel{
+     .Sum{
+        padding:5px 15px;
+     }
+     .sumbox{
+       -webkit-display:flex;
+       -webkit-justify-content: flex-end;
+       -ms-display:flex;
+       -ms-justify-content: flex-end;
+       display:flex;
+       justify-content: flex-end;
+       span{
+         float:left;
+       }
+     }
+   }
+   .messageint{
+      font-size:28px;
+      color:#333;
+      .am-input-label{
+         font-size:28px;
+      }
+      .am-input-control input{
+         font-size:28px;
+      }
+   }
+   .dateTip{
+      width: 34%;
+      height:72px;
+      line-height:72px;
+      display:inline-block;
+      float:left;
+      font-size:28px;
+      color:#111;
+   }
+   .datewrap{
+       .am-list-content{
+           width: 100%;
+           padding:8px 0;
+       }
+       .am-list-line{
+          height:112px;
+          width:100%;
+
+       }
+   }
+
+   .date{
+      width: 66%;
+      height:76px;
+      display:inline-block;
+      .dateoto{
+         height:75px;
+         width: 31%;
+         margin-right:3.5%;
+         display:inline-block;
+         border:1px solid #cccccc;
+         border-radius:4px;
+         color:#333;
+         span{
+            display:block;
+            width: 100%;
+            height:35px;
+            font-size:24px;
+            text-align: center;
+         }
+         .moredateSpan{
+           white-space:nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
+         }
+
+      }
+      .noOrder{
+         color:#ccc;
+      }
+      .orderOrg{
+         color:#ffab00;
+         border:1px solid #ffab00;
+      }
+      .moredate{
+         margin-right:0;
+      }
+   }
+}
+
+// 添加游客部分
+.addtouristWrap{
+    width: 100%;
+    .am-list-body {
+      .oto{
+        .am-list-content{
+          -webkit-box-flex: 0.4;
+          flex:0.4;
+        }
+        .am-list-line .am-list-extra{
+          text-align: left;
+          color:#333;
+        }
+      }
+      .addmessage{
+        .am-list-extra{
+          -webkit-box-flex: 0.8; // 这里是为了兼容IOS 8.0
+          flex:1.05;
+        }
+        .am-list-line-multiple:after{
+          border:0;
+        }
+        .am-list-line .am-list-content{
+          -webkit-box-flex: 0.3;
+        }
+      }
+    }
+    .addnumbel{
+      .am-input-label.am-input-label-5{
+        width:170px;
+        margin-right:0;
+      }
+      .am-list-line{
+          // border-top: 1px solid #ddd;
+          .am-list-extra{
+            -webkit-box-flex: 0.5; // 这里是为了兼容IOS 8.0
+            flex-basis:50%;
+            flex:1.15;
+          }
+          .am-list-content{
+            // width:170px;
+          }
+      }
+      .Sum{
+         padding:0 15px;
+      }
+    }
+    .addpeoplediv{
+      text-align: center;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+      -webkit-align-items: center;
+      -ms-flex-align: center;
+      align-items: center;
+      -webkit-box-pack: center;
+      -webkit-justify-content: center;
+      -ms-flex-pack: center;
+      justify-content: center;
+      span{
+        margin-left:20px;
+      }
+    }
+    .messageint{
+      font-size:28px;
+      color:#333;
+      .am-input-label{
+         font-size:28px;
+         -webkit-box-flex:0.35;
+         flex:0.35;
+      }
+      .am-input-control input{
+         font-size:28px;
+         color:#333 !important;
+      }
+      .am-input-label.am-input-label-5{
+        color:#333 !important;
+        width:170px;
+        margin-right:0;
+      }
+    }
+}
+// 入园须知
+
+.noticeWrap{
+  width: 80%;
+  height:54%;
+  border-radius: 12px;
+  position:absolute;
+  top:23%;
+  left:10%;
+  background:#fff;
+  z-index: 10;
+  .orderinfoMian{
+      width: 100%;
+      height:100%;
+      overflow: hidden;
+  }
+  .orderinfoMian{
+     width: 100%;
+     height:100%;
+     .orderinfoHeader{
+        width: 100%;
+        height:10%;
+        padding:32px 32px 64px 32px;
+        span{
+          width: 20%;
+          display:inline-block;
+        }
+        .infortitle{
+           width: 60%;
+           text-align: center;
+        }
+     }
+     .orderinfo{
+        padding:32px;
+        width: 100%;
+        height:85%;
+        @extend %touch-layer;
+        .infotop{
+           width: 100%;
+           text-align: center;
+           color:#ffab00;
+        }
+        p{
+           line-height:50px;
+           color:#999;
+           padding-bottom:32px;
+        }
+     }
+     .infoFooter{
+        width: 100%;
+        border-top:1px solid #e5e5e5;
+
+        span{
+           display:inline-block;
+        }
+        .infof1{
+           width: 65%;
+           padding:5% 32px;
+           color:#ffab00;
+           font-size:36px;
+        }
+        .infof2{
+           width: 35%;
+           text-align: center;
+           padding:5% 32px;
+           background:#ffab00;
+           font-size:36px;
+           color:#fff;
+           border-bottom-right-radius:12px;
+        }
+     }
+  }
+}
+
+// 底部立即下单部分
+.orderFooter{
+    width: 100%;
+    height:99px;
+    background:#fff;
+    border-top:1px solid #e4e4e4;
+    position:absolute;
+    bottom:0;
+    // margin-top:32px;
+    .orderfootPrice{
+        width: 60%;
+        padding-left:32px;
+        display:inline-block;
+        height:100%;
+        line-height:100px;
+        font-size:28px;
+        color:#ff4848;
+        overflow: hidden;
+        float:left;
+        .price{
+            font-size:36px;
+            padding:0 10px;
+        }
+        .downprice{
+            font-size:24px;
+            color:#999;
+        }
+    }
+    .orderfooterOn{
+       width: 40%;
+       height:100%;
+       display:inline-block;
+       background-color:#ffab00;
+       color:#fff;
+       font-size:38px;
+       text-align: center;
+       line-height:100px;
+       float:left;
+    }
+    .orderNouse{
+        background-color:#e4e4e4;
+    }
+}
+
+.contact-list .listItem .iconBtn_l{
+     display:none;
+}
+
+// 日历样式更改
+.calendarList .dateUl .itemList{
+  font-size:28px;
+}
+
+
+
+
+ menpiao/style/orderDetails.scss
+
+
+.menpiaoOrderDetails{
+  .orderDetailsinfo{
+    width: 100%;
+    .main{
+      width: 100%;
+      padding: 0 32px;
+      color:#666;
+      .item{
+        width: 100%;
+        font-size:28px;
+        margin-top:26px;
+        .itemSs{
+          color:#ffab00;
+        }
+      }
+    }
+    .infoBtn{
+      width: 100%;
+      height: 90px;
+      border-top:1px solid #e5e5e5;
+      margin-top:30px;
+      .oto{
+        width: 33.33%;
+        height: 100%;
+        line-height: 90px;
+        float:left;
+        text-align: center;
+        font-size:28px;
+        span:nth-child(1){
+          vertical-align: middle;
+          margin-right:10px;
+        }
+        img{
+          width: 30px;
+          height:30px;
+          display:inline-block;
+        }
+      }
+      .cbtn{
+          border-left:1px solid #e5e5e5;
+          border-right:1px solid #e5e5e5;
+      }
+    }
+    .orderInfo{
+      color:#ffab00;
+    }
+    .am-list-item .am-list-line .am-list-arrow{
+      background-image: url(../img/fanhui.png);
+      background-size: 40px;
+    }
+  }
+}
+
+// 景点详情部分
+.tabIntro{
+  font-size:24px;
+  color:#999;
+  width: 100%;
+  height:100%;
+  overflow: hidden;
+  overflow-y: scroll;
+  background: #fff;
+  .introMain{
+    width: 100%;
+    height:100%; // 修改 8.0 的滑动问题
+    padding:0 32px;
+    img{
+      width: 100%;
+    }
+    p{
+      margin-bottom:16px;
+      line-height:44px;
+    }
+  }
+}
+ //  入园须知
+ .orderinfoWrap .orderinfoMian .orderinfo p{
+   padding-bottom:16px;
+ }
+// 覆盖样式
+.orderDetailsWrap {
+  .orderDetail-container .btn-container{
+    position:fixed;
+  }
+}
+
+
+
+
+ menpiao/style/picshow.scss
+
+.picWrap{
+    width: 100%;
+    height:100%;
+    overflow: hidden;
+    .picShow{
+        width: 100%;
+        height:100%;
+        padding:2%;
+        overflow: hidden;
+        overflow-y: scroll;
+        .picitemDemo{
+            width: 29%;
+            height:216px;
+            margin:14px 2.1%;
+            float:left;
+            img{
+                width: 100%;
+                height:100%;
+            }
+        }
+    }
+}
+
+.content{
+  .pic{
+      width: 100%;
+      height:50%;
+      // background:red;
+      position:absolute;
+      top:50%;
+      // transform: translateY(-60%);
+      margin-top: -50%;
+      z-index: 99;
+  }
+  .carouselWrap{
+      width: 100%;
+      .picitembig{
+          width: 100%;
+          height:100%;
+          img{
+              width: 100%;
+              height:100%;
+          }
+      }
+  }
+}
+
+
+
+
+ menpiao/style/search.scss
+
+.searchWrap{
+    width: 100%;
+    height:100%;
+    position:relative;
+    .searchBar{
+       background:#fff;
+       div{
+           background-color:#f3f3f4;
+       }
+       input{
+           background-color:#f3f3f4;
+           font-size:0.28rem;
+           color:#adadad;
+       }
+       // 取消按钮部分
+       .cancelBtn{
+         background:#fff;
+         height:100%;
+         text-align: center;
+         color:#ffab00;
+       }
+    }
+    .am-popup-slide-down{
+        top:180px;
+    }
+    .searchListWrap{
+        width: 100%;
+        height:calc( 100% - 100px );
+        overflow: hidden;
+        -webkit-overflow-scrolling:touch;
+        .ListMain{
+            width: 100%;
+            height:100%;
+            padding-top:20px;
+            -webkit-overflow-scrolling:touch;
+            .list {
+               background:#fff;
+               -webkit-overflow-scrolling:touch;
+            }
+
+        }
+    }
+}
+
+// 地址定位部分
+.searchWrap{
+  //  background:#fff;
+  .leftCom{
+    display:inline-block;
+    vertical-align: middle;
+    .citylocation{
+        width:100%;
+        height:99px;
+        font-size:28px;
+        color:#333333;
+        background:#fff;
+        .cityNameshow{
+          width: 70%;
+          display:inline-block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          vertical-align: middle;
+        }
+        .jiaoPic{
+            width: 16px;
+            height:10px;
+            margin-left:6px;
+        }
+     }
+  }
+  .listItem{
+      width: 100%;
+      height:auto;
+      // background:pink;
+      padding:40px 32px 32px 32px;
+      border-bottom:1px solid #e5e5e5;
+      // background-color: #fff;
+  }
+  .itemPic{
+      width: 28%;
+      height:210px;
+      float:left;
+      img{
+          width: 100%;
+          height:100%;
+      }
+  }
+  .itemMain{
+      width: 72%;
+      height:auto;
+      padding-left:32px;
+      float:left;
+      .oto{
+          width:100%;
+          height:auto;
+          float:left;
+          margin-bottom:16px;
+          font-size:24px;
+          color:#999;
+          margin-top:5px;
+          .otoS1{
+              float:left;
+              display:inline-block;
+          }
+          .otoS2{
+              float:right;
+              display:inline-block;
+          }
+          .otoS3{
+              border:1px solid #e5e5e5;
+              border-radius:4px;
+          }
+          img{
+             width: 24px;
+             height:24px;
+          }
+      }
+      .itemTitle{
+          .otoS1{
+              font-size:28px;
+              color:#111;
+              width: 65%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow:ellipsis;
+          }
+          .otoS2{
+              font-size:36px;
+              color:#ff4848;
+              letter-spacing:2px;
+              i{
+                  font-style:normal;
+                  font-size:20px;
+                  color:#999;
+              }
+          }
+          .otoS4{
+              color: #999;
+              font-size:24px;
+              i{
+                  display:none;
+              }
+          }
+      }
+      .itemTime{
+          .otoS2{
+              text-decoration: line-through;
+          }
+          .otoS1{
+              width: 60%;
+              white-space: nowrap;
+              text-overflow: ellipsis;
+              overflow: hidden;
+          }
+      }
+      .itemAddr{
+        margin-bottom:0;
+          .otoS1{
+              margin-right: 20px;
+              margin-top:6px;
+          }
+          .otoS2{
+              float:left;
+              padding:6px 20px;
+
+              border-radius:4px;
+          }
+      }
+
+  }
+  .clear{
+      clear: both;
+  }
+}
+
+
+// 没有景点对应时的展示
+.noOneComponent{
+     width: 100%;
+     height:100%;
+    //  background:pink;
+     position:relative;
+     z-index: 1;
+     .noOneMain{
+         width:320px;
+         height:320px;
+         position: absolute;
+         top:46%;
+         left:calc(50% - 160px);
+        //  transform: translateX(50%);
+         transform: translateY(-50%);
+         img{
+            width: 100%;
+         }
+         div{
+             width: 100%;
+             margin-top:10px;
+             line-height:40px;
+             font-size:28px;
+             text-align: center;
+             color:#999;
+         }
+     }
+}
+
+// 历史记录部分
+.searchHistoryMain{
+    width: 100%;
+    .title_oto .am-list-line .am-list-content .span_oto{
+        color:#adadad;
+    }
+    .deleteBtn{
+      .am-list-content{
+          display:flex;
+          align-items: center;
+          justify-content: center;
+      }
+      span{
+          margin-left: 10px;
+          color:#adadad;
+      }
+    }
+}
+// 对搜索框的样式修改
+.searchBar{
+   overflow: hidden;
+}
+
+
+// // 对引用的 组件里面的样式进行修改
+// .am-popup-slide-down{
+//     top:180px;
+//     max-height:5.4rem;
+//     transition: all 0s !important;
+//     .test{
+//         height:180px;
+//     }
+// }
+// .am-popup-mask{
+//     top:180px;
+//     // transition: all 0s !important;
+// }
+// .searchListWrap{
+//     .am-list-item{
+//         padding-left:0;
+//         .am-list-line{
+//            padding-right:0;
+//         }
+//         .am-list-content{
+//            padding:0;
+//         }
+//     }
+// }
+// .test1Animation-appear-active {
+//   overflow: hidden;
+//   animation: test .5s ease forwards;
+// }
+// .test1Animation-leave-active {
+//   animation: test 0s backwards reverse;
+//   overflow: hidden;
+// }
+// @keyframes test {
+//  0% { top:180px;height:0px; }
+//  100%   { top:180px; height:5.4rem;}
+// }
+// .test2Animation-appear-active {
+//   overflow: hidden;
+//   animation: test2 .5s ease forwards;
+// }
+// .test2Animation-leave-active {
+//   animation: test2 0s backwards reverse;
+//   overflow: hidden;
+// }
+// @keyframes test2 {
+//  0% { top:180px;height:0px; }
+//  100%   { top:180px; height:3.6rem;}
+// }
+
+
+
+
+ menpiao/style/selectTab.scss
+
+.select_shade{
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  transition: 2s ease;
+  z-index: 1;
+  .select_wrap{
+    z-index: 2;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height:50%;
+    overflow-y: scroll;
+    overflow: hidden;
+    background: #ffffff;
+    transition: .2s ease;
+    p{
+      display: flex;
+      display: -webkit-flex;
+      align-items: center;
+      -webkit-align-items: center;
+      justify-content: space-between;
+      -webkit-justify-content: space-between;
+      height: 0.9rem;
+      line-height: 0.9rem;
+      font-size: 0.28rem;
+      color: #999999;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0 0.3rem;
+    }
+  }
+}
+
+
+
+
+ menpiao/style/self_common.scss
+
+*{margin: 0;padding: 0;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);box-sizing: border-box;}
+a{color: #000}
+html{font-size: 16px;height: 100%;overflow: hidden;}
+body{height: 100%;background: #f5f5f6;font-family: -apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,Helvetica,Arial,PingFang SC,Hiragino Sans GB,Source Han Sans,Noto Sans CJK Sc,Microsoft YaHei,sans-serif;-webkit-font-smoothing:antialiased;overflow-y: scroll;}
+ul{list-style: none;}
+h2{font-weight: normal;}
+input{border: none;outline: none;}
+input[type="search"]{-webkit-appearance:none;}
+input::-webkit-search-cancel-button {display: none;}
+button{outline: none;border: 0;}
+
+body{
+  background-color: #f5f5f6;
+}
+img{
+    border:none;
+}
+ul , li {
+    list-style: none;
+}
+
+
+
+
+ menpiao/style/slideTab.scss
+
+.select_tabs{
+  position: relative;
+  background: #ffffff;
+  color:#adadad;
+  .select_cro{
+    height: 0.9rem;
+    width: 100%;
+    overflow: hidden;
+    p{
+      margin: 0;
+      font-size: 0.24rem;
+      position: relative;
+      display: inline-block;
+      height: 0.9rem;
+      line-height: 0.3rem;
+      white-space: nowrap;
+      .select_li{
+        display: inline-block;
+        box-sizing: border-box;
+        height: 100%;
+        text-align: center;
+        padding: 0.15rem 0.4rem;
+        position: relative;
+      }
+      .select_foucs{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        display: inline-block;
+        transition: .3s ease;
+      }
+    }
+  }
+}

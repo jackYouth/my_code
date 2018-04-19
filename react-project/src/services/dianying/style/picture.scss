@@ -1,0 +1,38 @@
+@mixin s_allCenter{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    -ms-transform:translateX(-50%) translateY(-50%);     /* IE 9 */
+    -moz-transform:translateX(-50%) translateY(-50%);    /* Firefox */
+    -webkit-transform:translateX(-50%) translateY(-50%); /* Safari 和 Chrome */
+    -o-transform:translateX(-50%) translateY(-50%);
+}
+
+*{margin: 0;padding: 0}
+html{
+  height: 100%;
+}
+.picture{
+  width: 100%;
+  padding: 0.25rem;
+  box-sizing: border-box;
+  img{
+    width: calc(50% - 0.1rem);
+    height: 2.3rem;
+    margin: 0.2rem 0;
+    border-radius: 0.05rem;
+    &:nth-child(odd){
+      margin-right: 0.2rem;
+    }
+  }
+}
+.imgWrap{
+  position: relative;
+  img{
+    @include s_allCenter;
+  }
+}
+.juzhao .slide-page-container.info{
+  background: rgba(0, 0, 0, 0.95);
+}

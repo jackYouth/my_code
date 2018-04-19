@@ -1,0 +1,1277 @@
+         
+ 
+ 
+ 
+ baoyang/actions/app.js 
+ 
+import { log } from '@boluome/common-lib'
+import { get } from 'business'
+
+export const fetchShop = (postData, cb) => {
+  get('/baoyang/v1/near/shop', postData)
+  .then(({ code, message, data = [] }) => {
+    if (code === 0) {
+      cb(data)
+    } else {
+      log(message)
+    }
+  })
+}
+
+export const changeAddress = data => {
+  return {
+    type: 'CHANGE_ADDRESS',
+    ...data,
+  }
+}
+         
+ 
+ 
+ 
+ baoyang/actions/confirm.js 
+ 
+import { Loading } from '@boluome/oto_saas_web_app_component'
+import { Toast } from 'antd-mobile'
+import { afterOrdering, send } from 'business'
+
+export const saveOrder = postData => () => {
+  const handleClose = Loading()
+  send('/baoyang/v2/order', postData)
+  .then(({ code, data, message }) => {
+    if (code === 0) {
+      afterOrdering(data)
+    } else {
+      Toast.info(message, 1)
+    }
+    handleClose()
+  })
+}
+         
+ 
+ 
+ 
+ baoyang/actions/detail.js 
+ 
+import { merge } from 'ramda'
+import { getStore, setStore, log } from '@boluome/common-lib'
+import { get } from 'business'
+
+export const fetchDetails = postData => dispatch => {
+  get('/baoyang/v1/shop/details', postData)
+  .then(({ code, message, data = [] }) => {
+    if (code === 0) {
+      const currentShop = merge(getStore('currentShop', 'session'), data)
+      setStore('currentShop', currentShop, 'session')
+      dispatch({ type: 'UPDATE_SHOP', shop: merge(currentShop, data) })
+    } else {
+      log(message)
+    }
+  })
+}
+         
+ 
+ 
+ 
+ baoyang/actions/index.js 
+ 
+
+         
+ 
+ 
+ 
+ baoyang/components/app.js 
+ 
+import React from 'react'
+import { Icon } from 'antd-mobile'
+import { Listview, Mask, SlidePage, AddressSearchGaode, Empty, UserCenter } from '@boluome/oto_saas_web_app_component'
+import { forceCheck } from 'react-lazyload'
+import Shop from './shop'
+
+const relativeStyle = {
+  position: 'relative',
+}
+const inlineBlockStyle = {
+  display: 'inline-block',
+}
+const headerStyle = {
+  fontSize:        '.24rem',
+  textAlign:       'center',
+  height:          '.88rem',
+  lineHeight:      '.88rem',
+  verticalAlign:   'middle',
+  backgroundColor: '#fff',
+  borderBottom:    '1px solid #e5e5e5',
+  ...relativeStyle,
+}
+const addressStyle = {
+  margin:       '0 .1rem',
+  whiteSpace:   'nowrap',
+  textOverflow: 'ellipsis',
+  overflow:     'hidden',
+  maxWidth:     '3rem',
+  ...inlineBlockStyle,
+}
+const iconParentStyle = {
+  height:        '100%',
+  verticalAlign: 'top',
+  padding:       '3% 0',
+  boxSizing:     'border-box',
+  ...inlineBlockStyle,
+}
+
+// <div onClick={ () => handleGoderDetails() }>进入订单详情</div>
+const App = ({ offset, currentAddress, fetchData, handleFetchShop, handleChangeAddress, handleShopClick, nolocation }) => {
+  const { latitude, longitude } = fetchData
+  // console.log('fetchData', fetchData, latitude && longitude, offset)
+  if (!(latitude && longitude)) return <div />
+  return (
+    <div>
+      <Header { ...{ currentAddress, handleChangeAddress } } />
+      <div style={{ height: 'calc(100% - .88rem)', backgroundColor: '#fff' }}>
+        <Listview
+          limit={ 10 }
+          offset={ offset }
+          listItem={ <Shop { ...{ handleShopClick, nolocation } } /> }
+          onScroll={ forceCheck }
+          onFetch={ handleFetchShop }
+          fetchData={ fetchData }
+          dataList={ [] }
+          noOneComponent={ <Empty imgUrl={ <Icon type={ require('../images/empty.svg') } /> } message='当前区域没有商家，换个地址试试吧' /> }
+        />
+      </div>
+      <UserCenter categoryCode='baoyang' />
+    </div>
+  )
+}
+
+export default App
+
+const Header = ({ currentAddress, handleChangeAddress }) => (
+  <div style={ headerStyle }
+    onClick={ () => {
+      const addressComponent = (
+        <SlidePage showClose={ false }>
+          <AddressSearchGaode onSuccess={ reply => handleChangeAddress(reply) } />
+        </SlidePage>
+      )
+      Mask(addressComponent, { mask: false })
+    } }
+  >
+    <span style={ iconParentStyle }>
+      <Icon type={ require('../images/location.svg') } style={{ width: '.3rem' }} />
+    </span>
+    <span style={ addressStyle }>{ currentAddress }</span>
+    <span style={ iconParentStyle }>
+      <Icon type={ require('../images/down.svg') } style={{ width: '.22rem' }} />
+    </span>
+  </div>
+)
+         
+ 
+ 
+ 
+ baoyang/components/confirm.js 
+ 
+import React from 'react'
+import { List, WhiteSpace } from 'antd-mobile'
+import { NewPromotion } from '@boluome/oto_saas_web_app_component'
+import Service from './service'
+
+const ListItem = List.Item
+const Brief = ListItem.Brief
+
+const Confirm = ({ currentService, currentShop, channel, promotion, handlePromotionChange, handleSaveOrder, handleToMap }) => {
+  const { shopId, shopName, shopAddress } = currentShop
+  const { price } = currentService
+  const { discount } = promotion
+
+  return (
+    <div>
+      <div style={{ height: 'calc(100% - 1rem)', WebkitOverflowScrolling: 'touch', overflow: 'hidden', overflowY: 'scroll' }}>
+        <List>
+          <Service { ...{ shopId, service: currentService, isConfirm: true } } />
+          <ListItem arrow='horizontal' onClick={ () => handleToMap(shopId) }>
+            <span style={{ fontSize: '.28rem' }}>{ shopName }</span>
+            <Brief style={{ fontSize: '.2rem' }}>{ shopAddress }</Brief>
+          </ListItem>
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          <ListItem extra='支付成功后显示'>
+            兑换码
+          </ListItem>
+          <ListItem extra={ <span style={{ color: '#333' }}>一个月</span> } >
+            有效时间
+          </ListItem>
+        </List>
+        <WhiteSpace size='lg' />
+        <List>
+          <NewPromotion handleChange={ handlePromotionChange } amount={ price } orderType='baoyang' channel={ channel } />
+        </List>
+        <WhiteSpace size='md' />
+        <div style={{ fontSize: '.24rem', color: '#999', padding: '0 .3rem', lineHeight: '.4rem' }} >下单后，“兑换码”将以短信形式告知您。您可以在兑换码有效期内到商家消费，向商家出示“兑换码”即可</div>
+      </div>
+      <div style={{ height: '1rem', backgroundColor: '#fff' }}>
+        <div style={{ display: 'inline-block', padding: '.25rem .3rem', boxSizing: 'border-box', width: '65%', color: '#ff4848' }}>
+          <span style={{ fontSize: '.28rem' }}>
+            实付：￥
+            <span style={{ fontSize: '.36rem' }}>
+              { (price - discount).toFixed(2) }
+            </span>
+          </span>
+          {
+            discount > 0 && (
+              <span style={{ fontSize: '.24rem', marginLeft: '.1rem', color: '#999' }}>{ `优惠￥${ discount.toFixed(2) }` }</span>
+            )
+          }
+        </div>
+        <div onClick={ handleSaveOrder } style={{ display: 'inline-block', width: '35%', backgroundColor: '#ffab00', color: '#fff', fontSize: '.36rem', textAlign: 'center', lineHeight: '1rem', verticalAlign: 'middle' }}>
+          立即下单
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default Confirm
+         
+ 
+ 
+ 
+ baoyang/components/description.js 
+ 
+import React from 'react'
+import { browserHistory } from 'react-router'
+import { getStore } from '@boluome/common-lib'
+import { Empty } from '@boluome/oto_saas_web_app_component'
+import noneSrc from '../images/none.jpg'
+
+export default (
+  () => {
+    const { descriptionImage } = getStore('currentService', 'session')
+    const { shopName = '', distance = 0, shopId } = getStore('currentShop', 'session')
+    return (
+      <div style={{ backgroundColor: '#000', height: '100%', overflow: 'hidden', overflowY: 'scroll', WebkitOverflowScrolling: 'touch' }}>
+        { descriptionImage
+          ? <img alt='' src={ descriptionImage } width='100%' />
+          : <Empty imgUrl={ noneSrc } message='暂无介绍' /> }
+        <div style={{ position: 'fixed', height: '1.2rem', padding: '.28rem .3rem', boxSizing: 'border-box', bottom: '0', width: '100%', backgroundColor: 'rgba(0, 0, 0, .8)' }}>
+          <div
+            onClick={ () => browserHistory.push(`/baoyang/${ shopId }/service/confirm`) }
+            style={{ float: 'right', fontSize: '.28rem', color: '#ffab00', border: '1px solid #ffab00', padding: '.1rem .18rem' }}
+          >
+            立即购买
+          </div>
+          <div style={{ color: '#fff' }}>
+            <div style={{ fontSize: '.28rem', marginBottom: '.05rem' }}>{ shopName }</div>
+            <div style={{ fontSize: '.20rem' }}>{ `${ distance }km` }</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+)
+         
+ 
+ 
+ 
+ baoyang/components/detail.js 
+ 
+import React from 'react'
+import { Icon, Carousel } from 'antd-mobile'
+import { Evaluation } from '@boluome/oto_saas_web_app_component'
+import noneSrc from '../images/none.jpg'
+import Service from './service'
+
+const circleTagStyle = {
+  display:       'inline-block',
+  border:        '1px solid #ffab00',
+  padding:       '.05rem .15rem',
+  borderRadius:  '0.2rem',
+  color:         '#ffab00',
+  marginRight:   '.13rem',
+  height:        '.3rem',
+  lineHeight:    '.3rem',
+  verticalAlign: 'middle',
+}
+
+const addressStyle = {
+  fontSize:     '.28rem',
+  color:        '#333',
+  width:        '90%',
+  display:      'inline-block',
+  whiteSpace:   'nowrap',
+  textOverflow: 'ellipsis',
+  overflow:     'hidden',
+}
+
+const Detail = ({ shop = {}, handleShowLicense, handleShowServiceDetail, handleBuyService, handleToMap }) => {
+  const { shopId, shopTel, time, serviceList = [], shopAvatorImg = [], shopAddress = '', shopName = '', distance = 0, score = 0, businessLicenseUrl } = shop
+  return (
+    <div style={{ backgroundColor: '#fff', overflow: 'scroll', height: '100%' }}>
+      <div style={{ height: '4rem', width: '100%', textAlign: 'center', overflow: 'hidden' }} >
+        {
+          shopAvatorImg.length > 0 ? (
+            <Carousel infinite style={{ height: '4rem' }} dotStyle={{ marginBottom: '.14rem' }} dotActiveStyle={{ marginBottom: '.14rem' }}>
+              {
+                shopAvatorImg.map(imgSrc => (<img key={ `carousel-img-${ Math.random() }` } src={ imgSrc } alt='' onLoad={ e => (e.target.parentNode.parentNode.style.overflow = 'visible') } style={{ width: '100%', height: '4rem' }} />))
+              }
+            </Carousel>
+          ) : <img src={ noneSrc } alt='' style={{ height: '4rem' }} />
+        }
+      </div>
+      <div style={{ padding: '.24rem .3rem', borderBottom: '1px solid #e5e5e5' }} >
+        <span style={{ fontSize: '.32rem', color: '#333' }}>{ shopName }</span>
+      </div>
+      <div style={{ padding: '.24rem .3rem', borderBottom: '1px solid #e5e5e5', whiteSpace: 'nowrap' }} >
+        <div style={{ float: 'right' }} >
+          {
+            businessLicenseUrl ? (
+              <div style={{ display: 'inline-block', fontSize: '.2rem' }} onClick={ () => handleShowLicense(shopId) } >
+                <div style={{ textAlign: 'center', marginBottom: '.07rem' }} >
+                  <Icon type={ require('../images/license.svg') } style={{ width: '.7rem', height: '.7rem' }} />
+                </div>
+                <div>营业执照</div>
+              </div>
+            ) : ''
+          }
+          <div style={{ display: 'inline-block', fontSize: '.2rem', marginLeft: '.5rem' }} onClick={ () => (location.href = `tel://${ shopTel }`) }>
+            <div style={{ textAlign: 'center', marginBottom: '.07rem' }} >
+              <Icon type={ require('../images/phone.svg') } style={{ width: '.7rem', height: '.7rem' }} />
+            </div>
+            <div>联系商家</div>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '.2rem', marginBottom: '.3rem' }}>
+            <span style={ circleTagStyle }>
+              <Icon type={ require('../images/crown.svg') } style={{ height: '.32rem', width: '.32rem', position: 'relative', top: '-.03rem', marginRight: '.1rem' }} />
+              <span style={{ verticalAlign: 'top' }}>典典养车认证店</span>
+            </span>
+            <span style={ circleTagStyle }>{ time }</span>
+          </div>
+          <div style={{ fontSize: '.24rem' }}>
+            <Evaluation defaultValue={ `${ parseInt((score / 5) * 100, 10) }%` } width='1.2rem' />
+            <span style={{ fontSize: '.24rem', marginLeft: '.14rem', color: '#666' }}>{ `${ score }分` }</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: '.24rem .3rem', borderBottom: '1px solid #e5e5e5' }} onClick={ () => handleToMap(shopId) } >
+        <span style={{ float: 'right', fontSize: '.28rem', color: '#999', padding: '0.07rem 0' }} >
+          <Icon type={ require('../images/right.svg') } style={{ height: '.25rem', width: '.25rem' }} />
+        </span>
+        <span style={ addressStyle }>{ `${ distance }km ${ shopAddress }` }</span>
+      </div>
+      <div>
+        {
+          Array.isArray(serviceList) && serviceList.length > 0 ? (
+            serviceList.map(service => {
+              const { lv1ServiceTypeId, lv2ServiceTypeId } = service
+              return (
+                <Service key={ `service-list-${ lv1ServiceTypeId }-${ lv2ServiceTypeId }` } { ...{ shopId, service, handleShowServiceDetail, handleBuyService } } />
+              )
+            })
+          ) : ''
+        }
+      </div>
+    </div>
+  )
+}
+
+export default Detail
+
+
+// const freeStyle = {
+//   width:    '33%',
+//   fontSize: '.20rem',
+//   color:    '#999',
+//   display:  'inline-block',
+// }
+// const freeIconStyle = {
+//   width:       '.3rem',
+//   height:      '.3rem',
+//   marginRight: '.05rem',
+//   position:    'relative',
+//   top:         '.05rem',
+// }
+// const Free = () => (
+//   <div style={{ padding: '.24rem .3rem', borderBottom: '1px solid #e5e5e5' }} >
+//     <div style={ merge(freeStyle, { textAlign: 'left' }) } >
+//       <Icon type={ require('../images/wifi.svg') } style={ freeIconStyle } />
+//       <span>免费上网</span>
+//     </div>
+//     <div style={ merge(freeStyle, { textAlign: 'center' }) }>
+//       <Icon type={ require('../images/p.svg') } style={ freeIconStyle } />
+//       <span>免费停车</span>
+//     </div>
+//     <div style={ merge(freeStyle, { textAlign: 'right' }) }>
+//       <Icon type={ require('../images/sofa.svg') } style={ freeIconStyle } />
+//       <span>休息等候</span>
+//     </div>
+//   </div>
+// )
+         
+ 
+ 
+ 
+ baoyang/components/info.js 
+ 
+import React from 'react'
+
+const Info = ({ children }) => (<div>{ children }</div>)
+
+export default Info
+         
+ 
+ 
+ 
+ baoyang/components/license.js 
+ 
+import React from 'react'
+import { getStore } from '@boluome/common-lib'
+import { Empty } from '@boluome/oto_saas_web_app_component'
+import noneSrc from '../images/none.jpg'
+
+const License = () => {
+  const { businessLicenseUrl } = getStore('currentShop', 'session')
+  return (
+    <div style={{ backgroundColor: '#000', height: '100%' }}>
+      { businessLicenseUrl
+        ? <img alt='' src={ businessLicenseUrl } width='100%' style={{ top: '50%', position: 'relative' }}
+          onLoad={ e => {
+            const node = e.target
+            if (node) {
+              node.style.marginTop -= node.offsetHeight / 2
+            }
+          } }
+        />
+        : <Empty imgUrl={ noneSrc } message='暂无营业执照' /> }
+    </div>
+  )
+}
+
+export default License
+         
+ 
+ 
+ 
+ baoyang/components/map.js 
+ 
+import React from 'react'
+import { getStore } from '@boluome/common-lib'
+import { MapShowGaode } from '@boluome/oto_saas_web_app_component'
+
+export default (
+  () => {
+    const { shopName, shopLng, shopLat, shopAddress } = getStore('currentShop', 'session')
+    return (
+      <MapShowGaode { ...{ longitude: shopLng, latitude: shopLat, addrnameStr: shopAddress, addrTitlename: shopName } } />
+    )
+  }
+)
+         
+ 
+ 
+ 
+ baoyang/components/orderDetails.js 
+ 
+import React from 'react'
+import { afterOrdering } from 'business'
+import { List, WhiteSpace } from 'antd-mobile'
+import { moment } from '@boluome/common-lib'
+import { OrderDetail, OrderPreferential } from '@boluome/oto_saas_web_app_component'
+
+// import '../style/orderDetails.scss'
+import logo from '../images/logo.png'
+import tel from '../images/tel.png'
+
+const { customer = {} } = window.OTO_SAAS
+const { bridge = {}, isSpecialPhoneCall = false } = customer
+const { specialPhoneCall } = bridge
+const Item = List.Item
+const orderDetails = props => {
+  const { params, goBackIndex } = props
+  console.log('od---', props, params)
+  const orderId = params ? params.id : ''
+  return (
+    <div className='orderDetailsWrap'>
+      <OrderDetail
+        content={ <OrderComponent goBackIndex={ goBackIndex } /> }
+        id={ orderId }
+        orderType='baoyang'
+        goPay={ () => afterOrdering({ id: orderId }) }
+      />
+    </div>
+  )
+}
+
+export default orderDetails
+
+// 订单详情页面的主要内容
+const OrderComponent = ({ goBackIndex, orderDetailInfo }) => {
+  console.log('test---', orderDetailInfo)
+  const { shop, servers = {}, createdAt, id, platformActivity = {}, coupon = {},
+    realPrice = 0, orderPrice = 0, consumerCode, expiredTime, services,
+  } = orderDetailInfo
+  const { price, title } = platformActivity
+  const { phone = '' } = services ? services[0] : {}
+  const creatComponentLFn = (
+    isSpecialPhoneCall ? (
+      <div onClick={ () => {
+        if (isSpecialPhoneCall && specialPhoneCall && typeof specialPhoneCall === 'function') {
+          specialPhoneCall(phone)
+        } else {
+          console.log('定制电话方法', isSpecialPhoneCall, specialPhoneCall)
+        }
+      } }
+      >
+        <img src={ tel } alt='' /><span style={{ marginLeft: '15px' }}>联系商家</span>
+      </div>
+    ) : (<div><a href={ `tel:${ phone }` } style={{ color: 'ffab00' }}><img src={ tel } alt='' /><span style={{ marginLeft: '15px' }}>联系商家</span></a></div>)
+  )
+  const proCouponObj = {
+    topTitle:              servers.serviceName,
+    platformActivityPrice: price,
+    couponPrice:           coupon.price,
+    realPayPrice:          realPrice.toFixed(2),
+    sumPrice:              orderPrice.toFixed(2),
+    atitle:                title,
+    ctitle:                coupon.title,
+    creatComponentL:       creatComponentLFn,
+    realPayTitle:          '实付金额',
+  }
+  return (
+    <div className='menpiaoOrderDetails'>
+      <WhiteSpace size='lg' />
+      {
+        shop && servers ? (<Detailsinfo goBackIndex={ goBackIndex } shop={ shop } servers={ servers } proCouponObj={ proCouponObj } />) : ('')
+      }
+      {
+        consumerCode && expiredTime ? (<OrderCode expiredTime={ expiredTime } consumerCode={ consumerCode } />) : ''
+      }
+      <WhiteSpace size='lg' />
+      <OrderTimeCom id={ id } createdAt={ createdAt } />
+      <WhiteSpace />
+    </div>
+  )
+}
+
+// 详情展示部分
+const Detailsinfo = ({ goBackIndex, shop, proCouponObj }) => {
+  const { shopName } = shop
+  return (
+    <div className='orderDetailsinfo'>
+      <List>
+        <Item arrow='horizontal' onClick={ () => { goBackIndex(shop) } }><span><img src={ logo } alt='' /></span> { shopName }</Item>
+      </List>
+      <OrderPreferential propsObj={ proCouponObj } />
+    </div>
+  )
+}
+// <Item extra={ <span>¥ { price }</span> }>{ serviceName }<span style={{ marginLeft: '70%' }}>x1</span></Item>
+// 订单编号和下单时间
+const OrderCode = ({ consumerCode, expiredTime }) => {
+  return (
+    <List>
+      <Item extra={ <span style={{ color: '#999', fontSize: '28px' }}>{ consumerCode }</span> }>兑换码</Item>
+      <Item extra={ `${ expiredTime }` }>有效时间</Item>
+    </List>
+  )
+}
+
+// 订单编号和下单时间
+const OrderTimeCom = ({ id, createdAt }) => {
+  const itemcom = {
+    padding:      '26px 32px',
+    borderBottom: '1px solid #f5f5f6',
+    background:   '#fff',
+    color:        '#333',
+  }
+  const rItem = {
+    float: 'right',
+  }
+  return (
+    <div className='OrderTimeCom'>
+      <div style={ itemcom }><span>订单编号</span><span style={ rItem }>{ id }</span></div>
+      <div style={ itemcom }><span>下单时间</span><span style={ rItem }>{ `${ moment('YYYY-MM-DD HH:mm:ss')(createdAt) }` }</span></div>
+    </div>
+  )
+}
+         
+ 
+ 
+ 
+ baoyang/components/root.js 
+ 
+import React from 'react'
+import customize from 'customize'
+
+export default customize(
+  ({ children }) => (
+    <div>{ children }</div>
+  )
+)
+         
+ 
+ 
+ 
+ baoyang/components/service.js 
+ 
+import React from 'react'
+
+const Service = ({ shopId, service, isConfirm, handleShowServiceDetail, handleBuyService }) => {
+  const { descriptionImage, serviceName, serviceImg, description, price = 0 } = service
+  return (
+    <div style={{ padding: '.24rem .3rem', borderBottom: '1px solid #e5e5e5', height: '1.8rem', boxSizing: 'border-box', backgroundColor: '#fff' }} >
+      <div style={{ display: 'inline-block', width: '1.4rem', marginRight: '.3rem', position: 'relative' }} onClick={ () => handleShowServiceDetail(shopId, service) } >
+        {
+          descriptionImage && !isConfirm
+          ? (<div style={{ padding: '.08rem 0', textAlign: 'center', fontSize: '.20rem', color: '#fff', backgroundColor: 'rgba(0, 0, 0, 0.8)', position: 'absolute', bottom: 0, width: '100%' }} >查看详情</div>)
+          : ''
+        }
+        <img src={ serviceImg } alt='' style={{ height: '100%', width: '100%' }} />
+      </div>
+      <div style={{ display: 'inline-block', maxWidth: '50%', verticalAlign: 'top' }} >
+        <div style={{ fontSize: '.28rem', marginBottom: '.08rem' }} >{ serviceName }</div>
+        <div style={{ fontSize: '.24rem', color: '#666', height: '.34rem', width: '100%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} >{ description }</div>
+        <div style={{ fontSize: '.24rem', marginTop: '.21rem', color: '#fd6b70' }} >{ `￥${ price }` }</div>
+      </div>
+      {
+        isConfirm ? '' : (
+          <div style={{ display: 'inline-block', textAlign: 'right', float: 'right', padding: '.35rem 0', verticalAlign: 'top' }} >
+            <button
+              style={{ color: '#ff9a00', border: '1px solid #ff9a00', fontSize: '.26rem', padding: '.11rem .22rem', backgroundColor: '#fff', borderRadius: '.08rem' }}
+              onClick={ () => handleBuyService(shopId, service) }
+            >
+              购买
+            </button>
+          </div>
+        )
+      }
+    </div>
+  )
+}
+
+export default Service
+         
+ 
+ 
+ 
+ baoyang/components/shop.js 
+ 
+import React from 'react'
+import { Evaluation } from '@boluome/oto_saas_web_app_component'
+import LazyLoad from 'react-lazyload'
+
+const tagStyle = {
+  fontSize:     '.26rem',
+  display:      'inline-block',
+  textAlign:    'center',
+  color:        '#fff',
+  borderRadius: '10px',
+  padding:      '0.03rem 0.06rem',
+}
+const nameStyle = {
+  whiteSpace:   'nowrap',
+  textOverflow: 'ellipsis',
+  overflow:     'hidden',
+  width:        '70%',
+  display:      'inline-block',
+  fontSize:     '.28rem',
+  color:        '#333',
+}
+const iconStyle = {
+  display:     'inline-block',
+  width:       '27%',
+  boxSizing:   'border-box',
+  marginRight: '3%',
+  height:      '1.6rem',
+  lineHeight:  '1.6rem',
+  border:      '1px solid #f5f5f6',
+}
+const Shop = ({ data, handleShopClick, nolocation }) => {
+  // console.log('shop--', nolocation)
+  const { shopAvator, shopName, distance, score, minPrice, shopType } = data
+  return (
+    <div onClick={ () => handleShopClick(data) } style={{ padding: '.2rem .3rem', backgroundColor: '#fff', borderBottom: '1px solid #e5e5e5', position: 'relative' }}>
+      <div style={ iconStyle }>
+        <LazyLoad
+          throttle={ 200 }
+          placeholder={ <img style={{ height: '100%', width: '100%', border: '1px solid #f5f5f6' }} alt='' /> }
+        >
+          <img src={ shopAvator } alt='' style={{ width: '100%', height: '100%' }} />
+        </LazyLoad>
+      </div>
+      <div style={{ display: 'inline-block', width: '70%', verticalAlign: 'top' }}>
+        <div>
+          <div style={{ float: 'right' }}>
+            <span style={{ backgroundColor: '#ffab00', ...tagStyle }}>洗</span>
+            {
+              shopType === 0 && (<span style={{ backgroundColor: '#4990e2', marginLeft: '.1rem', ...tagStyle }}>养</span>)
+            }
+          </div>
+          <span style={ nameStyle }>{ shopName }</span>
+        </div>
+        <div style={{ fontSize: '.20rem', color: '#666', marginTop: '.14rem' }}>{ `${ !nolocation ? '距离您' : '距离市中心' } ${ distance }km` }</div>
+        <div style={{ paddingRight: '.4rem', position: 'absolute', bottom: '.2rem', width: 'inherit', textAlign: 'right', lineHeight: '.34rem', boxSizing: 'border-box' }}>
+          <div style={{ float: 'left' }}>
+            <span>
+              <Evaluation defaultValue={ `${ parseInt((score / 5) * 100, 10) }%` } width='1.2rem' />
+              <span style={{ fontSize: '.24rem', marginLeft: '.14rem', color: '#666' }}>{ `${ score }分` }</span>
+            </span>
+          </div>
+          <span style={{ color: '#fd676a', fontSize: '.34rem' }}>
+            { `￥${ minPrice }` }
+          </span>
+          <span style={{ color: '#a9a9a9', fontSize: '.24rem' }}>起</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+export default Shop
+         
+ 
+ 
+ 
+ baoyang/containers/app.js 
+ 
+import { connect }    from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap, Loading, Mask } from '@boluome/oto_saas_web_app_component'
+import { Login, getLocationGaode } from 'business'
+import { getStore, setStore } from '@boluome/common-lib'
+import { fetchShop, changeAddress }  from '../actions/app'
+import App            from '../components/app'
+
+
+const mapStateToProps = ({ app }) => {
+  const { offset, channel, currentAddress, point, nolocation } = app
+  return {
+    currentAddress,
+    fetchData: {
+      ...point,
+      channel,
+    },
+    offset,
+    nolocation,
+  }
+}
+
+const mapDispatchToProps = dispatch => ({
+  dispatch,
+  handleFetchShop: (limit, offset, fetchData, onSuccess) => {
+    fetchShop({ limit, offset, ...fetchData }, data => {
+      console.log(offset + data.length)
+      if (data.length !== 0) {
+        dispatch({ type: 'UPDATE_OFFSET', offset: offset + data.length })
+      }
+      onSuccess(data)
+    })
+  },
+  handleChangeAddress: reply => {
+    // console.log('reply----', reply)
+    let { address } = reply
+    // const { title, point } = reply
+    const { title, location } = reply
+    const { lat, lng } = location
+    const currentPoint = { longitude: lng, latitude: lat }
+    address = address.replace(/[ ]/g, '')
+    setStore('currentAddress', address, 'session')
+    setStore('geopoint', currentPoint, 'session')
+    dispatch(changeAddress({
+      currentAddress: address || title,
+      point:          currentPoint,
+      offset:         0,
+    }))
+    dispatch({ type: 'NOLOCATION', nolocation: false })
+  },
+  handleShopClick: shop => {
+    const { shopId } = shop
+    dispatch({ type: 'UPDATE_OFFSET', offset: 0 })
+    setStore('currentShop', shop, 'session')
+    browserHistory.push(`/baoyang/${ shopId }/detail`)
+  },
+  handleGoderDetails: () => {
+    browserHistory.push('/baoyang/orderDetails')
+  },
+})
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    Login(err => {
+      if (err) {
+        console.log('用户绑定失败')
+      } else {
+        console.log('用户绑定成功')
+      }
+    }, true)
+    getLocationGaode(err => {
+      // 定位成功
+      const handleClose = Loading()
+      if (err) {
+        const currentAddress = '上海'
+        const point          = { latitude: '31.23037', longitude: '121.4737' }
+        setStore('currentAddress', currentAddress, 'session')
+        setStore('geopoint', point, 'session')
+        dispatch({ type: 'UPDATE_SHOP', shop: {} })
+        dispatch(changeAddress({
+          currentAddress,
+          point,
+        }))
+        dispatch({ type: 'UPDATE_OFFSET', offset: 0 })
+        dispatch({ type: 'NOLOCATION', nolocation: true })
+        Mask.closeAll()
+      } else {
+        handleClose()
+        const currentAddress = getStore('currentAddress', 'session')
+        const point          = getStore('geopoint', 'session')
+        console.log('log in unionLogin', currentAddress, point)
+        dispatch({ type: 'UPDATE_SHOP', shop: {} })
+        dispatch(changeAddress({
+          currentAddress,
+          point,
+        }))
+        dispatch({ type: 'UPDATE_OFFSET', offset: 0 })
+        dispatch({ type: 'NOLOCATION', nolocation: false })
+        Mask.closeAll()
+      }
+      handleClose()
+    })
+    // unionLogin(() => {
+    //   handleClose()
+    //   const currentAddress = getStore('currentAddress', 'session')
+    //   const point          = getStore('geopoint', 'session')
+    //   console.log('log in unionLogin', currentAddress, point)
+    //   dispatch({ type: 'UPDATE_SHOP', shop: {} })
+    //   dispatch(changeAddress({
+    //     currentAddress,
+    //     point,
+    //   }))
+    //   dispatch({ type: 'UPDATE_OFFSET', offset: 0 })
+    //   Mask.closeAll()
+    // })
+  },
+  componentWillUnmount: () => {
+    dispatch({ type: 'UPDATE_OFFSET', offset: 0, point: {} })
+  },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(App)
+)
+         
+ 
+ 
+ 
+ baoyang/containers/confirm.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { getStore } from '@boluome/common-lib'
+import { saveOrder } from '../actions/confirm'
+import Confirm from '../components/confirm'
+
+const mapStateToProps = ({ app, confirm }) => {
+  const { channel } = app
+  const { promotion } = confirm
+  const currentService = getStore('currentService', 'session')
+  const currentShop = getStore('currentShop', 'session')
+  return {
+    currentService,
+    currentShop,
+    channel,
+    promotion,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    handlePromotionChange: promotion => {
+      // const { coupon, activity, discount } = promotion
+      // console.log(coupon, activity, discount)
+      dispatch({ type: 'PROMOTION_CHANGE', promotion })
+    },
+    handleToMap: shopId => {
+      browserHistory.push(`/baoyang/${ shopId }/map`)
+    },
+  }
+}
+
+const mergeProps = (stateProps, dispatchProps) => {
+  return {
+    ...stateProps,
+    ...dispatchProps,
+    handleSaveOrder: () => {
+      const { dispatch } = dispatchProps
+      const { currentService, currentShop, promotion, channel } = stateProps
+      const { coupon, activities } = promotion
+      const { lv1ServiceTypeId, lv2ServiceTypeId } = currentService
+      const { shopId, shopLng, shopLat } = currentShop
+      const userPhone = getStore('userPhone', 'session')
+      const userId = getStore('customerUserId', 'session')
+
+      const postData = {
+        channel,
+        userPhone,
+        shopId,
+        shopLng,
+        shopLat,
+        lv1ServiceTypeId,
+        lv2ServiceTypeId,
+        userId,
+      }
+      if (coupon) {
+        const { id } = coupon
+        postData.couponId = id
+      }
+      if (activities) {
+        const { id } = activities
+        postData.activityId = id
+      }
+
+      dispatch(saveOrder(postData))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps, mergeProps)(Confirm)
+         
+ 
+ 
+ 
+ baoyang/containers/detail.js 
+ 
+import { connect }      from 'react-redux'
+import { browserHistory } from 'react-router'
+import { Toast } from 'antd-mobile'
+import { wrap, Loading }         from '@boluome/oto_saas_web_app_component'
+import { getStore, setStore } from '@boluome/common-lib'
+import { Login } from 'business'
+import { fetchDetails } from '../actions/detail'
+import Detail           from '../components/detail'
+
+const mapStateToProps = ({ detail, app }) => {
+  const { channel } = app
+  console.log('details--test', detail)
+  return {
+    channel,
+    ...detail,
+  }
+}
+const imgLoad = (src, cb) => {
+  const img = new Image()
+  img.onload = cb
+  img.src = src
+}
+const mapDispatchToProps = dispatch => ({
+  dispatch,
+  handleShowLicense: shopId => {
+    const { businessLicenseUrl } = getStore('currentShop', 'session')
+    const handleClose = Loading()
+    imgLoad(businessLicenseUrl, () => {
+      handleClose()
+      browserHistory.push(`/baoyang/${ shopId }/license`)
+    })
+  },
+  handleToMap: shopId => {
+    browserHistory.push(`/baoyang/${ shopId }/map`)
+  },
+  handleShowServiceDetail: (shopId, service) => {
+    const { descriptionImage } = service
+    setStore('currentService', service, 'session')
+    const handleClose = Loading()
+    imgLoad(descriptionImage, () => {
+      handleClose()
+      browserHistory.push(`/baoyang/${ shopId }/service/description`)
+    })
+  },
+  handleBuyService: (shopId, service) => {
+    if (getStore('customerUserId', 'session')) {
+      setStore('currentService', service, 'session')
+      browserHistory.push(`/baoyang/${ shopId }/service/confirm`)
+    } else {
+      Login(err => {
+        if (err) {
+          Toast.info('登录失败', 2, null, false)
+        } else {
+          console.log('用户绑定成功')
+          setStore('currentService', service, 'session')
+          browserHistory.push(`/baoyang/${ shopId }/service/confirm`)
+        }
+      }, true)
+    }
+  },
+})
+
+const mapFunToComponent  = (dispatch, state) => ({
+  componentWillMount: () => {
+    const { params, channel } = state
+    const { shopId } = params
+    const { longitude, latitude } = getStore('geopoint', 'session')
+    dispatch(fetchDetails({
+      shopId,
+      channel,
+      shopLng: longitude,
+      shopLat: latitude,
+    }))
+  },
+  // componentWillUnmount: () => {
+  //   dispatch({ type: 'UPDATE_OFFSET', offset: 0, point: {} })
+  // },
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(Detail)
+)
+         
+ 
+ 
+ 
+ baoyang/containers/orderDetails.js 
+ 
+import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import { wrap }    from '@boluome/oto_saas_web_app_component'
+import { getStore } from '@boluome/common-lib'
+import { Login } from 'business'
+import orderDetails         from '../components/orderDetails'
+
+const mapStateToProps = state => {
+  console.log(state.orderDetails)
+  return {
+    ...state.orderDetails,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return {
+    dispatch,
+    goBackIndex: shop => {
+      const { shopId } = shop
+      // setStore('currentShop', shop, 'session')
+      browserHistory.push(`/baoyang/${ shopId }/detail`)
+    },
+  }
+}
+
+const mapFunToComponent  = dispatch => ({
+  componentWillMount: () => {
+    if (getStore('customerUserId', 'session')) {
+      console.log('已用户绑定')
+    } else {
+      Login(err => {
+        if (err) {
+          console.log('在此用户绑定失败')
+        } else {
+          console.log('用户绑定成功')
+        }
+      }, true)
+    }
+  },
+  componentDidMount: () => console.log('root mounted', dispatch),
+})
+
+export default
+connect(mapStateToProps, mapDispatchToProps)(
+  wrap(mapFunToComponent)(orderDetails)
+)
+         
+ 
+ 
+ 
+ baoyang/images/crown.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1497234736029" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2922" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M850.944 375.808c-4.096-3.584-9.216-5.632-14.336-5.632-5.12 0-10.752 2.048-14.848 6.144l0 0-154.624 160.256c-1.536 1.536-3.072 2.048-4.608 2.048-1.024 0-2.048-0.512-2.56-0.512-1.024-0.512-1.536-1.024-2.048-2.048l0 0-123.904-238.08 0 0c-2.048-3.584-4.608-6.656-8.192-8.704-3.072-2.048-7.168-3.072-10.752-3.072-3.584 0-7.168 1.024-10.752 3.072-3.072 2.048-6.144 4.608-8.192 8.704l0 0L371.2 537.6l0 0c-0.512 1.024-1.024 1.536-2.048 2.048-1.024 0.512-2.048 1.024-3.072 1.024-1.536 0-3.072-0.512-4.096-1.536l0 0L207.36 378.88l0 0c-4.096-4.096-9.728-6.144-14.848-6.144-5.632 0-10.752 2.048-14.336 5.632-4.096 3.584-6.656 8.704-6.656 14.848 0 1.536 0 2.56 0.512 4.096l0 0 57.344 321.024 0 0c0.512 4.608 3.072 8.704 6.144 11.776 3.072 3.072 7.68 5.12 12.288 5.12 0.512 0 1.024 0 1.536 0l529.408 0c5.12 0 9.728-1.536 13.824-4.608 3.584-3.072 6.656-7.168 7.168-12.288l0 0 57.344-322.56 0 0c0.512-1.536 0.512-2.56 0.512-4.096C857.6 385.024 854.528 379.392 850.944 375.808zM752.128 668.672c0 1.536-1.024 2.56-1.536 3.072-1.024 0.512-1.536 1.024-2.56 1.024l-0.512 0-0.512 0L283.136 672.768c-1.536 0-3.072-0.512-4.096-1.536-1.024-1.024-1.536-2.048-2.048-3.072l0 0L251.392 522.24l0 0c0-0.512 0-1.024 0-1.536 0-1.536 0.512-3.072 1.536-4.096 1.024-1.024 2.56-1.536 4.096-1.536 1.536 0 2.56 0.512 4.096 2.048l0 0 99.328 103.424 0 0c4.096 4.096 9.728 6.656 15.36 6.656 3.584 0 7.168-1.024 10.752-3.072 3.072-2.048 6.144-4.608 7.68-8.192l0 0 115.712-221.184c0.512-1.024 1.536-2.048 2.048-2.56 1.024-0.512 1.536-0.512 2.56-0.512 1.024 0 2.048 0 2.56 0.512 1.024 0.512 1.536 1.024 2.048 2.56l115.712 221.184 0 0c2.048 3.584 4.608 6.656 8.192 8.704 3.072 2.048 7.168 3.072 10.752 3.072 5.632 0 11.264-2.048 15.36-6.656l0 0 99.84-103.424c1.536-1.536 2.56-1.536 4.096-1.536 1.536 0 3.072 0.512 4.096 1.536 1.024 1.024 1.536 2.048 1.536 3.584l0 1.024 0 0L752.128 668.672 752.128 668.672z" p-id="2923" fill="#ff9a00"></path><path d="M771.584 772.608 258.56 772.608c-5.632 0-11.264 2.56-14.848 6.144-3.584 3.584-6.144 9.216-6.144 14.848l0 20.48c0 5.632 2.56 11.264 6.144 14.848 3.584 3.584 9.216 6.144 14.848 6.144l512.512 0c5.632 0 11.264-2.56 14.848-6.144 3.584-3.584 6.144-9.216 6.144-14.848l0-20.48c0-5.632-2.048-11.264-5.632-14.848C782.336 774.656 777.216 772.608 771.584 772.608z" p-id="2924" fill="#ff9a00"></path><path d="M154.624 310.272m-34.304 0a6.7 6.7 0 1 0 68.608 0 6.7 6.7 0 1 0-68.608 0Z" p-id="2925" fill="#ff9a00"></path><path d="M869.376 310.272m-34.304 0a6.7 6.7 0 1 0 68.608 0 6.7 6.7 0 1 0-68.608 0Z" p-id="2926" fill="#ff9a00"></path><path d="M514.048 223.232m-34.304 0a6.7 6.7 0 1 0 68.608 0 6.7 6.7 0 1 0-68.608 0Z" p-id="2927" fill="#ff9a00"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/down.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1496310046094" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10647" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M63.488 326.656l418.816 429.056c16.384 16.384 43.008 16.384 59.392 0l418.816-429.056c25.6-26.624 7.168-70.656-29.696-70.656L93.184 256C56.32 256 37.888 300.032 63.488 326.656L63.488 326.656z" p-id="10648" fill="#666666"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/empty.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1496384126408" class="icon" style="" viewBox="0 0 1064 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="30038" xmlns:xlink="http://www.w3.org/1999/xlink" width="207.8125" height="200"><defs><style type="text/css"></style></defs><path d="M991.90938 932.691142c0 49.796328-209.028167 90.165548-466.870454 90.165548S58.173669 982.48747 58.173669 932.691142 267.201835 842.525594 525.044123 842.525594s466.865257 40.369221 466.865257 90.165548" fill="#D8D8D8" p-id="30039"></path><path d="M1016.677622 524.747901a5.124106 5.124106 0 0 1-5.077334-5.139696V444.420012c0-2.821896 2.281422-5.139696 5.077334-5.139696s5.077334 2.3178 5.077334 5.139696v75.182996c0 2.827093-2.281422 5.144893-5.077334 5.144893" fill="#9C9C9C" p-id="30040"></path><path d="M974.473909 482.014109c0-2.83229 2.286619-5.139696 5.077334-5.139696h74.252758c2.790715 0 5.077334 2.312603 5.077334 5.139696 0 2.83229-2.286619 5.139696-5.077334 5.139696h-74.252758a5.118909 5.118909 0 0 1-5.077334-5.139696M44.864506 675.456887a5.124106 5.124106 0 0 1-5.077334-5.139696v-75.188193c0-2.821896 2.281422-5.139696 5.077334-5.139696s5.077334 2.3178 5.077334 5.139696v75.182996c0 2.827093-2.281422 5.144893-5.077334 5.144893" fill="#9C9C9C" p-id="30041"></path><path d="M2.660793 632.723095c0-2.83229 2.286619-5.139696 5.077334-5.139697h74.252758c2.790715 0 5.077334 2.312603 5.077334 5.139697 0 2.83229-2.286619 5.139696-5.077334 5.139696H7.738127a5.118909 5.118909 0 0 1-5.077334-5.139696" fill="#9C9C9C" p-id="30042"></path><path d="M921.247653 5.41513l33.561332 61.31777 61.380132 33.535347-61.380132 33.540545-33.561332 61.312573-33.566529-61.312573L826.300992 100.268247l61.380132-33.535347z" fill="#FFFFFF" p-id="30043"></path><path d="M921.247653 200.531298l-35.478974-64.804864-64.882817-35.458187 64.882817-35.447792 35.478974-64.820455 35.478974 64.815258 64.882817 35.447793-64.882817 35.458186-35.478974 64.810061z m-89.526335-100.263051l57.872251 31.622903 31.654084 57.815085 31.654084-57.815085 57.87225-31.622903-57.877447-31.617705-31.648887-57.820282-31.654084 57.820282-57.872251 31.617705z" fill="#9C9C9C" p-id="30044"></path><path d="M937.539814 349.878706l16.349326 29.829986 29.902742 16.328539-29.902742 16.318145-16.349326 29.840379-16.349327-29.840379-29.902741-16.318145 29.902741-16.323343z" fill="#FFFFFF" p-id="30045"></path><path d="M937.539814 447.600491l-18.261772-33.327473-33.410623-18.240984 33.41582-18.230591 18.261772-33.327473 18.266968 33.327473 33.41582 18.240985-33.41582 18.235787-18.272165 33.322276z m-40.821348-51.56326l26.384466 14.395306 14.436882 26.348088 14.436881-26.348088 26.389663-14.395306-26.389663-14.405701-14.436881-26.348088-14.436882 26.348088-26.384466 14.405701z" fill="#9C9C9C" p-id="30046"></path><path d="M486.031283 94.925874l13.0805 23.552176 23.921154 12.888217-23.921154 12.88302-13.0805 23.552177-13.075304-23.552177-23.926351-12.888217 23.926351-12.888216z" fill="#FFFFFF" p-id="30047"></path><path d="M486.03648 173.154231l-14.982552-26.982105-27.496595-14.811056 27.491398-14.811055 14.987749-26.982106 14.982551 26.982106 27.501792 14.811055-27.501792 14.811056-14.982551 26.982105z m-31.524163-41.787964l20.345713 10.954984 11.173253 20.132642 11.173252-20.132642 20.35091-10.954984-20.345713-10.965378-11.173252-20.127445-11.17845 20.132642-20.345713 10.960181z" fill="#9C9C9C" p-id="30048"></path><path d="M874.678576 841.319922h-28.780219v-237.912324h-47.249866v237.912324H489.035069v-249.719593h-30.370459v249.719593H280.640919v-237.912324h-41.33064v237.912324h-43.45096c-16.312949 0-29.50778 13.641762-29.50778 29.944316 0 16.27657 13.200028 29.949513 29.50778 29.949513h678.819257c16.307752 0 29.523371-13.672943 29.523371-29.949513 0-16.302555-13.215619-29.944316-29.523371-29.944316z m-352.180916-130.586738l10.440495 10.424904 110.552837-110.552836-11.765695-9.104902-109.227637 109.232834z m239.050436-26.342892l-11.755301-9.110098-109.227636 109.238031 10.440495 10.435298 110.542442-110.563231z m-36.435196-66.842033l-10.450889-10.435298-177.384476 177.405264 10.424904 10.435298 177.410461-177.405264z m-348.428782 154.190883a26.400057 26.400057 0 0 0 26.400057 26.452025 26.462419 26.462419 0 0 0 26.47801-26.452025c0-9.369941-6.324581-17.565392-12.233412-22.258158v-88.258301c5.908832-4.692766 12.233412-12.888217 12.233412-22.278945a26.462419 26.462419 0 0 0-26.47801-26.441632 26.410451 26.410451 0 0 0-26.400057 26.441632c0 8.850255 5.207255 16.629957 11.116087 21.447448v89.921296c-5.908832 4.807097-11.116087 12.586799-11.116087 21.42666z m-138.449589-200.354605c28.899747 0 52.498696-21.125242 54.489093-56.552247h10.336558c2.005989 35.427005 25.589346 56.552248 54.515078 56.552247 28.899747 0 52.483105-21.125242 54.4787-56.552247h10.346951c1.990398 35.427005 25.589346 56.552248 54.489094 56.552247 28.899747 0 52.498696-21.125242 54.515078-56.552247h10.320967c1.990398 35.427005 25.604937 56.552248 54.504685 56.552247s52.498696-21.125242 54.489093-56.552247h10.320967c2.016382 35.427005 25.604937 56.552248 54.515078 56.552247 28.899747 0 52.498696-21.125242 54.515078-56.552247h10.305377c1.990398 35.427005 25.604937 56.552248 54.489094 56.552247 28.910141 0 52.52468-21.125242 54.515078-56.552247h-2.146304v-12.654358h-707.812548v12.654358h4.323789c1.974807 35.421809 25.589346 56.552248 54.489094 56.552247z m1.07575-336.642299h588.871977v29.52337H239.310279v-29.52337z m581.866607 47.239471H249.350616L181.100232 484.46183H889.44286l-68.265974-202.480121zM301.443956 472.649364h-29.497386l44.272064-178.0081h29.50778l-44.282458 178.0081z m118.062302 0h-29.507781l27.429036-178.0081h29.497386l-27.418641 178.0081z m128.575552 0h-29.523371V294.641264h29.523371v178.0081z m105.252038 0l-27.43943-178.0081h29.533765l27.403051 178.0081h-29.497386z m118.041514 0l-44.256474-178.0081h29.50778l44.256474 178.0081h-29.50778z" fill="#FFFFFF" p-id="30049"></path><path d="M874.678576 903.817379H195.859319c-17.705707 0-32.111408-14.603181-32.111407-32.553141 0-17.944763 14.4057-32.547944 32.111407-32.547944h40.852529v-237.912323h46.527502v237.912323h172.821632v-249.719593h35.567321v249.719593h304.416561v-237.912323h52.446727v237.912323h26.181788c17.710904 0 32.126998 14.603181 32.126999 32.547944 0 17.94996-14.410897 32.553141-32.121802 32.553141zM195.859319 843.918352c-14.83704 0-26.914546 12.26979-26.914546 27.351083 0 15.081292 12.072309 27.356279 26.914546 27.356279h678.81406c14.847434 0 26.930137-12.26979 26.930137-27.356279 0-15.076095-12.077506-27.351083-26.930137-27.351083h-31.37865v-237.912323h-42.053004v237.912323H486.436638v-249.719592h-25.173598v249.719592H278.042488v-237.912323h-36.133778v237.912323h-46.049391z m207.219659-43.133951c-15.990743 0-28.998488-13.028532-28.998488-29.045259 0-8.153876 4.131505-16.536414 11.116087-22.632332v-87.509952c-6.984582-6.106312-11.116087-14.494047-11.116087-22.65312 0-16.011531 13.007745-29.040063 28.998488-29.040063 16.032318 0 29.076441 13.028532 29.076441 29.040063 0 11.687742-8.398128 20.220988-12.233413 23.500208v85.815775c3.840481 3.284417 12.233412 11.812466 12.233413 23.484618 0 16.011531-13.044123 29.040063-29.076441 29.040062z m0-185.689061a23.853595 23.853595 0 0 0-23.801626 23.843201c0 6.984582 3.798906 14.249794 10.159864 19.431065l0.956223 0.77953v92.389805l-0.961419 0.779529c-6.360959 5.176074-10.159864 12.43609-10.159865 19.410278a23.853595 23.853595 0 0 0 23.801626 23.848398 23.889973 23.889973 0 0 0 23.879579-23.848398c0-8.330569-5.815288-15.907593-11.251205-20.226185l-0.982207-0.779529v-90.768385l0.982207-0.779529c5.435917-4.318592 11.251205-11.900813 11.251205-20.246973a23.879579 23.879579 0 0 0-23.874382-23.832807z m144.623461 183.532364l-14.099085-14.109479 181.058657-181.079445 14.130267 14.109479-181.089839 181.079445z m-6.750723-14.109479l6.750723 6.761116 173.741477-173.731082-6.781905-6.761117-173.710295 173.731083z m110.059134 14.109479l-14.119872-14.109479 112.688746-112.699141 15.8972 12.321759-114.466074 114.486861z m-6.77151-14.109479l6.77151 6.761116 106.618813-106.639599-7.613403-5.908832-105.77692 105.787315z m-111.295988-59.685956l-14.119873-14.099085 112.688747-112.688747 15.907593 12.311365-114.476467 114.476467z m-6.766314-14.099085l6.766314 6.750723 106.629206-106.629206-7.623796-5.898438-105.771724 105.776921z m308.693578-136.750216c-31.409831 0-54.026573-22.621938-56.910831-56.557445h-5.467098c-2.915439 33.935506-25.537378 56.557445-56.936816 56.557445-31.404635 0-54.026573-22.621938-56.936815-56.557445h-5.482689c-2.884258 33.940703-25.495803 56.557445-56.910831 56.557445-31.420225 0-54.036967-22.616742-56.921225-56.557445h-5.482689c-2.910242 33.935506-25.537378 56.557445-56.936816 56.557445-31.409831 0-54.026573-22.621938-56.910831-56.557445h-5.508673c-2.884258 33.935506-25.495803 56.557445-56.895241 56.557445-31.409831 0-54.036967-22.621938-56.936815-56.557445h-5.493083c-2.884258 33.935506-25.501 56.557445-56.910831 56.557445-31.420225 0-54.036967-22.621938-56.916028-56.557445h-4.495286v-17.851219h713.019803v12.654358h2.297013l-0.155906 2.743943c-1.980004 35.302281-24.934542 59.010363-57.108312 59.010363z m-67.252585-61.749109h15.221607l0.135119 2.452918c1.824098 32.360857 22.679104 54.104526 51.895859 54.104526 28.400849 0 48.902467-20.51721 51.719167-51.360583h-1.948823v-12.654358H182.020077v7.457497h4.178277l0.135118 2.452918c1.808508 32.360857 22.663513 54.099329 51.89586 54.09933 29.221953 0 50.076958-21.743669 51.89586-54.09933l0.135118-2.452918h15.247592l0.135118 2.452918c1.834492 32.360857 22.699891 54.104526 51.921844 54.104526 29.211559 0 50.061368-21.743669 51.88027-54.099329l0.135118-2.452918h15.263182l0.135119 2.452918c1.818902 32.360857 22.673907 54.099329 51.89586 54.099329 29.216756 0 50.076958-21.743669 51.921844-54.104526l0.140315-2.452918h15.232001l0.135119 2.452918c1.818902 32.360857 22.673907 54.099329 51.906253 54.09933 29.221953 0 50.082155-21.743669 51.89586-54.09933l0.135118-2.452918h15.237198l0.135119 2.452918c1.839689 32.360857 22.705088 54.104526 51.921844 54.104526 29.211559 0 50.076958-21.743669 51.921844-54.104526l0.161103-2.452918z m125.441845-25.173598H177.47802l70.001725-207.676982h575.562814l0.592443 1.766933 69.424874 205.910049z m-708.342628-5.196861h701.103399l-66.509434-197.28326H251.211092L184.717248 481.8634z m619.491885-6.615605h-34.865744l-45.555689-183.204961h34.865744l45.555689 183.204961z m-30.806995-5.196862h24.155012l-42.967651-172.811238h-24.155013l42.967652 172.811238z m-87.535937 5.196862h-34.75661l-28.239746-183.204961h34.787791l28.208565 183.204961z m-30.3029-5.196862h24.24336l-26.602735-172.811238h-24.27454l26.633915 172.811238z m-104.88306 5.196862h-34.720232V292.042834h34.720232v183.204961z m-29.523371-5.196862h24.326509V297.239695h-24.326509v172.811238z m-99.421159 5.196862h-34.767004l28.229352-183.204961h34.756611l-28.218959 183.204961z m-28.707463-5.196862h24.253753l26.613128-172.811238h-24.238162l-26.628719 172.811238z m-89.552319 5.196862H268.625775l45.560886-183.204961h34.865744l-45.576476 183.204961z m-28.203368-5.196862h24.144619l42.988439-172.811238h-24.155013l-42.978045 172.811238z m555.508125-203.186894H236.711848v-34.720232h594.068838v34.720232z m-588.871976-5.196861h583.675115v-24.32651H241.90871v24.32651z" fill="#8C8C8C" p-id="30050"></path><path d="M893.860192 595.321282c-76.263944 0-138.085809 61.821865-138.085809 138.085809s108.214249 192.975061 108.214249 192.975061c16.494839 19.259569 43.497731 19.358309 59.831467-0.103937 0 0 108.120705-116.612377 108.120705-192.871124 0.005197-76.263944-61.816669-138.085809-138.080612-138.085809z m0 197.548299c-35.281493 0-63.879823-28.598329-63.879822-63.879822s28.593132-63.879823 63.879822-63.879823c35.281493 0 63.874626 28.598329 63.874626 63.879823 0 35.28669-28.593132 63.879823-63.874626 63.879822z" fill="#D0D0D0" p-id="30051"></path><path d="M893.969326 942.799038c-11.916404 0-23.084459-5.378752-31.4618-15.148852-0.218268-0.239056-27.397854-29.663686-54.224053-68.042508-36.133779-51.703576-54.457913-94.167132-54.457913-126.200587 0-77.209773 62.819663-140.029435 140.029435-140.029435s140.029435 62.819663 140.029436 140.029435c0 32.033455-18.303346 74.476223-54.411141 126.148618-26.795018 38.352838-53.959014 67.751484-54.229251 68.047706-8.190254 9.775297-19.327128 15.195623-31.274713 15.195623zM893.860192 597.275302c-75.063469 0-136.131789 61.06832-136.131789 136.131789 0 74.621735 106.613615 190.485764 107.694563 191.649861 7.670568 8.948996 17.788857 13.844439 28.54636 13.84444 10.778291 0 20.855006-4.926625 28.364471-13.875621 1.138113-1.231656 107.663381-116.996945 107.663381-191.61868-0.005197-75.063469-61.073517-136.131789-136.136986-136.131789z m0 197.543102c-36.294881 0-65.828646-29.533764-65.828645-65.828645s29.533764-65.823449 65.828645-65.823449 65.823449 29.528568 65.823449 65.823449S930.155074 794.818404 893.860192 794.818404z m0-127.754448c-34.148577 0-61.930999 27.782422-61.930999 61.925803 0 34.148577 27.782422 61.930999 61.930999 61.930999 34.143381 0 61.925803-27.782422 61.925803-61.930999 0-34.143381-27.782422-61.925803-61.925803-61.925803z" fill="#757575" p-id="30052"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/license.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1497250793646" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2275" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M512 1024C229.6832 1024 0 794.3168 0 512S229.6832 0 512 0s512 229.6832 512 512-229.6832 512-512 512z m0-993.28C246.62016 30.72 30.72 246.62016 30.72 512S246.62016 993.28 512 993.28 993.28 777.37984 993.28 512 777.37984 30.72 512 30.72z" fill="#4990E2" p-id="2276"></path><path d="M547.10272 493.01504h151.83872v24.94464h-151.83872z" fill="#4A90E2" p-id="2277"></path><path d="M593.3056 676.47488l-1.3312-1.24928H293.62176c-11.8784 0-21.11488-8.74496-21.11488-19.968V393.15456c0-11.22304 9.23648-21.21728 21.11488-21.21728h425.10336c11.8784 0 21.13536 8.74496 21.13536 19.968v157.26592l1.31072 1.24928c6.59456 3.74784 13.2096 8.74496 18.49344 14.97088l5.28384 6.2464v-184.7296c0-21.21728-18.49344-38.68672-40.91904-38.68672H287.00672c-22.44608 0-40.91904 17.46944-40.91904 38.68672V661.504c0 21.21728 18.49344 38.68672 40.91904 38.68672h323.46112l-3.95264-4.99712c-5.28384-6.22592-9.23648-12.47232-13.2096-18.71872z" fill="#4A90E2" p-id="2278"></path><path d="M547.10272 547.92192h44.89216v24.96512h-44.89216zM547.10272 439.33696h151.83872v24.96512h-151.83872zM685.73184 551.66976c-48.8448 0-87.1424 36.18816-87.1424 82.37056 0 44.93312 39.60832 82.37056 87.1424 82.37056 48.8448 0 87.1424-36.20864 87.1424-82.39104-0.02048-46.16192-39.6288-82.35008-87.1424-82.35008z m-1.3312 132.3008c-3.95264 3.74784-11.8784 3.74784-17.16224 0l-36.9664-34.93888c-3.95264-3.74784-3.95264-11.24352 0-14.97088 3.95264-3.74784 11.8784-3.74784 17.16224 0l29.04064 27.46368 56.77056-52.4288c3.95264-3.74784 11.8784-3.74784 17.16224 0 3.95264 3.74784 3.95264 11.24352 0 14.97088l-66.00704 59.904zM414.24896 566.272c-36.70016 0-66.53952-28.63104-66.53952-63.81568 0-35.18464 29.85984-63.81568 66.53952-63.81568 36.70016 0 66.56 28.63104 66.56 63.81568-0.02048 35.18464-29.88032 63.81568-66.56 63.81568z m0-106.61888c-24.45312 0-44.3392 19.21024-44.3392 42.8032 0 23.61344 19.88608 42.8032 44.3392 42.8032s44.3392-19.21024 44.3392-42.8032c0-23.61344-19.90656-42.8032-44.3392-42.8032z" fill="#4A90E2" p-id="2279"></path><path d="M502.9888 596.43904a11.264 11.264 0 0 1-9.5232-5.05856l-36.352-56.95488a10.19904 10.19904 0 0 1 3.76832-14.41792 11.4688 11.4688 0 0 1 15.2576 3.56352l36.352 56.95488a10.19904 10.19904 0 0 1-3.76832 14.41792 11.75552 11.75552 0 0 1-5.7344 1.49504z" fill="#4A90E2" p-id="2280"></path><path d="M502.9888 596.43904a11.71456 11.71456 0 0 1-2.7648-0.32768l-36.352-8.78592a10.48576 10.48576 0 0 1-8.00768-12.77952 11.1616 11.1616 0 0 1 13.5168-7.5776l36.352 8.78592c5.9392 1.4336 9.5232 7.168 8.00768 12.77952a10.99776 10.99776 0 0 1-10.752 7.90528z" fill="#4A90E2" p-id="2281"></path><path d="M456.97024 616.93952a12.4928 12.4928 0 0 1-3.31776-0.47104 10.40384 10.40384 0 0 1-7.29088-13.14816l9.64608-29.2864a11.264 11.264 0 0 1 13.90592-6.90176 10.4448 10.4448 0 0 1 7.31136 13.14816l-9.66656 29.30688a11.0592 11.0592 0 0 1-10.58816 7.35232z" fill="#4A90E2" p-id="2282"></path><path d="M456.97024 616.93952a11.22304 11.22304 0 0 1-9.64608-5.28384l-29.5936-49.00864a10.19904 10.19904 0 0 1 4.13696-14.31552 11.42784 11.42784 0 0 1 15.1552 3.91168l29.5936 49.00864a10.19904 10.19904 0 0 1-4.13696 14.31552 11.73504 11.73504 0 0 1-5.50912 1.37216zM325.44768 596.43904a11.61216 11.61216 0 0 1-5.7344-1.51552 10.17856 10.17856 0 0 1-3.76832-14.41792l36.352-56.95488a11.4688 11.4688 0 0 1 15.2576-3.56352 10.19904 10.19904 0 0 1 3.7888 14.41792l-36.352 56.95488a11.34592 11.34592 0 0 1-9.54368 5.07904z" fill="#4A90E2" p-id="2283"></path><path d="M325.46816 596.43904a10.99776 10.99776 0 0 1-10.752-7.8848 10.48576 10.48576 0 0 1 8.00768-12.77952l36.352-8.78592a11.18208 11.18208 0 0 1 13.5168 7.5776 10.48576 10.48576 0 0 1-8.00768 12.77952l-36.352 8.78592a12.98432 12.98432 0 0 1-2.7648 0.3072z" fill="#4A90E2" p-id="2284"></path><path d="M371.46624 616.93952a11.01824 11.01824 0 0 1-10.58816-7.3728l-9.64608-29.30688a10.38336 10.38336 0 0 1 7.29088-13.14816c5.8368-1.67936 12.0832 1.37216 13.90592 6.90176l9.64608 29.2864a10.40384 10.40384 0 0 1-7.29088 13.14816 10.9568 10.9568 0 0 1-3.31776 0.49152z" fill="#4A90E2" p-id="2285"></path><path d="M371.44576 616.93952a11.264 11.264 0 0 1-5.48864-1.39264 10.19904 10.19904 0 0 1-4.13696-14.31552l29.5936-49.00864a11.4688 11.4688 0 0 1 15.1552-3.91168c5.3248 2.8672 7.168 9.29792 4.13696 14.31552l-29.5936 49.00864a11.18208 11.18208 0 0 1-9.66656 5.30432z" fill="#4A90E2" p-id="2286"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/location.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1496309943872" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9846" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M512 52.736c-191.6672 0-347.6224 155.9552-347.6224 347.6224 0 76.4928 24.3712 149.0688 70.3744 209.6896l261.8368 353.4592c3.6096 4.8896 9.344 7.7824 15.4368 7.7824 0 0 0 0 0 0 6.0672 0 11.8016-2.8928 15.4368-7.7824L801.024 593.5616c38.3488-57.216 58.5984-124.032 58.5984-193.2032C859.6224 208.6656 703.6672 52.736 512 52.736zM769.6384 571.4432 512 919.808l-246.528-332.7744c-41.0112-54.0672-62.6944-118.6304-62.6944-186.6752C202.7776 229.8624 341.4784 91.136 512 91.136s309.2224 138.7264 309.2224 309.2224C821.2224 461.8752 803.2 521.2928 769.6384 571.4432z" p-id="9847" fill="#ffab00"></path><path d="M512 271.3856c-71.1168 0-128.9728 57.856-128.9728 128.9728s57.856 128.9728 128.9728 128.9728 128.9728-57.856 128.9728-128.9728S583.1168 271.3856 512 271.3856zM512 490.9312c-49.9456 0-90.5728-40.6272-90.5728-90.5728s40.6272-90.5728 90.5728-90.5728 90.5728 40.6272 90.5728 90.5728S561.9456 490.9312 512 490.9312z" p-id="9848" fill="#ffab00"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/p.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M845.050613 649.76939c7.39105 2.698492 14.724301 5.559544 22.180375 8.055739 16.552195 5.545094 18.560711 8.167724 18.874993 25.789201 0.046962 2.442009 0.007225 4.884017 0.007225 8.171337-10.616958 0-20.587289-0.039737-30.557621 0.010837-8.507294 0.043349-14.124636 4.407175-14.417244 11.0649-0.307057 6.917821 5.610118 12.166694 14.186048 12.275067 9.966719 0.130048 19.933438 0.0289 30.76353 0.0289 0 13.644182 0.007225 26.370804-0.003612 39.101039-0.007225 6.527677 0.158947 13.058967-0.126435 19.572194-0.202297 4.544448 1.278803 7.315189 4.855118 10.580834 3.605214 3.294544 5.248874 8.958849 7.120117 13.832029 0.838086 2.185526-0.01445 4.974328 0.169785 7.470524 1.46665 20.153797-8.084638 24.474274-23.256882 25.951761-5.942462 0.57799-11.856025 1.354665-18.481238 2.120502 2.561219-38.371326-8.875762-70.69543-37.869197-95.657383-21.215854-18.264491-46.10917-26.663412-74.127247-25.74224-20.85461 0.682751-39.794627 7.279064-56.90675 18.961692-17.404731 11.877699-30.109678 27.707407-38.262953 47.210964-7.994327 19.124252-10.425499 38.942092-7.152629 59.8834-86.759946 0-172.739605 0-259.506775 0 5.064639-42.1391-7.932916-77.313418-41.192641-103.713122-23.014848-18.268104-49.895006-24.954728-79.058226-21.721595-52.185293 5.783515-105.483217 57.137946-92.659058 130.521031-11.169661-1.820669-21.909442-3.388468-32.558912-5.462008-2.225262-0.433493-4.399951-2.431171-6.079735-4.204879-7.893179-8.333897-6.524065-33.928026 1.60031-41.958478 2.333636-2.304736 4.067606-6.108634 4.385501-9.388729 1.123469-11.476718 1.650885-23.014848 2.098827-34.542141 0.216746-5.527032 1.697846-8.554255 8.113538-9.031097 7.943753-0.588828 15.779133-2.633468 23.643413-4.150692 7.575284-1.459425 12.27868-7.369375 10.970977-13.593608-1.394401-6.592701-7.488586-10.288226-14.962722-8.994973-8.1316 1.408851-16.255975 2.882726-24.369513 4.327702-1.954329-7.651146 0.419043-12.780809 8.348346-17.964659 22.812552-14.919373 47.713093-25.612192 73.766003-32.804558 29.354679-8.106313 59.316247-13.976526 88.970758-21.006332 3.211458-0.758612 6.603538-2.19275 9.106959-4.277128 33.440347-27.884416 69.557512-51.563953 108.65855-70.789353 34.206184-16.815903 70.926626-22.216499 108.318981-24.607934 40.19922-2.568444 80.188919-0.126435 119.987159 5.931625 18.611285 2.832152 35.763145 9.833059 51.592853 19.561357 24.524848 15.071095 48.973835 30.366162 72.530549 46.882232 12.983105 9.099734 25.677216 12.965043 41.055368 8.803514 6.968395-1.885693 14.319708-2.344473 21.494012-3.467941 9.280356-1.4522 15.576837 1.972392 16.982075 9.255069 1.517224 7.889567-3.059736 13.579158-12.455689 15.461239-1.838731 0.368469-3.6883 0.668301-5.527032 0.997033C845.213173 648.934916 845.130087 649.350347 845.050613 649.76939zM591.146731 582.92482c-89.310328-10.046193-164.817526 19.716692-232.579655 77.515714 75.846768 17.191597 150.985497 8.127988 226.629968 4.179592C587.216397 636.894657 589.177951 609.9567 591.146731 582.92482zM616.220669 585.099508c-1.892918 25.688053-3.778611 51.264121-5.682366 77.129183 34.92506-2.94775 68.907273-5.816027 104.005729-8.781839C689.639878 617.67287 659.407377 592.627831 616.220669 585.099508zM573.474679 715.07506c0 0.021675 0 0.039737 0 0.065024 4.75397 0 9.511552 0.003612 14.269134-0.003612 0.498517 0 1.000646-0.032512 1.49555-0.111986 6.831122-1.076507 11.942723-6.766098 11.411695-12.690498-0.527416-5.967749-5.624567-10.403824-12.56045-10.519422-9.511552-0.158947-19.033941-0.260096-28.538268-0.01445-7.300739 0.187847-12.238943 5.039352-12.41234 11.473106-0.169785 6.332605 4.775644 11.328608 12.065546 11.751264C563.95229 715.302644 568.717097 715.07506 573.474679 715.07506zM311.027379 125.868209c46.697998 0 93.395996 0.075861 140.086769-0.032512 22.310423-0.054187 44.812305 20.446404 45.061563 43.970607 0.285383 27.042718-0.007225 54.09266 0.083086 81.138991 0.122823 36.073815 0.437105 72.14763 0.549091 108.221445 0.093923 30.059104 0.845311 60.147108-0.223971 90.170088-0.989808 27.77243-26.461115 46.871395-49.035246 45.903261-17.014587-0.729713-34.083361-0.332344-51.119623-0.382919-13.767005-0.043349-27.530397-0.057799-41.301014 0.003612-17.28552 0.079474-34.574653 0.270933-51.867398 0.372081-11.270809 0.068636-22.545231 0.086699-33.819653 0.090311-29.560588 0.010837-59.117563 0.252871-88.674538-0.115598-12.275067-0.151722-24.243078-0.747775-34.968409-9.475427-13.380474-10.887891-19.66973-24.730757-19.745591-40.900034-0.404593-89.62461-0.549091-179.256444 0.050574-268.877442 0.155335-23.134059 10.327963-42.092138 36.767403-48.962997 2.846602-0.74055 5.877438-1.076507 8.825188-1.080119C218.137125 125.846535 264.582252 125.868209 311.027379 125.868209zM177.208191 163.939703c-7.047868 0.075861-11.884924 4.992391-11.978847 11.754876-0.256483 18.033295-0.072249 248.636946-0.126435 266.670241-0.079474 26.031235 0-26.031235 0 0 0.122823 0 0.003612-134.480264 0.126435-134.483876 0 8.268873-0.155335 126.211391-0.126435 134.483876 0.0289 8.261648 0.003612-8.26526 0 0-0.003612 11.769326 0.075861-11.769326 0 0-0.108373 16.530521-0.863373-16.479946 0 0 0.581603 11.054063 5.653467 15.020521 16.389635 14.890473 22.523557-0.278158 45.057951-0.462392 67.588732-0.531029 29.289655-0.086699 58.590147-0.036124 87.883414-0.01445 11.516455 0.007225 23.036523 0.090311 34.552978 0.151722 24.037169 0.130048 48.085175 0.632177 72.115118 0.220359 9.269518-0.158947 14.084899-4.125405 13.792292-14.522004-0.689976-24.774106-0.021675-49.573499 0-74.362055 0.032512-35.810107-0.11921-71.616602 0-107.426709 0.090311-27.288364-0.093923-54.573115 0-81.861478 0.039737-11.003489-3.269257-14.695402-14.283584-15.540712-1.49555-0.115598-3.009162-0.046962-4.515549-0.0289M748.573207 898.139015c-44.400487-0.003612-78.696982-34.679414-78.646408-79.520618 0.046962-43.103621 34.878098-77.869733 78.035906-77.884183 42.973573-0.01445 78.386312 34.444605 79.654278 75.008682C829.083633 863.008047 790.351063 899.352795 748.573207 898.139015zM778.386665 819.79244c0.263708-15.659923-13.748943-29.907382-29.582262-30.084391-15.677985-0.173397-29.921832 14.001813-29.903769 29.748435 0.018062 15.450401 13.59722 29.300492 29.170444 29.766497C763.431168 849.68176 778.126569 835.416238 778.386665 819.79244zM196.982682 818.921842c-0.061411-42.037952 34.787787-77.136408 75.427725-78.3538 46.101946-1.387177 82.201048 36.048528 81.959014 77.920308-0.252871 44.465511-34.33262 79.625379-77.783035 79.647053C231.188866 898.164302 197.044094 864.192927 196.982682 818.921842zM275.101674 789.79836c-15.649085 0.234809-29.184894 13.987364-29.137932 29.607549 0.046962 15.930856 14.182435 30.041042 29.802621 29.748435 16.205401-0.307057 29.596712-13.918727 29.535301-30.019367C305.236639 803.388355 291.000018 789.556326 275.101674 789.79836zM227.023724 421.694446c0-73.596218 0-146.296552 0-219.600162 2.402272-0.223971 4.540836-0.59244 6.683012-0.596052 29.603937-0.021675 59.229549-0.650239 88.811811 0.198684 30.705731 0.881435 57.134334 11.816288 70.457009 41.387713 20.637864 45.809338 0.834473 101.303625-60.197682 110.836851-15.714109 2.456458-31.984534 1.354665-48.005701 1.856794-2.712942 0.083086-5.433108 0.010837-9.04916 0.010837 0 22.227337 0 43.883908 0 65.905336C259.116632 421.694446 243.435034 421.694446 227.023724 421.694446zM275.997559 312.967259c13.048129 0 25.301522 0.072249 37.554915-0.054187 2.980262-0.0289 5.974974-0.59244 8.933561-1.101794 16.718367-2.882726 27.754368-15.06387 28.234823-31.088649 0.552703-18.250041-8.846863-31.879774-26.58755-34.469892-15.692435-2.286674-31.789463-1.770095-48.132136-2.510645C275.997559 267.540839 275.997559 289.750114 275.997559 312.967259z" /></svg>         
+ 
+ 
+ 
+ baoyang/images/phone.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1497249981880" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5707" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M512 0c281.6 0 512 230.4 512 512s-230.4 512-512 512S0 793.6 0 512 230.4 0 512 0z m0 36.565333A474.453333 474.453333 0 0 0 36.565333 512 474.453333 474.453333 0 0 0 512 987.434667 474.453333 474.453333 0 0 0 987.434667 512 474.453333 474.453333 0 0 0 512 36.565333z m-43.904 515.669334c40.234667 40.234667 113.408 80.469333 128 58.496 25.6-25.6 29.269333-58.496 87.808-10.965334 58.496 43.904 14.592 76.8-11.008 102.4-29.226667 29.269333-138.965333 3.669333-248.661333-106.069333C318.165333 486.4 288.853333 376.746667 318.165333 347.434667c25.6-25.6 54.869333-69.504 102.4-10.965334 47.530667 58.496 14.634667 58.496-10.965333 84.096-18.304 21.930667 18.304 91.434667 58.496 131.669334z" fill="#ff9a00" p-id="5708"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/right.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1497243251052" class="icon" style="" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3628" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><defs><style type="text/css"></style></defs><path d="M763.448846 480.660224l-37.939077-37.939077-364.895641-364.895641c-17.084097-17.083074-45.039799-17.084097-62.123896 0l-37.939077 37.939077c-17.084097 17.084097-17.084097 45.039799 0 62.122873l333.834204 333.834204-333.834204 333.833181c-17.084097 17.084097-17.084097 45.039799 0 62.123896l37.939077 37.939077c17.084097 17.084097 45.039799 17.084097 62.123896 0l364.895641-364.895641 37.939077-37.939077C780.532943 525.699 780.532943 497.744321 763.448846 480.660224z" p-id="3629" fill="#dadada"></path></svg>         
+ 
+ 
+ 
+ baoyang/images/sofa.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M433.92 570.24l166.4 0c17.92 0 32-14.08 32-32l0-12.8c0-17.92-14.08-32-32-32l-166.4 0c-17.92 0-32 14.08-32 32l0 12.8C401.92 556.16 416 570.24 433.92 570.24zM805.76 454.4c1.28-12.16-2.56-24.32-10.88-33.28-8.96-9.6-21.76-15.36-35.2-15.36l-17.92 0 0-100.48c0-26.24-21.76-48-48-48l-355.84 0c-26.24 0-48 21.76-48 48l0 100.48-15.36 0c-26.24 0-48 21.76-48 48l0 210.56c0 0.64 0 1.28 0 1.92l0 1.28c0 21.12 13.44 38.4 32 45.44l0 12.8c0 12.16 10.24 22.4 22.4 22.4l42.88 0c12.16 0 22.4-10.24 22.4-22.4l0-9.6 336.64 0 0 10.88c0 12.16 10.24 22.4 22.4 22.4l42.88 0c12.16 0 22.4-10.24 22.4-22.4l0-12.8c12.16-3.84 23.04-12.16 28.8-23.68 5.12-8.32 7.04-17.28 6.4-26.88L805.76 454.4zM337.92 289.28l355.84 0c8.96 0 16 7.04 16 16l0 100.48-12.8 0c-26.24 0-48 21.76-48 48l0 133.12-263.68 0L385.28 455.04c0 0 0 0 0 0l0-1.92c0-26.24-21.76-48-48-48l-15.36 0 0-100.48C321.92 296.32 329.6 289.28 337.92 289.28zM773.76 666.24c0.64 2.56 0 5.12-1.92 7.68l-0.64 1.28c-2.56 5.76-8.32 8.96-14.08 8.96L275.2 684.16c-8.96 0-16-7.04-16-16l0-4.48L259.2 453.12c0-8.96 7.04-16 16-16l15.36 0 0 0 48 0c8.32 0 16 8.32 16 17.28l0 163.2 0 0 0 0.64 327.68 0 0.64-164.48c0-8.96 7.04-16 15.36-16l32.64-0.64 29.44 0c4.48 0 8.32 1.92 10.88 5.12 1.92 1.92 3.2 5.12 3.2 8.96l0 212.48L773.76 666.24z" /></svg>         
+ 
+ 
+ 
+ baoyang/images/wifi.svg 
+ 
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="200px" height="200.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#999999" d="M716.559421 603.452875c-50.847062-50.851155-118.345362-78.872349-190.124152-78.872349-71.77265 0-139.269927 28.021194-190.092429 78.872349l1.604544 1.602498c-8.083096 12.229532-7.284917 28.742625 2.925632 40.125883 11.104919 12.481266 29.437449 14.56574 42.871413 5.618974l2.137687 2.13564c75.192539-75.139328 205.943442-75.139328 281.077653 0l1.848091-1.843998c12.152784 7.78122 28.418236 6.890944 39.712467-3.175319 12.31242-10.979052 14.509459-28.977985 5.931083-42.360783L716.559421 603.452875zM527.348058 691.871647c-34.06177 0-61.739133 27.64871-61.739133 61.740156 0 33.978882 27.677363 61.680804 61.739133 61.680804 34.089399 0 61.679781-27.701922 61.679781-61.680804C589.028862 719.519334 561.438481 691.871647 527.348058 691.871647zM964.201567 350.762759c-0.391926-0.438998-0.792039-0.864694-1.202385-1.278109l1.315972-1.318018C723.341894 107.222023 331.353199 107.194394 90.377892 348.025415l1.388627 1.388627c-12.31242 12.289907-13.011338 32.162514-1.274016 45.302789 12.143575 13.650905 33.008788 14.849196 46.63411 2.705622 0.469698-0.417509 0.921999-0.848321 1.362021-1.286296l1.429559 1.429559c213.582423-213.610052 561.191352-213.465766 774.917038 0.143263l1.487887-1.489934c12.300141 12.214183 32.094976 12.882402 45.198411 1.203408C975.203132 385.2799 976.402447 364.416733 964.201567 350.762759zM833.859987 478.540957l1.387603-1.38965c-82.316797-82.319867-191.661158-127.670751-307.930231-127.69838 0 0-0.029676 0-0.056282 0-116.241444 0-225.581712 45.322232-307.872926 127.640052l1.413186 1.413186c-12.338003 12.292977-13.037944 32.165584-1.299599 45.333488 12.172227 13.623275 33.036417 14.81952 46.63411 2.679016 0.475837-0.421602 0.932232-0.857531 1.37737-1.300622l1.414209 1.414209c69.066005-69.094658 160.792103-107.11867 258.33365-107.11867 0.027629 0 0.056282 0 0.056282 0 97.571223 0 189.29732 38.080294 258.449283 107.174951l1.39272-1.393743c12.346189 12.231579 32.1707 12.914124 45.239344 1.222851 13.681604-12.144598 14.879895-33.009811 2.735297-46.633087C834.719564 479.422024 834.292845 478.975862 833.859987 478.540957z" /></svg>         
+ 
+ 
+ 
+ baoyang/index.js 
+ 
+import 'styles/index.scss'
+import React        from 'react'
+import { createStore, applyMiddleware } from 'redux'
+import { render }   from 'react-dom'
+import { Provider } from 'react-redux'
+import thunk        from 'redux-thunk'
+import reducers     from './reducers'
+import Routes       from './routes'
+
+// 定义根组件
+const Root  = () => (
+  <Provider store={ createStore(reducers, applyMiddleware(thunk)) }>
+    <Routes />
+  </Provider>
+)
+render(<Root />, document.querySelector('#root'))
+         
+ 
+ 
+ 
+ baoyang/reducers/app.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  channel:        'diandian',
+  offset:         0,
+  currentAddress: '定位中...',
+  point:          {},
+  nolocation:     false,
+}
+
+const app = (state = initialState, action) => {
+  switch (action.type) {
+    case 'UPDATE_OFFSET':
+    case 'CHANGE_ADDRESS':
+    case 'NOLOCATION':
+      return mergeState(state, action)
+    default:
+      return state
+  }
+}
+
+export default app
+         
+ 
+ 
+ 
+ baoyang/reducers/confirm.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {
+  promotion: {
+    discount: 0,
+  },
+}
+
+const confirm = (state = initialState, action) => {
+  switch (action.type) {
+    case 'PROMOTION_CHANGE':
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default confirm
+         
+ 
+ 
+ 
+ baoyang/reducers/detail.js 
+ 
+import { mergeState } from '@boluome/common-lib'
+
+const initialState = {}
+
+const detail = (state = initialState, action) => {
+  switch (action.type) {
+    case 'UPDATE_SHOP':
+      return mergeState(state, action)
+    default: return state
+  }
+}
+
+export default detail
+         
+ 
+ 
+ 
+ baoyang/reducers/index.js 
+ 
+import { combineReducers } from 'redux'
+// 引入reducers
+import app     from './app'
+import detail  from './detail'
+import confirm from './confirm'
+// 组合reducers
+export default combineReducers({
+  app,
+  detail,
+  confirm,
+})
+         
+ 
+ 
+ 
+ baoyang/routes.js 
+ 
+import React from 'react'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// 路由配置
+const Routes = () => (
+  <Router history={ browserHistory } >
+    <Route path='/baoyang' component={ require('react-router?name=root!./components/root') } >
+      <IndexRoute component={ require('react-router?name=app!./containers/app') } />
+      <Route path='orderDetails/:id' component={ require('react-router?name=orderDetails!./containers/orderDetails') } />
+      <Route path=':shopId' component={ require('react-router?name=info!./components/info') }>
+        <Route path='detail' component={ require('react-router?name=detail!./containers/detail') } />
+        <Route path='license' component={ require('react-router?name=license!./components/license') } />
+        <Route path='service' component={ require('react-router?name=info!./components/info') } >
+          <Route path='description' component={ require('react-router?name=description!./components/description') } />
+          <Route path='confirm' component={ require('react-router?name=confirm!./containers/confirm') } />
+        </Route>
+        <Route path='map' component={ require('react-router?name=map!./components/map') } />
+      </Route>
+    </Route>
+  </Router>
+)
+export default Routes

@@ -1,0 +1,56 @@
+@import "../common.scss";
+
+.cart-brand-item {
+  @include s_border_t;
+  background: $bg-ff;
+  margin-bottom: 20px;
+  .not-select-icon, .am-icon {
+    @include s_blockDemo(38px, 38px);
+    border:1px solid #999999;
+    border-radius:100%;
+    float: left;
+    @include s_middle;
+  }
+  .am-icon {
+    border: none;
+  }
+  .cart-brand-item-title {
+    height: 80px;
+    padding-left: 90px;
+    position: relative;
+    @include s_border_b;
+    .not-select-icon, .am-icon {
+      left: 25px;
+    }
+    .brand-name {
+      float: left;
+      @include s_fontDemo(24px, 80px, $font-33);
+    }
+    .brand-edit {
+      float: right;
+      @include s_fontDemo(24px, 80px, $font-33);
+      margin-right: 30px;
+    }
+  }
+  .clear-commodies {
+    height: 90px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    -webkit-box-pack: center;
+        -ms-flex-pack: center;
+            justify-content: center;
+    .am-icon {
+      position: static;
+      -webkit-transform: translateY(0);
+              transform: translateY(0);
+      margin-right: 10px;
+    }
+    span {
+      @include s_fontDemo(28px, 28px, $font-ad);
+    }
+  }
+}

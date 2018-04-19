@@ -1,0 +1,113 @@
+@import "../../../styles/s_common.scss";
+
+.reserve-time {
+  background: $bg-ff;
+  margin-bottom: 10px;
+  .header {
+    @include s_border_b;
+    p {
+      @include s_fontDemo(28px, auto, $font-33);
+      .text {
+        @include s_fontDemo(20px, auto, $font-66);
+      }
+      .green-bg, .white-bg {
+        display: inline-block;
+        @include s_blockDemo(20px, 20px);
+      }
+      .green-bg {
+        background: #83cd47;
+      }
+      .white-bg {
+        background: #ededed;
+      }
+    }
+  }
+  .axis {
+    height: 70px;
+    /* padding-right: 24px;*/
+    border-bottom: 1px solid #000;
+    margin-bottom: 30px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    .time-part {
+      width: 70px;
+      text-align: right;
+      @include s_fontDemo(22px, 70px, $font-33);
+    }
+    .am-flexbox.am-flexbox-align-middle {
+      -webkit-box-align: end;
+          -ms-flex-align: end;
+              align-items: flex-end;
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      padding-left: 30px;
+      .long {
+        height: 16px;
+        border-left: 1px solid #333;
+      }
+      .short {
+        height: 12px;
+        border-left: 1px solid #999;
+      }
+      .am-flexbox-item {
+        position: relative;
+        margin-left: 0;
+        &:last-of-type {
+          width: 1px;
+          -webkit-box-flex: 0;
+              -ms-flex: none;
+                  flex: none;
+          padding-right: 24px;
+        }
+        p {
+          position: absolute;
+          z-index: 2;
+          @include s_fontDemo(20px, 29px, $font-66);
+          -webkit-transform: translate3d(-50%, -30px, 0);
+                  transform: translate3d(-50%, -30px, 0);
+        }
+      }
+    }
+  }
+  .reserve-time-list {
+    max-height: 400px;
+    overflow: auto;
+  }
+  .time-axis-item {
+    height: 30px;
+    padding-bottom: 30px;
+    padding-right: 24px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    .time-part {
+      width: 70px;
+      height: 30px;
+      text-align: right;
+      @include s_fontDemo(22px, 30px, $font-66);
+    }
+    .am-flexbox.am-flexbox-align-middle {
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      height: 20px;
+      padding-left: 30px;
+      .am-flexbox-item {
+        height: 20px;
+        margin-left: 0;
+      }
+      .able {
+        background: #83cd47;
+      }
+      .disable {
+        background: #eee;
+      }
+    }
+  }
+  /* 改变antd组件样式*/
+  .am-list-item .am-list-line .am-list-extra {
+    @include s_fontDemo(24px, auto, $font-66);
+  }
+}

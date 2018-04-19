@@ -1,0 +1,45 @@
+@import "../common.scss";
+
+.message {
+  background: $bg-ff;
+  .message-list {
+    padding-left: 30px;
+    li {
+      padding: 30px;
+      @include s_border_b;
+      .sc-badge-icon {
+        left: 120px;
+        right: auto;
+        top: 20px;
+        transform: translateX(25px);
+      }
+      dl {
+        overflow: hidden;
+        position: relative;
+        dt {
+          @include sc_img_container(96px, 96px);
+          border-radius:12px;
+          float: left;
+          margin-right: 20px;
+        }
+        dd {
+          float: left;
+          width: calc(100% - 120px);
+          &:nth-of-type(1) {
+            p:nth-of-type(1) {
+              float: left;
+              @include s_fontDemo(34px, 60px, $font-33);
+            }
+            p:nth-of-type(2) {
+              float: right;
+              @include s_fontDemo(24px, 60px, $font-99);
+            }
+          }
+          &:nth-of-type(2) {
+            @include s_fontDemo(28px, 28px, $font-99);
+          }
+        }
+      }
+    }
+  }
+}

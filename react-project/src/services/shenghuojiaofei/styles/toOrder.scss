@@ -1,0 +1,44 @@
+@mixin fontDemo($f, $c, $h) {
+  font-size: $f;
+  color: $c;
+  line-height: $h;
+ }
+@mixin blockDemo($w, $h) {
+  width: $w;
+  height: $h;
+ }
+
+.footer{
+  position: absolute;
+  box-sizing: border-box;
+  padding-left: 30px;
+  border-top: 1px solid #e5e5e5;
+  bottom: 0;
+  width: 100%;
+  height: 112px;
+  background: #fff;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  .real-price{
+    font-size:20px;
+    color:#999999;
+    line-height: 112px;
+  }
+  .pay-price{
+    @include fontDemo(.28rem, #ff4848, 1.12rem);
+    .cur-price{
+      font-size: 36px;
+    }
+  }
+  .button{
+    @include blockDemo(200px, 112px);
+    @include fontDemo(34px, #fff, 112px);
+    text-align:center;
+    background-color: rgb(219,219,219);
+    &.active{
+      background-color: rgb(255,160,0);
+      color: #fff;
+    }
+  }
+}

@@ -1,0 +1,90 @@
+@import "../common.scss";
+
+.commodity-list-container {
+  width: 100%;
+  .commodity-list-container-bottom {
+    padding-top: 100px;
+    &.commodity-list-brand {
+      padding-top: 0;
+      .commodity-list-header {
+        .filter-list {
+          width: 100%;
+        }
+      }
+    }
+    .commodity-list-header {
+      @include s_border_t;
+      height: 100px;
+      padding-left: 30px;
+      padding-right: 30px;
+      background: $bg-ff;
+      @include s_border_b;
+      @include s_border_t;
+      .filter-list {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        justify-content: space-around;
+        float: left;
+        width: calc(100% - 100px);
+        height: 100px;
+        li {
+          -webkit-box-flex: 1;
+          -ms-flex: 1;
+          flex: 1;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          justify-content: center;
+          color: $font-99;
+          @include s_fontDemo(32px, 96px, $font-99);
+          position: relative;
+          &:nth-of-type(1) {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            align-items: center;
+            span {
+              @include s_fontDemo(32px, 96px, $font-99);
+            }
+            .am-icon {
+              &.rotate180 {
+                -webkit-transform: rotate(180deg);
+                transform: rotate(180deg);
+              }
+            }
+          }
+          &.active {
+            span {
+              color: $theme;
+            }
+            .bottom-line {
+              background: $theme;
+            }
+          }
+          .bottom-line {
+            @include s_blockDemo(120px, 4px);
+            @include s_center;
+            bottom: 0;
+            background: $bg-ff;
+          }
+        }
+      }
+      .commodity-list-search {
+        width: 40px;
+        height: 40px;
+        float: right;
+        transform: translateY(30px);
+      }
+    }
+    .commodity-list {
+      overflow: hidden;
+      width: 100%;
+      .empty-container {
+        z-index: 1;
+      }
+    }
+  }
+}

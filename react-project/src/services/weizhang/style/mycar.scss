@@ -1,0 +1,39 @@
+.mycar{
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  // height: 100%;
+  .am-list-item, .am-list-item .am-input-label, .am-list-item .am-list-line .am-list-content, .am-list-item .am-input-control input,.am-list-item .am-list-line .am-list-extra{font-size: 0.26rem}
+
+
+  .am-button{ background:#ffab00;border: 1PX solid #ffab00;color:#ffffff;}
+  .am-button.am-button-active{ background:#ffab00;border: 1PX solid #ffab00;}
+
+  .am-list-item{
+    background: url(../img/carBg.png) no-repeat;
+    background-size: 75% 100%;
+  }
+  .am-list-item .am-list-line .am-list-content,.am-list-item .am-list-line .am-list-extra{
+    padding: 0.2rem 0;
+  }
+  .am-list-item.am-list-item-middle .am-list-line{
+    align-items: flex-end;
+  }
+  .am-list-content span{
+    display: block;
+    width: 2.7rem;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    font-family:CNLicense-A;
+    font-size:0.4rem;
+    color:#ffffff;
+    text-align: center;
+    background: url(../img/flateBg.png) no-repeat;
+    background-size: 100% 100%;
+  }
+
+  .am-list-item img{margin: 0 0.1rem;width: 0.4rem;height:0.4rem;}
+  .am-list-item .am-list-line .am-list-extra{overflow: initial}
+}
+.am-modal-body{
+  height: auto;
+}

@@ -1,0 +1,146 @@
+@import "../../../styles/s_common.scss";
+
+@mixin footer {
+  @include s_blockDemo(calc(100% - 100px), 100px);
+  background: $bg-ff;
+  // box-shadow: 10px 10px 5px #eee;
+  z-index: 19;
+  line-height: 100px;
+  @include s_center;
+  bottom: 23px;
+}
+
+.pay-footer {
+  @include footer;
+  z-index: 100;
+  .pay-footer-left {
+    float: left;
+    margin-left: 20px;
+    font-size: 32px;
+    color: $font-66;
+    span {
+      color: $font-f48;
+      margin-right: 12px;
+    }
+    .am-icon {
+      @include s_middle;
+    }
+  }
+  .pay-footer-middle {
+    float: right;
+    position: relative;
+    .details {
+      @include s_fontDemo(28px, 100px, $theme);
+      width: 140px;
+    }
+    .active-popup {
+      position: absolute;;
+      top: 28px;
+      right: 10px;
+      .active-popup-container {
+        left: -50px;
+        top: -100vh;
+      }
+    }
+  }
+  .pay-footer-right {
+    float: right;
+    width: 238px;
+    text-align: center;
+    font-size:32px;
+    color: $font-ff;
+    background: $theme;
+  }
+}
+
+// .mask-container {
+//   position: fixed;
+//   height: 100%;
+//   width: 100%;
+//   background: rgba(0, 0, 0, .3);
+// }
+
+// 价格详情弹出框样式
+.details-list-container {
+  @include s_blockDemo(100%, auto);
+  @include s_center;
+  @include s_border_b;
+  padding: 30px 20px 70px;
+  background: $bg-ff;
+  bottom: 100px;
+  .detail-list-item .detail-list-title {
+    margin-bottom: 55px;
+  }
+  .price-detail {
+    @include s_center;
+    span, .am-icon {
+      float: left;
+    }
+    span {
+      @include s_fontDemo(28px, 44px, $font-66);
+    }
+  }
+}
+
+// 评价列表弹出框样式
+.evaluate {
+  padding: 0 30px;
+  .header {
+    height: 90px;
+    @include s_border_b;
+    .left {
+      width: 70px;
+    }
+    .center {
+      text-align: center;
+      font-weight: bolder;;
+      color: $font-33;
+    }
+    .right {
+      width: 100px;
+      text-align: right;
+      color: $theme;
+    }
+  }
+  .s-evaluation {
+    position: relative;
+    overflow: hidden;
+    padding: 30px 0;
+    height: 60px;
+    box-sizing: content-box;
+    .evaluationContainer {
+      @include s_center;
+    }
+  }
+  .evaluate-text {
+    @include s_fontDemo(28px, 28px, $font-66);
+    margin-bottom: 42px;
+    text-align: center;
+  }
+  // 改变评价框中antd样式
+  .am-textarea-item {
+    background:#fbfbfb;
+    border:1px solid #dddddd;
+    border-radius:6px;
+    margin-bottom: 30px;
+    padding-left: 0;
+    .am-textarea-control {
+      padding: 0;
+      textarea {
+        height: 180px;
+        padding: 20px;
+        font-size: 28px;
+      }
+    }
+  }
+}
+
+.pay-footer-active-popup {
+  width: calc(100% - 100px) !important;
+  @include s_center;
+  @include s_border_b;
+  // bottom: 124px;
+  .am-list-item.am-input-item:after {
+    border-bottom: none;
+  }
+}

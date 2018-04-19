@@ -1,0 +1,361 @@
+@import 'common';
+
+.detailsWrap{
+    width: 100%;
+    height:100%;
+    // overflow:hidden;
+    @extend %touch-layer;
+    .ItempicWrap{
+        width: 100%;
+        height:34%;
+        position:relative;
+        .itemPic{
+            height: 100%;
+            width: 100%;
+            background:url(../img/nousebg.png) no-repeat;
+            background-size: cover;
+            img{
+                width: 100%;
+                height:100%;
+                color:#fff;
+            }
+        }
+        .picMeng{
+            width: 100%;
+            height:100%;
+            position:absolute;
+            top:0;
+            background: linear-gradient(transparent 60%, #000000);
+            opacity: 0.6;
+            z-index: 10;
+        }
+        .itemMain{
+            width:100%;
+            position:absolute;
+            bottom:0;
+            left:0;
+            color:#fff;
+            padding:32px;
+            font-size:36px;
+            z-index: 99;
+            .title{
+                max-width: 60%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .level{
+               font-size:24px;
+               margin-left:20px;
+            }
+            .itemgount{
+                padding-top:20px;
+                span{
+                    display:inline-block;
+                }
+                .Star{
+                  img{
+                     width: 24px;
+                     height:24px;
+                  }
+                }
+                .fenshu{
+                    font-size:24px;
+                    letter-spacing: 1px;
+                    margin-left: 14px;
+                }
+                .picshow{
+                    padding:12px 21px;
+                    background:rgba(0,0,0,0.6);
+                    border-radius: 4px;
+                    position:absolute;
+                    right:32px;
+                    bottom:32px;
+                    font-size:24px;
+                }
+            }
+        }
+    }
+    .itemnoteWrap{
+        width: 100%;
+        // height:auto;
+        // height:20%;
+        .serviceSpan{
+            display:inline-block;
+            padding:5px 10px;
+            border:1px solid #e5e5e5;
+            border-radius: 4px;
+            color:#999;
+            margin-right:10px;
+        }
+    }
+    .itemTabs{
+        width: 100%;
+        // height:46%;
+        // height:100%;
+        height:auto;
+        max-height: 100%;
+        overflow: hidden;
+        // overflow: scroll;
+        // overflow-x: hidden;
+        // padding-bottom:32px;//解决底部空条问题
+        .tabItem{
+            // height:auto;
+            height:100%; // 修改 8.0 的滑动问题
+            // @extend %touch-layer;
+            .am-accordion{
+                @extend %touch-layer;
+            }
+            .am-accordion-header {
+                color:#333;
+                font-size:28px;
+            }
+            .title{
+                width: 80%;
+                padding:20px 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color:#333;
+                font-size:30px;
+            }
+            .timeS1{
+                float: left;
+                width: 55%;
+                height:100px;
+                span{
+                    display:block;
+                    width: 100%;
+                }
+                .s1a{
+                    color:#999;
+                    font-size:24px;
+                }
+                .s1b{
+                    color:#ffab00;
+                    font-size:24px;
+                }
+            }
+            .timeS2{
+                width: 45%;
+                float:right;
+                span{
+                    display:inline-block;
+                    float: right;
+                }
+                .s2a{
+                    font-size:36px;
+                    color:#ff4848;
+                    letter-spacing:1px;
+                    i{
+                        font-style:normal;
+                        font-size:20px;
+                        color:#999;
+                    }
+                }
+                .s2b{
+                    background:#ffab00;
+                    border-radius:4px;
+                    width:110px;
+                    height:50px;
+                    line-height:50px;
+                    color:#fff;
+                    text-align: center;
+                    margin-left:15px;
+                }
+            }
+            // tab标题显示
+            .tabtitle{
+              display:flex;
+              align-items: center;
+              span{
+                  display:inline-block;
+                  margin-right:20px;
+              }
+                img{
+                    width: 44px;
+                    height:44px;
+                    display:inline-block;
+                }
+            }
+        }
+        .tabItem1{
+            width: 100%;
+            height:50px;
+        }
+        .tabItem1-accor{
+            width: 100%;
+            height:200px;
+            background:pink;
+        }
+        .am-tabs-content-animated{
+             height:100%;//这里修改使没有东西就不滚动了
+            padding-bottom:100px;
+        }
+        .am-list-item-middle{
+            background:#f3f3f4;
+        }
+        .tabIntro{
+            font-size:24px;
+            color:#999;
+            width: 100%;
+            .introMain{
+                width: 100%;
+                height:100%; // 修改 8.0 的滑动问题
+                padding:0 32px;
+                @extend %touch-layer;
+                img{
+                    width: 100%;
+                }
+                p{
+                    margin-bottom:32px;
+                    line-height:44px;
+                }
+            }
+        }
+
+    }
+    // .am-tabs{
+    //   overflow:scroll;
+    //   overflow-x: hidden;
+    // }
+    .am-tabs-tab-active{
+        color:#ffab00;
+    }
+    .am-tabs-ink-bar{
+        background:#ffab00;
+    }
+}
+// 无票展示
+.no_trickWrap{
+    width: 100%;
+    height:100%;
+    .no_main{
+       width: 42%;
+       height:60%;
+       position:absolute;
+      //  top:20%;
+       top:10%;
+       left:28%;
+       text-align: center;
+       p{
+          font-size:28px;
+          color:#999;
+          text-align: center;
+          line-height:42px;
+       }
+       img{
+          display:inline-block;
+          width: 170px;
+          height:170px;
+       }
+    }
+}
+
+// 开放时间
+.openTimeWrap{
+    width: 80%;
+    height:auto;
+    z-index: 99;
+    position:absolute;
+    top:50%;
+    left:10%;
+    transform: translateY(-50%);
+    background:red;
+    padding:32px;
+    background:#fff;
+    border-radius: 8px;
+    // text-align: center;
+    .openTimeHeader{
+        width: 100%;
+        height:60px;
+        text-align: center;
+        color:#ffab00;
+
+    }
+    .openTime{
+        line-height:40px;
+        color:#666;
+        text-align: center;
+    }
+}
+
+
+// 订单须知
+.orderinfoWrap{
+  width: 80%;
+  height:54%;
+  border-radius: 12px;
+  position:absolute;
+  top:23%;
+  left:10%;
+  background:#fff;
+  // transform: translate(-50%,-50%);
+  z-index: 10;
+
+
+  .orderinfoMian{
+      width: 100%;
+      height:100%;
+      overflow: hidden;
+  }
+  .orderinfoMian{
+     width: 100%;
+     height:100%;
+     .orderinfoHeader{
+        width: 100%;
+        height:14%;
+        padding:32px;
+        span{
+          width: 20%;
+          display:inline-block;
+        }
+        .infortitle{
+           width: 60%;
+           text-align: center;
+        }
+     }
+     .orderinfo{
+        @extend %touch-layer;
+        padding:10px 32px;
+        width: 100%;
+        height:72%;
+        .infotop{
+           width: 100%;
+           text-align: center;
+           color:#ffab00;
+        }
+        p{
+           line-height:50px;
+           color:#999;
+           padding-bottom:16px;
+        }
+     }
+     .infoFooter{
+        width: 100%;
+        border-top:1px solid #e5e5e5;
+        height:14%;
+        span{
+           display:inline-block;
+           height:100%;
+           vertical-align: middle;
+        }
+        .infof1{
+           width: 56%;
+           padding:3.5% 32px;
+           color:#ffab00;
+           font-size:36px;
+           vertical-align: middle;
+        }
+        .infof2{
+           width: 44%;
+           text-align: center;
+           background:#ffab00;
+           font-size:36px;
+           color:#fff;
+           padding:3.5% 32px;
+           border-radius: 0 0 12px 0px;
+        }
+     }
+  }
+}

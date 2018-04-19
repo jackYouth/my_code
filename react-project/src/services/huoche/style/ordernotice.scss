@@ -1,0 +1,52 @@
+@import "common.scss";
+
+.noticeBtn{
+  color:#ffab00;
+  width: 100%;
+  display: inline-block;
+}
+.noticeMaskwrap{
+  width: 100%;
+  height:100%;
+  background:rgba(255,255,255,1);
+  overflow: hidden;
+  position:absolute;
+  z-index: 10;
+  .noticeMask{
+    width: 100%;
+    height:90%;
+    padding:32px;
+    overflow: hidden;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling:touch;
+    p{
+      width: 100%;
+      font-size:28px;
+      color:#333;
+      font-weight: 900;
+      padding-bottom:20px;
+    }
+    div{
+      width: 100%;
+      font-size:28px;
+      color:#999;
+      line-height:36px;
+      margin-bottom:40px;
+      text-align:justify;
+    }
+    ul{
+      padding-left: 42px;
+      li{
+        list-style-type: disc;
+      }
+    }
+  }
+  img{
+    width: 62px;
+    height:62px;
+    position:absolute;
+    bottom:2%;
+    left:50%;
+    margin-left:-31px;
+  }
+}

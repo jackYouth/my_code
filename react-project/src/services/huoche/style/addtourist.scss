@@ -1,0 +1,70 @@
+@import "common.scss";
+
+.addrBtn{
+  color:#ffab00;
+  font-size:32px;
+  text-align: center;
+  .am-icon{
+    width: 32px;
+    height:32px;
+    vertical-align: top;
+  }
+}
+.checkedDelete{
+  // background: red;
+}
+.checkedGoEdit{
+  position:absolute;
+  width: 80px;
+  height:80px;
+  // background:pink;
+  right:0px;
+  top:34px;
+}
+
+// 分离出乘客信息个人部分
+.passenger_list{
+  height: 1.3rem;
+  display: flex;
+  display: -webkit-flex;
+  align-items: center;
+  -webkit-align-items: center;
+  border-top: 1px solid #e5e5e5;
+  background: #ffffff;
+  .passenger_icon,.passenger_jump,.passenger_delet{
+    width: 1rem;
+    overflow: hidden;
+    display: flex;
+    display: -webkit-flex;
+    align-items: center;
+    -webkit-align-items: center;
+    justify-content: space-around;
+    -webkit-justify-content: space-around;
+    transition: width 0.3s ease 0s;
+  }
+  .passenger_delet{
+    height: 100%;
+    font-size: 0.32rem;
+    color: #ffffff;
+    background: #fb4c4d;
+    span{
+      display: inline-block;
+      white-space: nowrap;
+    }
+  }
+  .passenger_main{
+    flex: auto;
+    -webkit-flex: auto;
+    font-size: 0.24rem;
+    color: #999999;
+    transition: all 0.3s ease 0s;
+    p{
+      line-height: 1.5;
+    }
+    span{
+      font-size: 0.28rem;
+      color: #333333;
+      margin-right: 0.2rem;
+    }
+  }
+}

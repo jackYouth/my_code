@@ -1,0 +1,128 @@
+@import "../common.scss";
+
+.express-slide.slide-page-container.info {
+  background-color: $bg-f3;
+}
+
+.express-info {
+  height: 100%;
+  overflow-y: auto;
+  .header {
+    padding: 30px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: $bg-ff;
+    p {
+      float: left;
+      &:nth-of-type(1) {
+        @include sc_img_container(140px, 140px);
+        border-radius: 4px;
+        position: relative;
+        margin-right: 30px;
+        span {
+          position: absolute;
+          bottom: 0;
+          width: 100%;
+          height: 30px;
+          background: #333;
+          text-align: center;
+          @include s_fontDemo(24px, 30px, $font-ff);
+        }
+      }
+      &:nth-of-type(2) {
+        span {
+          @include s_fontDemo(28px, 28px, $font-99);
+          margin-bottom: 20px;
+          display: block;
+        }
+      }
+    }
+  }
+  .express-info-list {
+    background: $bg-ff;
+    li {
+      padding-left: 45px;
+      height: 120px;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      p {
+        &:nth-of-type(1) {
+          width: 45px;
+          height: 120px;
+          -webkit-transform: translateY(50%);
+                  transform: translateY(50%);
+          @include s_border_l;
+          &:last-of-type {
+            border-left: none;
+          }
+          span {
+            display: block;
+            border-radius: 100%;
+          }
+          .active, .unActive {
+            -webkit-transform: translateX(-50%) translateY(-50%);
+                    transform: translateX(-50%) translateY(-50%);
+          }
+          .active {
+            @include s_blockDemo(30px, 30px);
+            background: rgba(255, 171, 0, .3);
+            position: relative;
+            display: none;
+            span {
+              @include s_blockDemo(20px, 20px);
+              background: $theme;
+              @include s_allCenter;
+            }
+          }
+          .unActive {
+            @include s_blockDemo(14px, 14px);
+            background: #e5e5e5;
+          }
+        }
+        &:nth-of-type(2) {
+          padding-top: 30px;
+          padding-bottom: 30px;
+          @include s_border_b;
+          span {
+            @include s_fontDemo(28px, 28px, $font-99);
+            display: block;
+            &:nth-of-type(1) {
+              margin-bottom: 10px;
+            }
+            &:nth-of-type(2) {
+              font-size: 24px;
+            }
+          }
+        }
+      }
+    }
+    li.active {
+      p {
+        &:nth-of-type(1) {
+          .active {
+            display: block;
+          }
+          .unActive {
+            display: none;
+          }
+        }
+        &:nth-of-type(2) {
+          span {
+            color: $font-33;
+          }
+        }
+      }
+    }
+    li:last-of-type {
+      p {
+        &:nth-of-type(1) {
+          border-left: none;
+        }
+        &:nth-of-type(2) {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+}

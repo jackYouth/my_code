@@ -1,0 +1,115 @@
+@import "../../../styles/s_common.scss";
+
+.daojia-order-content {
+  .am-list-item .am-list-line .am-list-content, .am-list-item .am-list-line .am-list-extra {
+    font-size: 28px;
+    color: $font-33;
+  }
+  .am-list-item.am-list-item-middle {
+    @include s_border_b;
+    &.good-info {
+      .am-list-extra {
+        width: 160px;
+        span:nth-of-type(1) {
+          float: left;
+          color:#adadad;
+        }
+      }
+    }
+    &.activity-price, &.coupon-price {
+      border-bottom: none;
+      .am-list-line {
+        @include s_border_b;
+        .am-list-content {
+          span {
+            float: left;
+            &:nth-of-type(1) {
+              display: inline-block;
+              @include s_blockDemo(32px, 32px);
+              background: #ff6e19;
+              border-radius:6px;
+              @include s_fontDemo(20px, 32px, #fff);
+              text-align: center;
+              margin-right: 10px;
+            }
+          }
+        }
+        .am-list-extra {
+          color: $font-f48;
+        }
+      }
+    }
+    &.coupon-price .am-list-line .am-list-content span:nth-of-type(1) {
+      background: $font-f48;
+    }
+    &.order-price .am-list-line {
+      -webkit-box-pack: end;
+          -ms-flex-pack: end;
+              justify-content: flex-end;
+      .am-list-extra {
+        span {
+          font-size: 28px;
+          font-weight: bold;
+        }
+      }
+      .am-list-content {
+        p {
+          overflow: hidden;
+          a, span {
+            float: left;
+            @include s_fontDemo(28px, 28px, $theme);
+          }
+          a {
+            margin-right: 8px;
+            .am-icon {
+              width: 30px;
+              height: 30px;
+            }
+          }
+        }
+      }
+    }
+  }
+  .brand-info {
+    p {
+      img {
+        @include s_blockDemo(30px, 30px);
+        border-radius: 6px;
+        float: left;
+        margin-right: 15px;
+      }
+    }
+  }
+  .am-list-body div:not(:last-child) .am-list-line:after {
+    border-bottom: none;
+  }
+  .am-whitespace {
+    background: #f4f4f5;
+  }
+
+  .service-address {
+    .am-list-extra {
+      width: calc(100% - 170px);
+      white-space: normal;
+      padding-top: 20px;
+      padding-bottom: 30px;
+      p {
+        @include s_fontDemo(28px, 42px, $font-33);
+        text-align: left;
+      }
+    }
+  }
+  .remark {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    // width: 100%;
+    // .am-list-line {
+    //   width: 100%;
+    // }
+    .am-list-extra {
+      // width: calc(100% - 1.7rem);
+      text-align: left;
+    }
+  }
+}

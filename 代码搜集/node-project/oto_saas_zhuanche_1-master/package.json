@@ -1,0 +1,30 @@
+{
+  "name": "oto_saas_zhuanche",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kpboluome/oto_saas_zhuanche_1.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kpboluome/oto_saas_zhuanche_1/issues"
+  },
+  "homepage": "https://github.com/kpboluome/oto_saas_zhuanche_1#readme",
+  "dependencies": {
+    "@boluome/hash": "^1.2.0",
+    "@boluome/mongo": "^2.0.2",
+    "@boluome/redis": "^2.0.4",
+    "async": "^2.4.1",
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "express-validator": "^3.2.0",
+    "moment": "^2.18.1",
+    "request": "^2.81.0"
+  }
+}
