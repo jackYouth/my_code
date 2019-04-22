@@ -1,0 +1,9 @@
+# HTML5新特性
+### 结构化元素：header、nav、artical、section、footer等
+### 用于绘画的canvas元素
+### 用于媒体回放的audio、video元素
+### 本地存储：localStorage、sessionStorage
+### 表单控件：calendar、date、time、email、url、search等，移动端体验更好
+### 属性：contenteditable（可编辑）和draggable（可拖动）
+### API：获取地理位置、上传文件
+### 新的跨域通信机制：window.postMessage

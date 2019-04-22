@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>to-do-list-by-vue</title>
+</head>
+<body>
+  <div id="app">
+    <div>
+      <input type="text" v-model="title" />
+      <button v-on:click="add">submit</button>
+    </div>
+    <div>
+      <ul>
+        <li v-for="item in list">{{ item }}</li>
+      </ul>
+    </div>
+  </div>
+  <script src="https://cdn.bootcss.com/vue/2.5.17-beta.0/vue.common.js"></script>
+  <script>
+    var vm = new Vue({
+      el: '#app',
+      data: {       // data中初始化需要用到的变量默认值
+        title: '',
+        list: [],
+      },
+      method: {
+        add: function() {   // method中初始化方法
+          this.list.push(this.title)
+          this.title = ''
+        },
+      },
+    })
+  </script>
+</body>
+</html>

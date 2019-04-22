@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+  <title>to-do-list by jquery</title>
+</head>
+<body>
+  <div>
+    <input type="text" id="txt-title" />
+    <button id="btn-submit">submit</button>
+  </div>
+  <div>
+    <ul id="ul-list"></ul>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script>
+    var $txtTitle = $("#txt-title")
+    var $btnSubmit = $("#btn-submit")
+    var $ulList = $("#ul-list")
+    $btnSubmit.onclick = function() {
+      var text = $txtTitle.val()
+      if (!text) return
+      var $li = $('<li>' + text + '</li>')
+      $ulList.append($li)
+      $txtTitle.val('')
+    }
+  </script>
+</body>
+</html>
