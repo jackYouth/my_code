@@ -39,3 +39,7 @@ git 中常用的就 6 个命令，但是进阶的话需要记住 60-100 个命�
 - 修改当前 git 提交时的用户名称、邮箱
   - git config --global user.name '<name>'
   - git config --global user.email '<email>'
+  
+### 删除命令:
+- git branch -d <branchName>: 删除本地分支
+- git push origin --delete <branchName>: 删除远程分支
