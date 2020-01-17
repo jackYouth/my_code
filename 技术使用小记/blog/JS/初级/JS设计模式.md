@@ -1,22 +1,53 @@
-# JS设计模式
-### 单例模式
-终极目标是闭包实现私有成员的惰性实例化单体, 三个特点:
-+ 该类只有一个实例
-+ 该类自行创建该实例(在该类内部创建自身的实例对象)
-+ 向整个系统公开这个实例接口
-> 通常该类中自己定义的属性和方法, 外界系统只是调用这个实例中定义的属性和方法.
-```js
-  var LazySingleton = function() {
-    var attr = 1; fn = function() {};
-    var obj = {
-      method: function() {fn()},
-      getAttr: function() {return attr;}
-    };
-    function init() {
-      return obj;
-    }
-    return {getInstance: init}
-  }
-  LazySingleton.getInstance().method()
-  // 其中attr, fn都是实例私有的无法被改变, 当执行到变量时LazySingleton时, 并没有加载自身, 而是通过getInstance才会加载, 这就实现了惰性实例化
-```
+# JS 23 种设计模式
+
+- 创建型
+  - [单例模式](#createMode_1)
+  - [原型模式](#createMode_2)
+  - [构造器模式](#createMode_3)
+  - [工厂模式](#createMode_4)
+  - [抽象工厂模式](#createMode_5)
+- 结构型
+  - [桥接模式](#constructMode_1)
+  - [外观模式](#constructMode_2)
+  - [组合模式](#constructMode_3)
+  - [装饰器模式](#constructMode_4)
+  - [适配器模式](#constructMode_5)
+  - [代理模式](#constructMode_6)
+  - [享元模式](#constructMode_7)
+- 行为型
+  - [迭代器模式](#behaviorMode_1)
+  - [解释器模式](#behaviorMode_2)
+  - [观察者模式](#behaviorMode_3)
+  - [中介者模式](#behaviorMode_4)
+  - [访问者模式](#behaviorMode_5)
+  - [状态模式](#behaviorMode_6)
+  - [备忘录模式](#behaviorMode_7)
+  - [策略模式](#behaviorMode_8)
+  - [模板方法模式](#behaviorMode_9)
+  - [职责链模式](#behaviorMode_10)
+  - [命令模式](#behaviorMode_11)
+
+
+## 单例模式
+## 原型模式
+## 构造器模式
+## 工厂模式
+## 抽象工厂模式
+## 桥接模式
+## 外观模式
+## 组合模式
+## 装饰器模式
+## 适配器模式
+## 代理模式
+## 享元模式
+## 迭代器模式
+## 解释器模式
+## 观察者模式
+## 中介者模式
+## 访问者模式
+## 状态模式
+## 备忘录模式
+## 策略模式
+## 模板方法模式
+## 职责链模式
+## 命令模式
