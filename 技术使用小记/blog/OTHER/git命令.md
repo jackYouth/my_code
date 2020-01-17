@@ -46,3 +46,7 @@ git 中常用的就 6 个命令，但是进阶的话需要记住 60-100 个命�
   - git config --global user.email '<email>'
 
 > git 简版命令配置神器: [oh my zsh!](https://github.com/robbyrussell/oh-my-zsh/blob/master/plugins/git/git.plugin.zsh)
+  
+### 删除命令:
+- git branch -d <branchName>: 删除本地分支
+- git push origin --delete <branchName>: 删除远程分支
