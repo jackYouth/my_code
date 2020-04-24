@@ -44,11 +44,14 @@ JS 在存储东西时，会将其转成二进制，很多小数在转成二进�
   }
   A()
   B() // 1
+
   // 面试题：如何解决下面打印出不全是 6
+
   for (var i = 1; i <= 5; i++) {
     setTimeout(function timer() { console.log(i) }, i _ 1000)
   }
   // 首先，当函数执行的时候，再找 i 的值时，已经变成 6 了，所以打印的时候全是 6
+
   // 方案 1:
   for (var i = 1; i <= 5; i++) {
     function(j) {
@@ -56,11 +59,13 @@ JS 在存储东西时，会将其转成二进制，很多小数在转成二进�
     }(i)
   }
   // 这种就是就会生成六个自执行的 function，并且通过传参，在函数内部隐式定义一个变量 j = 1 / 2 。。。之类的，当定时器函数执行的时候，往外层找 j 就可以找到函数中保存下来的 j 了
+
   // 方案 2:
   for (var i = 1; i <= 5; i++) {
     setTimeout(function timer(j) { console.log(j) }, i _ 1000, i)
   }
   // 定时器的第三个参数，会被当成定时器中函数的参数传进去的
+
   // 方案 3：（最推荐）
   for (let i = 1; i <= 5; i++) {
     setTimeout(function timer() { console.log(i) }, i _ 1000)
