@@ -159,3 +159,25 @@
         > 注意, 这里核心的方法就是 **require.ensure(dependencies, callback, chunkName)**, 这是一个异步方法, webpack 在打包时, 将 BugComponent 组件打包成一个文件, 当跳转到 /bug 路由时, 这个异步方法的回调才会生效, 才会去真正获取 BugComponent 中的内容.
         > **按需加载的粒度，还可以继续细化，细化到更小的组件、细化到某个功能点，都是 ok 的。**
         > 在 React-Router 4 中, 我们是用了 Code-splitting 替换掉了上面的操作. 但是 React-Router 4 中的按需加载使用的 Bundle-Loader, 其源码也是用 require.ensure 来实现的.
+
+# GZip 压缩原理
+
+### 简介
+
+GZip 是 http 压缩最常用的一种压缩方案, 还有一个是 deflate. Gzip 的内核就是 Deflate.
+
+http 压缩是一种内置到网页服务器和网页客户端中的用以改进传输速度和带宽利用率的方式. 兼容的浏览器将支持的压缩方案告知服务端, 服务端使用对应方案压缩后, 返回给客户端, 客户端接受时自动解压缩. 不支持压缩方案的浏览器, 服务端就不会压缩, 客户端会接收未压缩的数据.
+
+### 意义
+
+Gzip 是以服务端的压缩时间和客户端解压缩时的 CPU 开销为代价, 省去了传输过程中的时间开销. 对于 1,2kb 的体积, 使用 GZip 是划算的.
+
+> webpack 中的 GZip 和 http 的 GZip 并不一样, webpack 的 GZip 是为了给服务器分担压力, 通过在构建中去做一部分服务器的工作.
+
+### 原理
+
+GZip 是通过去除文件中的空格、换行、制表等符号, 并且将一些重复的名称, 使用一个较短的字符去替换它们的形式, 来减小文件体积. 所以说, 当代码重复率越高时, 压缩效率就越高. GZip 一般能减少 70%左右的体积.
+
+### 开启方法
+
+request 头中添加 accept-encoding: gzip, deflate
