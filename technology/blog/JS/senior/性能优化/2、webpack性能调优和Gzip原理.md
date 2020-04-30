@@ -159,6 +159,7 @@
         > 注意, 这里核心的方法就是 **require.ensure(dependencies, callback, chunkName)**, 这是一个异步方法, webpack 在打包时, 将 BugComponent 组件打包成一个文件, 当跳转到 /bug 路由时, 这个异步方法的回调才会生效, 才会去真正获取 BugComponent 中的内容.
         > **按需加载的粒度，还可以继续细化，细化到更小的组件、细化到某个功能点，都是 ok 的。**
         > 在 React-Router 4 中, 我们是用了 Code-splitting 替换掉了上面的操作. 但是 React-Router 4 中的按需加载使用的 Bundle-Loader, 其源码也是用 require.ensure 来实现的.
+        > [Code-splitting 的 webpack 配置](https://webpack.docschina.org/guides/code-splitting/), require.ensure 是 webpack 遗留的功能, 目前主推的是 import()语法
 
 # GZip 压缩原理
 
